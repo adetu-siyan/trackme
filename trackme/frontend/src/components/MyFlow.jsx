@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+
+const BYPASS_EMAIL = 'adetusiyan@gmail.com'
 
 const PRIORITY_COLORS = {
   high:   { background: 'rgba(248, 113, 113, 0.08)', border: 'rgba(248, 113, 113, 0.3)', color: '#F87171', label: 'HIGH PRIORITY' },
@@ -40,6 +42,84 @@ const CalendarIcon = () => (
   </svg>
 )
 
+function ComingSoon() {
+  return (
+    <div className="page" style={{
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      minHeight: '70vh', textAlign: 'center', padding: '40px 20px',
+      fontFamily: 'Urbanist, sans-serif',
+    }}>
+      <div style={{
+        background: 'linear-gradient(135deg, var(--accent-soft) 0%, var(--surface-3) 100%)',
+        border: '1px solid var(--border)',
+        borderRadius: 24, padding: '48px 40px', maxWidth: 480, width: '100%',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: -60, right: -60,
+          width: 200, height: 200,
+          background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)',
+          opacity: 0.12, borderRadius: '50%', pointerEvents: 'none',
+        }} />
+
+        <div style={{ fontSize: 56, marginBottom: 20 }}>⚡</div>
+
+        <div style={{
+          fontSize: 11, letterSpacing: 3, fontWeight: 700,
+          color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 12,
+        }}>
+          Coming Soon
+        </div>
+
+        <h2 style={{
+          fontSize: 28, fontWeight: 900, letterSpacing: '-0.5px',
+          marginBottom: 12,
+          background: 'linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+        }}>
+          MyFlow
+        </h2>
+
+        <p style={{
+          fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.7,
+          marginBottom: 32,
+        }}>
+          Your personal AI planning workspace is almost ready. We're building something that turns your chaos into clarity.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+          {[
+            { icon: '✨', text: 'Dump tasks in plain English — AI structures them instantly' },
+            { icon: '⏱', text: 'Smart time suggestions based on your learning patterns' },
+            { icon: '📅', text: 'One-click sync to Google Calendar' },
+            { icon: '💭', text: 'Quick notes and ideas — always autosaved' },
+            { icon: '📊', text: 'Daily momentum tracking and progress streaks' },
+          ].map(({ icon, text }) => (
+            <div key={text} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 12,
+              padding: '12px 16px', borderRadius: 12,
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              textAlign: 'left',
+            }}>
+              <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{text}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{
+          padding: '12px 20px', borderRadius: 12,
+          background: 'var(--accent-soft)', border: '1px solid var(--border)',
+          fontSize: 13, color: 'var(--accent)', fontWeight: 600,
+        }}>
+          🔔 You'll be notified the moment it drops
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected }) {
   const [time, setTime] = useState(() => localStorage.getItem('flow-reminder-time') || '08:00')
   const [saved, setSaved] = useState(false)
@@ -48,7 +128,7 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
   async function saveReminder() {
     setLoading(true)
     try {
-      await fetch('http://localhost:8000/api/notifications/schedule', {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/notifications/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email, time }),
@@ -102,7 +182,6 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
           zIndex: 200,
         }}
       />
-
       <div style={{
         position: 'fixed',
         top: 0, right: 0, bottom: 0,
@@ -111,9 +190,7 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
         borderLeft: '1px solid var(--border)',
         zIndex: 201,
         padding: '32px 28px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 24,
+        display: 'flex', flexDirection: 'column', gap: 24,
         overflowY: 'auto',
         fontFamily: 'Urbanist, sans-serif',
         boxShadow: '-8px 0 30px rgba(0,0,0,0.3)',
@@ -133,8 +210,7 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
               background: 'var(--surface-2)', border: '1px solid var(--border)',
               color: 'var(--text-muted)', cursor: 'pointer',
               padding: 8, borderRadius: 10,
-              display: 'flex', alignItems: 'center',
-              transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', transition: 'all 0.2s',
             }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
@@ -156,11 +232,7 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.6 }}>
                 Tasks sync automatically to your primary Google Calendar.
               </p>
-              <button
-                onClick={disconnectCalendar}
-                className="btn"
-                style={{ fontSize: 13, padding: '10px 18px', background: 'var(--surface-2)', color: 'var(--text-muted)', width: '100%' }}
-              >
+              <button onClick={disconnectCalendar} className="btn" style={{ fontSize: 13, padding: '10px 18px', background: 'var(--surface-2)', color: 'var(--text-muted)', width: '100%' }}>
                 Disconnect Calendar
               </button>
             </div>
@@ -169,11 +241,7 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.6 }}>
                 Connect Google Calendar to sync your scheduled tasks.
               </p>
-              <button
-                onClick={connectCalendar}
-                className="btn btn-primary"
-                style={{ fontSize: 13, padding: '10px 18px', width: '100%' }}
-              >
+              <button onClick={connectCalendar} className="btn btn-primary" style={{ fontSize: 13, padding: '10px 18px', width: '100%' }}>
                 Connect Google Calendar
               </button>
             </div>
@@ -182,7 +250,7 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
 
         <div className="card" style={{ gap: 0, padding: '20px' }}>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16, fontWeight: 600 }}>
-            Daily reminder
+            Daily Reminder
           </div>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.6 }}>
             We'll email <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{user?.email}</span> to start your planning session.
@@ -193,17 +261,11 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
               value={time}
               onChange={e => setTime(e.target.value)}
               style={{
-                background: 'var(--surface-2)',
-                border: '1px solid var(--border)',
-                borderRadius: 10,
-                padding: '12px 16px',
-                color: 'var(--text-primary)',
-                fontSize: 16,
-                fontWeight: 700,
-                fontFamily: 'Urbanist, sans-serif',
-                outline: 'none',
-                colorScheme: 'dark',
-                flex: 1,
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                borderRadius: 10, padding: '12px 16px',
+                color: 'var(--text-primary)', fontSize: 16, fontWeight: 700,
+                fontFamily: 'Urbanist, sans-serif', outline: 'none',
+                colorScheme: 'dark', flex: 1,
               }}
             />
             <button
@@ -211,13 +273,11 @@ function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected 
               disabled={loading}
               className="btn btn-primary"
               style={{
-                fontSize: 13,
-                padding: '12px 24px',
+                fontSize: 13, padding: '12px 24px',
                 background: saved ? '#064E3B' : undefined,
                 color: saved ? '#86EFAC' : undefined,
                 border: saved ? '1px solid #065F46' : undefined,
-                flexShrink: 0,
-                fontWeight: 600,
+                flexShrink: 0, fontWeight: 600,
               }}
             >
               {saved ? '✓ Saved' : loading ? 'Saving…' : 'Save'}
@@ -253,12 +313,9 @@ function NoteCardStack({ notes, onUpdate, onDelete }) {
 
   if (notes.length === 0) {
     return (
-      <div style={{ 
-        textAlign: 'center', 
-        padding: '24px', 
-        color: 'var(--text-muted)',
-        fontSize: 13,
-        opacity: 0.6,
+      <div style={{
+        textAlign: 'center', padding: '24px',
+        color: 'var(--text-muted)', fontSize: 13, opacity: 0.6,
       }}>
         No notes yet. Capture ideas as they come.
       </div>
@@ -269,7 +326,6 @@ function NoteCardStack({ notes, onUpdate, onDelete }) {
     <div style={{ position: 'relative', minHeight: notes.length > 3 ? '180px' : 'auto' }}>
       {notes.length > 3 && (
         <>
-          {/* Stack shadow cards behind */}
           {[2, 1].map((offset) => {
             const noteIndex = notes.length - offset - 1
             if (noteIndex < 0) return null
@@ -279,17 +335,10 @@ function NoteCardStack({ notes, onUpdate, onDelete }) {
               <div
                 key={`shadow-${offset}`}
                 style={{
-                  position: 'absolute',
-                  top: offset * 8,
-                  left: offset * 4,
-                  right: offset * -4,
-                  height: '60px',
-                  background: colorScheme.bg,
-                  borderRadius: 10,
-                  opacity: 0.3 - (offset * 0.1),
-                  transform: `rotate(${offset * 1.5}deg)`,
-                  zIndex: 1,
-                  border: '1px solid rgba(0,0,0,0.05)',
+                  position: 'absolute', top: offset * 8, left: offset * 4, right: offset * -4,
+                  height: '60px', background: colorScheme.bg, borderRadius: 10,
+                  opacity: 0.3 - (offset * 0.1), transform: `rotate(${offset * 1.5}deg)`,
+                  zIndex: 1, border: '1px solid rgba(0,0,0,0.05)',
                 }}
               />
             )
@@ -297,105 +346,66 @@ function NoteCardStack({ notes, onUpdate, onDelete }) {
         </>
       )}
 
-      {/* Visible notes */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 2 }}>
-        {visibleNotes.map((note, index) => {
+        {visibleNotes.map((note) => {
           const colorScheme = NOTE_COLORS[note.colorIndex]
           const isExpanded = expandedIndex === note.id
-          
+
           return (
             <div
               key={note.id}
               className="note-card"
               style={{
-                background: colorScheme.bg,
-                borderRadius: 10,
-                padding: '14px',
-                position: 'relative',
-                transform: notes.length <= 3 ? `rotate(${index % 2 === 0 ? '-0.5deg' : '0.8deg'})` : 'none',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
+                background: colorScheme.bg, borderRadius: 10, padding: '14px',
+                position: 'relative', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                cursor: 'pointer', transition: 'all 0.2s ease',
                 border: '1px solid rgba(0,0,0,0.05)',
               }}
               onClick={() => setExpandedIndex(isExpanded ? null : note.id)}
             >
               <div style={{
                 maxHeight: isExpanded ? '200px' : '60px',
-                overflow: 'hidden',
-                transition: 'max-height 0.3s ease',
-                position: 'relative',
+                overflow: 'hidden', transition: 'max-height 0.3s ease', position: 'relative',
               }}>
                 <p style={{
-                  margin: 0,
-                  color: colorScheme.color,
-                  fontSize: 13,
-                  fontFamily: 'Urbanist, sans-serif',
-                  lineHeight: 1.6,
-                  fontWeight: 500,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
+                  margin: 0, color: colorScheme.color, fontSize: 13,
+                  fontFamily: 'Urbanist, sans-serif', lineHeight: 1.6,
+                  fontWeight: 500, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                 }}>
                   {note.text}
                 </p>
                 {!isExpanded && note.text.length > 100 && (
                   <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '30px',
+                    position: 'absolute', bottom: 0, left: 0, right: 0, height: '30px',
                     background: `linear-gradient(transparent, ${colorScheme.bg.split(',')[0].replace('linear-gradient(135deg, ', '')})`,
                   }} />
                 )}
               </div>
-              
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                marginTop: 8,
-                paddingTop: 8,
-                borderTop: `1px solid ${colorScheme.color}20`,
+
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colorScheme.color}20`,
               }}>
                 <span style={{ fontSize: 10, color: colorScheme.color, opacity: 0.5, fontWeight: 600 }}>
                   autosaved
                 </span>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setExpandedIndex(isExpanded ? null : note.id)
-                    }}
+                    onClick={(e) => { e.stopPropagation(); setExpandedIndex(isExpanded ? null : note.id) }}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: colorScheme.color,
-                      opacity: 0.5,
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      fontWeight: 600,
+                      background: 'none', border: 'none', color: colorScheme.color,
+                      opacity: 0.5, cursor: 'pointer', fontSize: 12,
+                      padding: '2px 6px', borderRadius: 4, fontWeight: 600,
                     }}
                   >
                     {isExpanded ? 'collapse' : 'expand'}
                   </button>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(note.id)
-                    }}
+                    onClick={(e) => { e.stopPropagation(); onDelete(note.id) }}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: colorScheme.color,
-                      opacity: 0.4,
-                      cursor: 'pointer',
-                      fontSize: 16,
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      transition: 'all 0.2s',
+                      background: 'none', border: 'none', color: colorScheme.color,
+                      opacity: 0.4, cursor: 'pointer', fontSize: 16,
+                      padding: '2px 6px', borderRadius: 4, transition: 'all 0.2s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.background = 'rgba(0,0,0,0.1)' }}
                     onMouseLeave={e => { e.currentTarget.style.opacity = 0.4; e.currentTarget.style.background = 'none' }}
@@ -409,33 +419,30 @@ function NoteCardStack({ notes, onUpdate, onDelete }) {
         })}
       </div>
 
-      {/* Show more indicator */}
       {remainingCount > 0 && (
         <div style={{
-          textAlign: 'center',
-          marginTop: 12,
-          padding: '8px',
-          background: 'var(--surface-2)',
-          borderRadius: 8,
-          fontSize: 12,
-          color: 'var(--text-muted)',
-          fontWeight: 600,
-          cursor: 'pointer',
-          border: '1px solid var(--border)',
-          transition: 'all 0.2s',
+          textAlign: 'center', marginTop: 12, padding: '8px',
+          background: 'var(--surface-2)', borderRadius: 8,
+          fontSize: 12, color: 'var(--text-muted)', fontWeight: 600,
+          cursor: 'pointer', border: '1px solid var(--border)', transition: 'all 0.2s',
         }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
-      >
-        + {remainingCount} more {remainingCount === 1 ? 'note' : 'notes'}
-      </div>
+        >
+          + {remainingCount} more {remainingCount === 1 ? 'note' : 'notes'}
+        </div>
       )}
     </div>
   )
 }
 
 export default function MyFlow() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+
+  // Gate: show coming soon for everyone except bypass email
+  const isOwner = user?.email === BYPASS_EMAIL
+  if (!isOwner) return <ComingSoon />
+
   const [input, setInput] = useState('')
   const [withTime, setWithTime] = useState(false)
   const [cards, setCards] = useState(() => {
@@ -451,17 +458,9 @@ export default function MyFlow() {
   const [syncingAll, setSyncingAll] = useState(false)
   const [allSynced, setAllSynced] = useState(false)
   const [newNote, setNewNote] = useState('')
-  const [staggered, setStaggered] = useState(false)
 
   useEffect(() => { localStorage.setItem('myflow-cards', JSON.stringify(cards)) }, [cards])
   useEffect(() => { localStorage.setItem('myflow-notes', JSON.stringify(notes)) }, [notes])
-
-  useEffect(() => {
-    if (cards.length > 0 && !staggered) {
-      setStaggered(true)
-      setTimeout(() => setStaggered(false), 100)
-    }
-  }, [cards.length])
 
   async function structureTasks() {
     if (!input.trim()) return
@@ -517,20 +516,16 @@ export default function MyFlow() {
   async function addAllToCalendar() {
     const token = localStorage.getItem('gcal-token')
     if (!token) { setShowSettings(true); return }
-
     setSyncingAll(true)
     const today = new Date()
-    
     try {
       for (const card of cards) {
         if (card.addedToCalendar || !card.suggestedTime) continue
-        
         const [startStr, endStr] = card.suggestedTime.split('–').map(s => s.trim())
         const [sh, sm] = startStr.split(':').map(Number)
         const [eh, em] = endStr.split(':').map(Number)
         const start = new Date(today); start.setHours(sh, sm, 0, 0)
         const end = new Date(today); end.setHours(eh, em, 0, 0)
-
         await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -541,7 +536,6 @@ export default function MyFlow() {
             end: { dateTime: end.toISOString(), timeZone: 'Africa/Lagos' },
           }),
         })
-        
         setCards(prev => prev.map(c => c.id === card.id ? { ...c, addedToCalendar: true } : c))
       }
       setAllSynced(true)
@@ -554,11 +548,7 @@ export default function MyFlow() {
 
   function addNote() {
     if (!newNote.trim()) return
-    const noteObj = {
-      id: Date.now(),
-      text: newNote.trim(),
-      colorIndex: notes.length % NOTE_COLORS.length,
-    }
+    const noteObj = { id: Date.now(), text: newNote.trim(), colorIndex: notes.length % NOTE_COLORS.length }
     setNotes(prev => [noteObj, ...prev])
     setNewNote('')
   }
@@ -589,103 +579,71 @@ export default function MyFlow() {
           from { opacity: 0; transform: translateX(-20px); }
           to { opacity: 1; transform: translateX(0); }
         }
-        .task-card {
-          animation: slideIn 0.3s ease forwards;
-        }
+        .task-card { animation: slideIn 0.3s ease forwards; }
         .task-card:nth-child(1) { animation-delay: 0s; }
         .task-card:nth-child(2) { animation-delay: 0.05s; }
         .task-card:nth-child(3) { animation-delay: 0.1s; }
         .task-card:nth-child(4) { animation-delay: 0.15s; }
         .task-card:nth-child(5) { animation-delay: 0.2s; }
-        .note-card {
-          transition: all 0.2s ease;
-        }
-        .note-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }
-        .checklist-item {
-          transition: all 0.15s ease;
-        }
-        .checklist-item:hover {
-          transform: translateX(4px);
-        }
+        .note-card { transition: all 0.2s ease; }
+        .note-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+        .checklist-item { transition: all 0.15s ease; }
+        .checklist-item:hover { transform: translateX(4px); }
       `}</style>
 
       {/* Hero Section */}
       <div style={{
         background: 'linear-gradient(135deg, var(--accent-soft) 0%, var(--surface-3) 100%)',
-        borderRadius: 16,
-        padding: '32px',
-        marginBottom: 24,
-        border: '1px solid var(--border)',
-        position: 'relative',
-        overflow: 'hidden',
+        borderRadius: 16, padding: '32px', marginBottom: 24,
+        border: '1px solid var(--border)', position: 'relative', overflow: 'hidden',
       }}>
         <div style={{
-          position: 'absolute',
-          top: -50,
-          right: -50,
-          width: 200,
-          height: 200,
+          position: 'absolute', top: -50, right: -50, width: 200, height: 200,
           background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)',
-          opacity: 0.1,
-          borderRadius: '50%',
+          opacity: 0.1, borderRadius: '50%',
         }} />
-        
+
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
               AI Planning Workspace
             </div>
-            <h1 style={{ 
-              marginBottom: 6, 
-              letterSpacing: '-0.5px',
+            <h1 style={{
+              marginBottom: 6, letterSpacing: '-0.5px',
               background: 'linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: 36,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: 36,
             }}>
               Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {firstName}
             </h1>
             <p className="text-muted" style={{ fontSize: 15, maxWidth: 500 }}>
               Turn brain dumps into actionable work. AI structures your tasks, suggests timing, and syncs to your calendar.
             </p>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
-              {todayStr}
-            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>{todayStr}</div>
           </div>
-          
+
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             {totalToday > 0 && (
               <div style={{ display: 'flex', gap: 16 }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--accent)' }}>{cards.length}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Tasks</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--accent)' }}>{totalToday}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Subtasks</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: '#22C55E' }}>{progressPercent}%</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Complete</div>
-                </div>
+                {[
+                  { value: cards.length, label: 'Tasks' },
+                  { value: totalToday, label: 'Subtasks' },
+                  { value: `${progressPercent}%`, label: 'Complete', color: '#22C55E' },
+                ].map(stat => (
+                  <div key={stat.label} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: stat.color || 'var(--accent)' }}>{stat.value}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{stat.label}</div>
+                  </div>
+                ))}
               </div>
             )}
             <button
               onClick={() => setShowSettings(true)}
               title="MyFlow Settings"
               style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 12,
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '12px',
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+                color: 'var(--text-muted)', cursor: 'pointer', padding: '12px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.2s',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
               }}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'scale(1.05)' }}
               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'scale(1)' }}
@@ -697,11 +655,7 @@ export default function MyFlow() {
       </div>
 
       {/* Command Box */}
-      <div className="card" style={{ 
-        marginBottom: 16, 
-        padding: '28px',
-        background: 'linear-gradient(135deg, var(--surface) 0%, var(--surface-3) 100%)',
-      }}>
+      <div className="card" style={{ marginBottom: 16, padding: '28px', background: 'linear-gradient(135deg, var(--surface) 0%, var(--surface-3) 100%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <span style={{ fontSize: 20 }}>✨</span>
           <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -715,16 +669,9 @@ export default function MyFlow() {
           placeholder="Describe what you want to accomplish — finish the landing page, call Becca about JCD, research YC timeline…"
           rows={3}
           style={{
-            width: '100%',
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            resize: 'none',
-            color: 'var(--text-primary)',
-            fontSize: 15,
-            fontFamily: 'Urbanist, sans-serif',
-            lineHeight: 1.8,
-            marginBottom: 20,
+            width: '100%', background: 'transparent', border: 'none', outline: 'none',
+            resize: 'none', color: 'var(--text-primary)', fontSize: 15,
+            fontFamily: 'Urbanist, sans-serif', lineHeight: 1.8, marginBottom: 20,
           }}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -732,19 +679,14 @@ export default function MyFlow() {
             <div
               onClick={() => setWithTime(t => !t)}
               style={{
-                width: 40, height: 22,
-                background: withTime ? 'var(--accent)' : 'var(--surface-2)',
-                borderRadius: 11, position: 'relative',
-                transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
+                width: 40, height: 22, background: withTime ? 'var(--accent)' : 'var(--surface-2)',
+                borderRadius: 11, position: 'relative', transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
               }}
             >
               <div style={{
-                position: 'absolute', top: 3,
-                left: withTime ? 21 : 3,
-                width: 16, height: 16,
-                background: '#fff', borderRadius: '50%',
-                transition: 'left 0.2s',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                position: 'absolute', top: 3, left: withTime ? 21 : 3,
+                width: 16, height: 16, background: '#fff', borderRadius: '50%',
+                transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
               }} />
             </div>
             <span>Suggest schedule</span>
@@ -755,11 +697,9 @@ export default function MyFlow() {
             onClick={structureTasks}
             disabled={loading || !input.trim()}
             className="btn btn-primary"
-            style={{ 
-              fontSize: 14, 
-              padding: '12px 28px', 
-              opacity: loading || !input.trim() ? 0.5 : 1,
-              fontWeight: 600,
+            style={{
+              fontSize: 14, padding: '12px 28px',
+              opacity: loading || !input.trim() ? 0.5 : 1, fontWeight: 600,
               background: loading ? undefined : 'linear-gradient(135deg, var(--accent) 0%, #7C3AED 100%)',
             }}
           >
@@ -773,43 +713,22 @@ export default function MyFlow() {
         )}
       </div>
 
-      {/* Add All to Calendar Button */}
+      {/* Add All to Calendar */}
       {cards.length > 0 && calendarConnected && (
         <div style={{ marginBottom: 16 }}>
           <button
             onClick={addAllToCalendar}
             disabled={syncingAll || allSynced}
             style={{
-              width: '100%',
-              padding: '14px 24px',
-              fontSize: 14,
-              fontWeight: 600,
-              background: allSynced 
-                ? '#fff' 
-                : '#fff',
-              color: allSynced ? '#065F46' : 'var(--text-primary)',
+              width: '100%', padding: '14px 24px', fontSize: 14, fontWeight: 600,
+              background: '#fff', color: allSynced ? '#065F46' : 'var(--text-primary)',
               border: allSynced ? '2px solid #22C55E' : '2px solid var(--border)',
-              borderRadius: 12,
-              cursor: allSynced ? 'default' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              transition: 'all 0.2s',
-              fontFamily: 'Urbanist, sans-serif',
+              borderRadius: 12, cursor: allSynced ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              transition: 'all 0.2s', fontFamily: 'Urbanist, sans-serif',
             }}
-            onMouseEnter={e => { 
-              if (!allSynced && !syncingAll) {
-                e.currentTarget.style.borderColor = 'var(--accent)';
-                e.currentTarget.style.transform = 'scale(1.01)';
-              }
-            }}
-            onMouseLeave={e => { 
-              if (!allSynced && !syncingAll) {
-                e.currentTarget.style.borderColor = 'var(--border)';
-                e.currentTarget.style.transform = 'scale(1)';
-              }
-            }}
+            onMouseEnter={e => { if (!allSynced && !syncingAll) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'scale(1.01)' } }}
+            onMouseLeave={e => { if (!allSynced && !syncingAll) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'scale(1)' } }}
           >
             <CalendarIcon />
             {syncingAll ? 'Syncing to Calendar…' : allSynced ? '✓ All Synced to Calendar' : `Add All to Google Calendar (${tasksWithTimes} tasks)`}
@@ -823,9 +742,8 @@ export default function MyFlow() {
         {/* Task Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cards.length === 0 ? (
-            <div className="card" style={{ 
-              textAlign: 'center', 
-              padding: '64px 24px', 
+            <div className="card" style={{
+              textAlign: 'center', padding: '64px 24px',
               border: '2px dashed var(--border)',
               background: 'linear-gradient(135deg, var(--surface) 0%, var(--surface-3) 100%)',
             }}>
@@ -835,21 +753,19 @@ export default function MyFlow() {
                 Describe what you want to accomplish in the command box above, and MyFlow will organize everything for you.
               </p>
             </div>
-          ) : cards.map((card, index) => {
+          ) : cards.map((card) => {
             const pColor = PRIORITY_COLORS[card.priority] || PRIORITY_COLORS.medium
             const allDone = card.checklist.length > 0 && card.checklist.every(t => t.done)
 
             return (
-              <div 
-                key={card.id} 
-                className="card task-card" 
+              <div
+                key={card.id}
+                className="card task-card"
                 style={{
                   border: allDone ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid rgba(139, 92, 246, 0.2)',
                   transition: 'all 0.2s',
                   background: allDone ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.03) 0%, var(--surface) 100%)' : 'var(--surface)',
-                  cursor: 'default',
-                  position: 'relative',
-                  overflow: 'hidden',
+                  position: 'relative', overflow: 'hidden',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)'; e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)' }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = allDone ? 'rgba(139, 92, 246, 0.3)' : 'rgba(139, 92, 246, 0.2)' }}
@@ -857,17 +773,15 @@ export default function MyFlow() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{
-                      fontSize: 16, fontWeight: 700,
+                      fontSize: 16, fontWeight: 700, marginBottom: 10, lineHeight: 1.3,
                       color: allDone ? 'var(--text-muted)' : 'var(--text-primary)',
                       textDecoration: allDone ? 'line-through' : 'none',
-                      marginBottom: 10, lineHeight: 1.3,
                     }}>
                       {card.title}
                     </div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                       <span style={{
-                        fontSize: 10, fontWeight: 700,
-                        padding: '4px 10px', borderRadius: 6,
+                        fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
                         background: pColor.background, color: pColor.color,
                         letterSpacing: '0.5px', textTransform: 'uppercase',
                         border: `1px solid ${pColor.border}`,
@@ -875,13 +789,9 @@ export default function MyFlow() {
                         {pColor.label}
                       </span>
                       {card.suggestedTime ? (
-                        <span style={{ 
-                          fontSize: 12, 
-                          color: 'var(--text-muted)', 
-                          fontWeight: 600,
-                          background: 'var(--surface-2)',
-                          padding: '4px 10px',
-                          borderRadius: 6,
+                        <span style={{
+                          fontSize: 12, color: 'var(--text-muted)', fontWeight: 600,
+                          background: 'var(--surface-2)', padding: '4px 10px', borderRadius: 6,
                         }}>
                           ⏱ {card.suggestedTime}
                         </span>
@@ -890,12 +800,10 @@ export default function MyFlow() {
                           onClick={() => suggestTime(card.id)}
                           style={{
                             fontSize: 11, color: 'var(--accent)',
-                            background: 'rgba(139, 92, 246, 0.1)', 
+                            background: 'rgba(139, 92, 246, 0.1)',
                             border: '1px solid rgba(139, 92, 246, 0.2)',
-                            borderRadius: 6, padding: '4px 10px',
-                            cursor: 'pointer', fontFamily: 'Urbanist, sans-serif',
-                            fontWeight: 600,
-                            transition: 'all 0.2s',
+                            borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                            fontFamily: 'Urbanist, sans-serif', fontWeight: 600, transition: 'all 0.2s',
                           }}
                           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)' }}
                           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)' }}
@@ -907,17 +815,10 @@ export default function MyFlow() {
                   </div>
                   <button
                     onClick={() => deleteCard(card.id)}
-                    style={{ 
-                      background: 'var(--surface-2)', 
-                      border: '1px solid var(--border)', 
-                      color: 'var(--text-muted)', 
-                      cursor: 'pointer', 
-                      fontSize: 16, 
-                      padding: '6px 10px', 
-                      lineHeight: 1, 
-                      borderRadius: 8,
-                      flexShrink: 0,
-                      transition: 'all 0.2s',
+                    style={{
+                      background: 'var(--surface-2)', border: '1px solid var(--border)',
+                      color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16,
+                      padding: '6px 10px', lineHeight: 1, borderRadius: 8, flexShrink: 0, transition: 'all 0.2s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.borderColor = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.1)' }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface-2)' }}
@@ -937,8 +838,7 @@ export default function MyFlow() {
                             border: item.done ? 'none' : '2px solid var(--border)',
                             background: item.done ? 'linear-gradient(135deg, var(--accent) 0%, #7C3AED 100%)' : 'transparent',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            cursor: 'pointer',
+                            transition: 'all 0.2s', cursor: 'pointer',
                           }}
                           onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = 'var(--accent)' }}
                           onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = 'var(--border)' }}
@@ -950,11 +850,9 @@ export default function MyFlow() {
                           )}
                         </div>
                         <span style={{
-                          fontSize: 13,
+                          fontSize: 13, lineHeight: 1.4, fontWeight: 500,
                           color: item.done ? 'var(--text-muted)' : 'var(--text-primary)',
                           textDecoration: item.done ? 'line-through' : 'none',
-                          lineHeight: 1.4,
-                          fontWeight: 500,
                         }}>
                           {item.text}
                         </span>
@@ -965,18 +863,11 @@ export default function MyFlow() {
 
                 {card.addedToCalendar && (
                   <div style={{
-                    padding: '8px 12px',
-                    background: 'rgba(6,78,59,0.2)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    color: '#86EFAC',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
+                    padding: '8px 12px', background: 'rgba(6,78,59,0.2)', borderRadius: 8,
+                    fontSize: 12, color: '#86EFAC', fontWeight: 600,
+                    display: 'flex', alignItems: 'center', gap: 8,
                   }}>
-                    <span>✓</span>
-                    Synced to Google Calendar
+                    <span>✓</span> Synced to Google Calendar
                   </div>
                 )}
               </div>
@@ -987,27 +878,15 @@ export default function MyFlow() {
         {/* Right Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Flow With Me - Note Cards Stack */}
-          <div className="card" style={{
-            background: 'linear-gradient(135deg, var(--surface) 0%, var(--surface-3) 100%)',
-            padding: '20px',
-          }}>
-            <div style={{ 
-              fontSize: 11, 
-              fontWeight: 700, 
-              color: 'var(--accent)', 
-              letterSpacing: 2, 
-              textTransform: 'uppercase', 
-              marginBottom: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
+          {/* Flow With Me */}
+          <div className="card" style={{ background: 'linear-gradient(135deg, var(--surface) 0%, var(--surface-3) 100%)', padding: '20px' }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: 2,
+              textTransform: 'uppercase', marginBottom: 16,
+              display: 'flex', alignItems: 'center', gap: 8,
             }}>
-              <span>💭</span>
-              Flow with Me
+              <span>💭</span> Flow with Me
             </div>
-
-            {/* Add new note */}
             <div style={{ marginBottom: 16 }}>
               <textarea
                 value={newNote}
@@ -1015,81 +894,49 @@ export default function MyFlow() {
                 placeholder="Quick thought or idea…"
                 rows={2}
                 style={{
-                  width: '100%',
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 10,
-                  padding: '12px',
-                  color: 'var(--text-primary)',
-                  fontSize: 13,
-                  fontFamily: 'Urbanist, sans-serif',
-                  lineHeight: 1.6,
-                  resize: 'none',
-                  outline: 'none',
-                  marginBottom: 8,
+                  width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)',
+                  borderRadius: 10, padding: '12px', color: 'var(--text-primary)',
+                  fontSize: 13, fontFamily: 'Urbanist, sans-serif', lineHeight: 1.6,
+                  resize: 'none', outline: 'none', marginBottom: 8,
                 }}
               />
               <button
                 onClick={addNote}
                 disabled={!newNote.trim()}
                 className="btn btn-primary"
-                style={{
-                  width: '100%',
-                  fontSize: 13,
-                  padding: '8px',
-                  fontWeight: 600,
-                  opacity: !newNote.trim() ? 0.5 : 1,
-                }}
+                style={{ width: '100%', fontSize: 13, padding: '8px', fontWeight: 600, opacity: !newNote.trim() ? 0.5 : 1 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <PlusIcon />
-                  Add Note
+                  <PlusIcon /> Add Note
                 </span>
               </button>
             </div>
-
-            {/* Note cards stack */}
-            <NoteCardStack 
-              notes={notes} 
-              onUpdate={updateNote}
-              onDelete={deleteNote}
-            />
+            <NoteCardStack notes={notes} onUpdate={updateNote} onDelete={deleteNote} />
           </div>
 
           {/* Progress Card */}
           {totalToday > 0 && (
             <div className="card" style={{
-              background: progressPercent === 100 
-                ? '#fff' 
-                : '#fff',
               border: progressPercent === 100 ? '2px solid #22C55E' : '1px solid var(--border)',
               padding: '20px',
             }}>
-              <div style={{ 
-                fontSize: 11, 
-                color: progressPercent === 100 ? '#065F46' : 'var(--text-muted)', 
-                letterSpacing: 2, 
-                textTransform: 'uppercase', 
-                marginBottom: 16, 
-                fontWeight: 600 
+              <div style={{
+                fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16, fontWeight: 600,
+                color: progressPercent === 100 ? '#065F46' : 'var(--text-muted)',
               }}>
                 {progressPercent === 100 ? '🎉 Complete!' : "Today's Momentum"}
               </div>
-              <div style={{ fontSize: 42, fontWeight: 900, color: progressPercent === 100 ? '#22C55E' : 'var(--text-primary)', marginBottom: 8 }}>
+              <div style={{ fontSize: 42, fontWeight: 900, marginBottom: 8, color: progressPercent === 100 ? '#22C55E' : 'var(--text-primary)' }}>
                 {progressPercent}%
               </div>
-              <div style={{ fontSize: 13, color: progressPercent === 100 ? '#065F46' : 'var(--text-muted)', marginBottom: 12 }}>
+              <div style={{ fontSize: 13, marginBottom: 12, color: progressPercent === 100 ? '#065F46' : 'var(--text-muted)' }}>
                 {completedToday} of {totalToday} subtasks completed
               </div>
               <div style={{ height: 6, background: 'var(--surface-2)', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{
-                  height: '100%',
-                  width: `${progressPercent}%`,
-                  background: progressPercent === 100 
-                    ? '#22C55E' 
-                    : 'var(--accent)',
-                  borderRadius: 3,
-                  transition: 'width 0.6s ease',
+                  height: '100%', width: `${progressPercent}%`,
+                  background: progressPercent === 100 ? '#22C55E' : 'var(--accent)',
+                  borderRadius: 3, transition: 'width 0.6s ease',
                 }} />
               </div>
               {progressPercent < 100 && (
@@ -1104,28 +951,14 @@ export default function MyFlow() {
           <div
             onClick={() => setShowSettings(true)}
             className="card"
-            style={{ 
-              cursor: 'pointer', 
-              padding: '16px 20px',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-            }}
+            style={{ cursor: 'pointer', padding: '16px 20px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 12 }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)' }}
           >
             <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              background: calendarConnected 
-                ? '#22C55E' 
-                : 'var(--surface-2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
+              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              background: calendarConnected ? '#22C55E' : 'var(--surface-2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <CalendarIcon />
             </div>
@@ -1142,7 +975,6 @@ export default function MyFlow() {
         </div>
       </div>
 
-      {/* Settings Panel */}
       {showSettings && (
         <SettingsPanel
           onClose={() => setShowSettings(false)}
@@ -1154,633 +986,3 @@ export default function MyFlow() {
     </div>
   )
 }
-
-
-
-
-// import { useState, useRef, useEffect } from 'react'
-// import { useAuth } from '../context/AuthContext'
-
-// const PRIORITY_COLORS = {
-//   high:   { background: 'var(--surface-2)', color: '#F87171' },
-//   medium: { background: 'var(--surface-2)', color: 'var(--accent)' },
-//   low:    { background: 'var(--surface-2)', color: '#86EFAC' },
-// }
-
-// const GearIcon = () => (
-//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-//     <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-//   </svg>
-// )
-
-// const CloseIcon = () => (
-//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-//     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-//   </svg>
-// )
-
-// function SettingsPanel({ onClose, user, calendarConnected, setCalendarConnected }) {
-//   const [time, setTime] = useState(() => localStorage.getItem('flow-reminder-time') || '08:00')
-//   const [saved, setSaved] = useState(false)
-//   const [loading, setLoading] = useState(false)
-
-//   async function saveReminder() {
-//     setLoading(true)
-//     try {
-//       await fetch('http://localhost:8000/api/notifications/schedule', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ email: user?.email, time }),
-//       })
-//     } catch {}
-//     localStorage.setItem('flow-reminder-time', time)
-//     setSaved(true)
-//     setLoading(false)
-//     setTimeout(() => setSaved(false), 3000)
-//   }
-
-//   function connectCalendar() {
-//     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-//     if (!clientId) {
-//       alert('Set VITE_GOOGLE_CLIENT_ID in your .env to enable Google Calendar.')
-//       return
-//     }
-//     const scope = encodeURIComponent('https://www.googleapis.com/auth/calendar.events')
-//     const redirect = encodeURIComponent(window.location.origin)
-//     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirect}&response_type=token&scope=${scope}`
-//     const popup = window.open(url, 'gcal-auth', 'width=500,height=600')
-//     const timer = setInterval(() => {
-//       try {
-//         const hash = popup.location.hash
-//         if (hash && hash.includes('access_token')) {
-//           const params = new URLSearchParams(hash.slice(1))
-//           const token = params.get('access_token')
-//           localStorage.setItem('gcal-token', token)
-//           setCalendarConnected(true)
-//           popup.close()
-//           clearInterval(timer)
-//         }
-//       } catch {}
-//       if (popup.closed) clearInterval(timer)
-//     }, 500)
-//   }
-
-//   function disconnectCalendar() {
-//     localStorage.removeItem('gcal-token')
-//     setCalendarConnected(false)
-//   }
-
-//   return (
-//     <>
-//       {/* Backdrop */}
-//       <div
-//         onClick={onClose}
-//         style={{
-//           position: 'fixed', inset: 0,
-//           background: 'rgba(0,0,0,0.5)',
-//           zIndex: 200,
-//         }}
-//       />
-
-//       {/* Panel */}
-//       <div style={{
-//         position: 'fixed',
-//         top: 0, right: 0, bottom: 0,
-//         width: 360,
-//         background: 'var(--surface)',
-//         borderLeft: '1px solid var(--border)',
-//         zIndex: 201,
-//         padding: '28px 24px',
-//         display: 'flex',
-//         flexDirection: 'column',
-//         gap: 24,
-//         overflowY: 'auto',
-//         fontFamily: 'Urbanist, sans-serif',
-//       }}>
-//         {/* Header */}
-//         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-//           <div>
-//             <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
-//               MyFlow
-//             </div>
-//             <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.3px' }}>
-//               Settings
-//             </h2>
-//           </div>
-//           <button
-//             onClick={onClose}
-//             style={{
-//               background: 'none', border: 'none',
-//               color: 'var(--text-muted)', cursor: 'pointer',
-//               padding: 6, borderRadius: 8,
-//               display: 'flex', alignItems: 'center',
-//             }}
-//             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-//             onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-//           >
-//             <CloseIcon />
-//           </button>
-//         </div>
-
-//         {/* Google Calendar */}
-//         <div className="card" style={{ gap: 0 }}>
-//           <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-//             Google Calendar
-//           </div>
-//           {calendarConnected ? (
-//             <div>
-//               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-//                 <div style={{ width: 8, height: 8, background: '#22C55E', borderRadius: '50%' }} />
-//                 <span style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600 }}>Connected</span>
-//               </div>
-//               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
-//                 Task cards will sync to your primary Google Calendar when you click "Add to Calendar".
-//               </p>
-//               <button
-//                 onClick={disconnectCalendar}
-//                 className="btn"
-//                 style={{ fontSize: 13, padding: '8px 16px', background: 'var(--surface-2)', color: 'var(--text-muted)' }}
-//               >
-//                 Disconnect
-//               </button>
-//             </div>
-//           ) : (
-//             <div>
-//               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
-//                 Connect your Google Calendar to add scheduled tasks directly from MyFlow.
-//               </p>
-//               <button
-//                 onClick={connectCalendar}
-//                 className="btn btn-primary"
-//                 style={{ fontSize: 13, padding: '8px 16px', width: '100%' }}
-//               >
-//                 Connect Google Calendar
-//               </button>
-//             </div>
-//           )}
-//         </div>
-
-//         {/* Daily reminder */}
-//         <div className="card" style={{ gap: 0 }}>
-//           <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-//             Daily reminder
-//           </div>
-//           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
-//             Get an email at <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{user?.email}</span> to start your planning session.
-//           </p>
-//           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-//             <input
-//               type="time"
-//               value={time}
-//               onChange={e => setTime(e.target.value)}
-//               style={{
-//                 background: 'var(--surface-2)',
-//                 border: '1px solid var(--border)',
-//                 borderRadius: 10,
-//                 padding: '10px 14px',
-//                 color: 'var(--text-primary)',
-//                 fontSize: 16,
-//                 fontWeight: 700,
-//                 fontFamily: 'Urbanist, sans-serif',
-//                 outline: 'none',
-//                 colorScheme: 'dark',
-//                 flex: 1,
-//               }}
-//             />
-//             <button
-//               onClick={saveReminder}
-//               disabled={loading}
-//               className="btn btn-primary"
-//               style={{
-//                 fontSize: 13,
-//                 padding: '10px 20px',
-//                 background: saved ? '#064E3B' : undefined,
-//                 color: saved ? '#86EFAC' : undefined,
-//                 border: saved ? 'none' : undefined,
-//                 flexShrink: 0,
-//               }}
-//             >
-//               {saved ? '✓ Saved' : loading ? 'Saving…' : 'Save'}
-//             </button>
-//           </div>
-//         </div>
-
-//         {/* Account */}
-//         <div className="card" style={{ gap: 0 }}>
-//           <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-//             Account
-//           </div>
-//           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-//             {[
-//               { label: 'Email', value: user?.email },
-//               { label: 'User ID', value: user?.id?.slice(0, 16) + '…' },
-//             ].map(({ label, value }) => (
-//               <div key={label} style={{ display: 'flex', justifyContent: 'space-between' }}>
-//                 <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{label}</span>
-//                 <span style={{ fontSize: 13, color: 'var(--text-primary)', fontFamily: 'monospace' }}>{value}</span>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-//     </>
-//   )
-// }
-
-// export default function MyFlow() {
-//   const { user } = useAuth()
-//   const [input, setInput] = useState('')
-//   const [withTime, setWithTime] = useState(false)
-//   const [cards, setCards] = useState(() => {
-//     try { return JSON.parse(localStorage.getItem('myflow-cards') || '[]') } catch { return [] }
-//   })
-//   const [notes, setNotes] = useState(() => localStorage.getItem('myflow-notes') || '')
-//   const [loading, setLoading] = useState(false)
-//   const [error, setError] = useState(null)
-//   const [calendarConnected, setCalendarConnected] = useState(() => !!localStorage.getItem('gcal-token'))
-//   const [showSettings, setShowSettings] = useState(false)
-
-//   useEffect(() => { localStorage.setItem('myflow-cards', JSON.stringify(cards)) }, [cards])
-//   useEffect(() => { localStorage.setItem('myflow-notes', notes) }, [notes])
-
-//   async function structureTasks() {
-//   if (!input.trim()) return
-//   setLoading(true)
-//   setError(null)
-//   try {
-//     const res = await fetch('/api/myflow/structure', {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({ input, with_time: withTime }),
-//     })
-//     const data = await res.json()
-//     if (data.error || !data.tasks?.length) {
-//       setError('Could not parse tasks. Try rephrasing.')
-//       return
-//     }
-//     const newCards = data.tasks.map((c, i) => ({
-//       ...c,
-//       id: Date.now() + i,
-//       checklist: (c.subtasks || []).map(s => ({ text: s, done: false })),
-//       addedToCalendar: false,
-//     }))
-//     setCards(prev => [...newCards, ...prev])
-//     setInput('')
-//   } catch {
-//     setError('Could not reach server. Is your backend running?')
-//   } finally {
-//     setLoading(false)
-//   }
-// }
-
-//   function toggleSubtask(cardId, idx) {
-//     setCards(prev => prev.map(c => c.id !== cardId ? c : {
-//       ...c,
-//       checklist: c.checklist.map((item, i) => i === idx ? { ...item, done: !item.done } : item),
-//     }))
-//   }
-
-//   function deleteCard(cardId) {
-//     setCards(prev => prev.filter(c => c.id !== cardId))
-//   }
-
-//   function suggestTime(cardId) {
-//     setCards(prev => prev.map((c, idx) => {
-//       if (c.id !== cardId) return c
-//       const start = 9 + idx
-//       // FIX: Clean, native syntax without the accidental '@' decorator prefix
-//       return { ...c, suggestedTime: `${String(start).padStart(2,'0')}:00 – ${String(start+1).padStart(2,'0')}:00` }
-//     }))
-//   }
-
-//   async function addToCalendar(card) {
-//     const token = localStorage.getItem('gcal-token')
-//     if (!token) { setShowSettings(true); return }
-
-//     const today = new Date()
-//     const [startStr, endStr] = (card.suggestedTime || '09:00 – 10:00').split('–').map(s => s.trim())
-//     const [sh, sm] = startStr.split(':').map(Number)
-//     const [eh, em] = endStr.split(':').map(Number)
-//     const start = new Date(today); start.setHours(sh, sm, 0, 0)
-//     const end = new Date(today); end.setHours(eh, em, 0, 0)
-
-//     try {
-//       await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-//         method: 'POST',
-//         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           summary: card.title,
-//           description: card.checklist.map(c => `• ${c.text}`).join('\n'),
-//           start: { dateTime: start.toISOString(), timeZone: 'Africa/Lagos' },
-//           end: { dateTime: end.toISOString(), timeZone: 'Africa/Lagos' },
-//         }),
-//       })
-//       setCards(prev => prev.map(c => c.id === card.id ? { ...c, addedToCalendar: true } : c))
-//     } catch {
-//       alert('Calendar error. Try reconnecting in settings.')
-//     }
-//   }
-
-//   const todayStr = new Date().toLocaleDateString('en-NG', { weekday: 'long', month: 'long', day: 'numeric' })
-//   const completedToday = cards.reduce((acc, c) => acc + c.checklist.filter(t => t.done).length, 0)
-//   const totalToday = cards.reduce((acc, c) => acc + c.checklist.length, 0)
-
-//   return (
-//     <div className="page" style={{ fontFamily: 'Urbanist, sans-serif' }}>
-
-//       {/* Header */}
-//       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
-//         <div>
-//           <h1 style={{ marginBottom: 4, letterSpacing: '-0.5px' }}>MyFlow</h1>
-//           <p className="text-muted" style={{ fontSize: 15 }}>{todayStr}</p>
-//         </div>
-//         <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
-//           {totalToday > 0 && (
-//             <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>
-//               {completedToday}/{totalToday} done
-//             </span>
-//           )}
-//           <button
-//             onClick={() => setShowSettings(true)}
-//             title="MyFlow Settings"
-//             style={{
-//               background: 'var(--surface)',
-//               border: '1px solid var(--border)',
-//               borderRadius: 10,
-//               color: 'var(--text-muted)',
-//               cursor: 'pointer',
-//               padding: '8px 10px',
-//               display: 'flex', alignItems: 'center', justifyContent: 'center',
-//               transition: 'all 0.18s',
-//             }}
-//             onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
-//             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-//           >
-//             <GearIcon />
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* Command bar */}
-//       <div className="card" style={{ marginBottom: 16 }}>
-//         <textarea
-//           value={input}
-//           onChange={e => setInput(e.target.value)}
-//           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) structureTasks() }}
-//           placeholder="Write your tasks in plain English — finish the fiti behavioral engine, call becca about jcd, research yc timeline…"
-//           rows={3}
-//           style={{
-//             width: '100%',
-//             background: 'transparent',
-//             border: 'none',
-//             outline: 'none',
-//             resize: 'none',
-//             color: 'var(--text-primary)',
-//             fontSize: 15,
-//             fontFamily: 'Urbanist, sans-serif',
-//             lineHeight: 1.6,
-//             marginBottom: 14,
-//           }}
-//         />
-//         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-//           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>
-//             <div
-//               onClick={() => setWithTime(t => !t)}
-//               style={{
-//                 width: 36, height: 20,
-//                 background: withTime ? 'var(--accent)' : 'var(--surface-2)',
-//                 borderRadius: 10, position: 'relative',
-//                 transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
-//               }}
-//             >
-//               <div style={{
-//                 position: 'absolute', top: 3,
-//                 left: withTime ? 19 : 3,
-//                 width: 14, height: 14,
-//                 background: '#fff', borderRadius: '50%',
-//                 transition: 'left 0.2s',
-//               }} />
-//             </div>
-//             Suggest timing
-//           </label>
-//           <div style={{ flex: 1 }} />
-//           <span style={{ fontSize: 12, color: 'var(--text-muted)', opacity: 0.5 }}>⌘↵</span>
-//           <button
-//             onClick={structureTasks}
-//             disabled={loading || !input.trim()}
-//             className="btn btn-primary"
-//             style={{ fontSize: 13, padding: '9px 20px', opacity: loading || !input.trim() ? 0.5 : 1 }}
-//           >
-//             {loading ? 'Structuring…' : 'Structure →'}
-//           </button>
-//         </div>
-//         {error && <div style={{ marginTop: 10, fontSize: 12, color: '#F87171' }}>{error}</div>}
-//       </div>
-
-//       {/* Bento grid */}
-//       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, alignItems: 'start' }}>
-
-//         {/* Task cards */}
-//         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-//           {cards.length === 0 ? (
-//             <div className="card" style={{ textAlign: 'center', padding: '48px 24px', border: '1px dashed var(--border)' }}>
-//               <p className="text-muted" style={{ fontSize: 14 }}>Your structured tasks will appear here</p>
-//             </div>
-//           ) : cards.map(card => {
-//             const pColor = PRIORITY_COLORS[card.priority] || PRIORITY_COLORS.medium
-//             const allDone = card.checklist.length > 0 && card.checklist.every(t => t.done)
-
-//             return (
-//               <div key={card.id} className="card" style={{
-//                 border: allDone ? '1px solid #064E3B' : '1px solid var(--border)',
-//                 transition: 'border-color 0.2s',
-//               }}>
-//                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
-//                   <div style={{ flex: 1 }}>
-//                     <div style={{
-//                       fontSize: 15, fontWeight: 700,
-//                       color: allDone ? 'var(--text-muted)' : 'var(--text-primary)',
-//                       textDecoration: allDone ? 'line-through' : 'none',
-//                       marginBottom: 6, lineHeight: 1.3,
-//                     }}>
-//                       {card.title}
-//                     </div>
-//                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-//                       <span style={{
-//                         fontSize: 11, fontWeight: 600,
-//                         padding: '2px 8px', borderRadius: 6,
-//                         background: pColor.background, color: pColor.color,
-//                         letterSpacing: '0.5px', textTransform: 'uppercase',
-//                       }}>
-//                         {card.priority}
-//                       </span>
-//                       {card.suggestedTime ? (
-//                         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>⏱ {card.suggestedTime}</span>
-//                       ) : (
-//                         <button
-//                           onClick={() => suggestTime(card.id)}
-//                           style={{
-//                             fontSize: 11, color: 'var(--text-muted)',
-//                             background: 'none', border: '1px solid var(--border)',
-//                             borderRadius: 6, padding: '2px 8px',
-//                             cursor: 'pointer', fontFamily: 'Urbanist, sans-serif',
-//                           }}
-//                         >
-//                           + suggest time
-//                         </button>
-//                       )}
-//                     </div>
-//                   </div>
-//                   <button
-//                     onClick={() => deleteCard(card.id)}
-//                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1, flexShrink: 0 }}
-//                     onMouseEnter={e => e.currentTarget.style.color = '#F87171'}
-//                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-//                   >×</button>
-//                 </div>
-
-//                 {card.checklist.length > 0 && (
-//                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-//                     {card.checklist.map((item, idx) => (
-//                       <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-//                         <div
-//                           onClick={() => toggleSubtask(card.id, idx)}
-//                           style={{
-//                             width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-//                             border: item.done ? 'none' : '1px solid var(--border)',
-//                             background: item.done ? 'var(--accent)' : 'transparent',
-//                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-//                             transition: 'all 0.15s',
-//                           }}
-//                         >
-//                           {item.done && (
-//                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-//                               <polyline points="20 6 9 17 4 12"/>
-//                             </svg>
-//                           )}
-//                         </div>
-//                         <span style={{
-//                           fontSize: 13,
-//                           color: item.done ? 'var(--text-muted)' : 'var(--text-primary)',
-//                           textDecoration: item.done ? 'line-through' : 'none',
-//                           lineHeight: 1.4,
-//                         }}>
-//                           {item.text}
-//                         </span>
-//                       </label>
-//                     ))}
-//                   </div>
-//                 )}
-
-//                 <button
-//                   onClick={() => addToCalendar(card)}
-//                   disabled={card.addedToCalendar}
-//                   className="btn"
-//                   style={{
-//                     width: '100%', fontSize: 12, padding: '8px',
-//                     color: card.addedToCalendar ? '#86EFAC' : 'var(--text-muted)',
-//                     background: card.addedToCalendar ? 'rgba(6,78,59,0.3)' : 'var(--surface-2)',
-//                     border: card.addedToCalendar ? '1px solid #064E3B' : '1px solid var(--border)',
-//                     cursor: card.addedToCalendar ? 'default' : 'pointer',
-//                   }}
-//                   onMouseEnter={e => { if (!card.addedToCalendar) e.currentTarget.style.borderColor = 'var(--accent)' }}
-//                   onMouseLeave={e => { if (!card.addedToCalendar) e.currentTarget.style.borderColor = 'var(--border)' }}
-//                 >
-//                   {card.addedToCalendar
-//                     ? '✓ Added to Calendar'
-//                     : calendarConnected
-//                       ? '+ Add to Google Calendar'
-//                       : '+ Connect Calendar in Settings'}
-//                 </button>
-//               </div>
-//             )
-//           })}
-//         </div>
-
-//         {/* Right column */}
-//         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-//           {/* Flow With Me */}
-//           <div className="card" style={{
-//             background: 'var(--surface)',
-//             borderLeft: '3px solid var(--accent)',
-//           }}>
-//             <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-//               Flow with me
-//             </div>
-//             <textarea
-//               value={notes}
-//               onChange={e => setNotes(e.target.value)}
-//               placeholder="ideas, fragments, things you don't want to lose…"
-//               rows={8}
-//               style={{
-//                 width: '100%',
-//                 background: 'transparent',
-//                 border: 'none', outline: 'none', resize: 'none',
-//                 color: 'var(--text-primary)',
-//                 fontSize: 14,
-//                 fontFamily: 'Urbanist, sans-serif',
-//                 lineHeight: 1.7,
-//               }}
-//             />
-//             <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', marginTop: 4 }}>
-//               autosaved
-//             </div>
-//           </div>
-
-//           {/* Progress */}
-//           {totalToday > 0 && (
-//             <div className="card">
-//               <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14 }}>
-//                 Today's progress
-//               </div>
-//               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-//                 <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{completedToday} of {totalToday} subtasks</span>
-//                 <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>
-//                   {Math.round((completedToday / totalToday) * 100)}%
-//                 </span>
-//               </div>
-//               <div style={{ height: 4, background: 'var(--surface-2)', borderRadius: 2 }}>
-//                 <div style={{
-//                   height: '100%',
-//                   width: `${(completedToday / totalToday) * 100}%`,
-//                   background: 'var(--accent)',
-//                   borderRadius: 2,
-//                   transition: 'width 0.3s ease',
-//                 }} />
-//               </div>
-//             </div>
-//           )}
-
-//           {/* Calendar status pill */}
-//           <div
-//             onClick={() => setShowSettings(true)}
-//             className="card"
-//             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
-//           >
-//             <div style={{
-//               width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-//               background: calendarConnected ? '#22C55E' : 'var(--text-muted)',
-//             }} />
-//             <span style={{ fontSize: 13, color: 'var(--text-muted)', flex: 1 }}>
-//               {calendarConnected ? 'Calendar connected' : 'Calendar not connected'}
-//             </span>
-//             <span style={{ fontSize: 12, color: 'var(--accent)' }}>
-//               {calendarConnected ? 'manage →' : 'connect →'}
-//             </span>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Settings panel */}
-//       {showSettings && (
-//         <SettingsPanel
-//           onClose={() => setShowSettings(false)}
-//           user={user}
-//           calendarConnected={calendarConnected}
-//           setCalendarConnected={setCalendarConnected}
-//         />
-//       )}
-//     </div>
-//   )
-// }

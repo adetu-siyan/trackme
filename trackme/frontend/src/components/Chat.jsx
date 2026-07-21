@@ -20,6 +20,9 @@ export default function Chat() {
   const [evaluation, setEvaluation] = useState(null)
   const [mentorEmail, setMentorEmail] = useState('')
   const [sentMentorEmail, setSentMentorEmail] = useState('')
+  const [recentEmails, setRecentEmails] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('trackme-recent-emails') || '[]') } catch { return [] }
+  })
   const [loading, setLoading] = useState(false)
 
   // Project + task linking
@@ -47,7 +50,7 @@ export default function Chat() {
       })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [user?.id]) // re-scoped per user
+  }, [user?.id])
 
   // When project is selected, load this week's tasks for that project context
   useEffect(() => {
@@ -81,7 +84,6 @@ export default function Chat() {
     setMatchingTasks(true)
 
     try {
-      // Send log topics and task titles to backend for matching
       const res = await logsApi.matchTasks({
         log_id: logData.log_id,
         task_ids: weeklyTasks.filter(t => !t.completed).map(t => t.id),
@@ -96,7 +98,7 @@ export default function Chat() {
       })
 
       setSuggestedTasks(res.matched_task_ids || [])
-      setConfirmedTasks(res.matched_task_ids || []) // pre-select all suggestions
+      setConfirmedTasks(res.matched_task_ids || [])
     } catch (e) {
       console.error('Task matching failed', e)
     } finally {
@@ -180,14 +182,12 @@ export default function Chat() {
     if (!mentorEmail.trim()) { toast.error("Enter your mentor's email"); return }
     setLoading(true)
     try {
-      // Send log to mentor with optional project tag
       await logsApi.sendToMentor({
         log_id: logData.log_id,
         mentor_email: mentorEmail,
         project_id: selectedProject || null,
       })
 
-      // If tasks were confirmed, mark them complete
       if (confirmedTasks.length > 0) {
         setCompletingTasks(true)
         await Promise.allSettled(
@@ -197,7 +197,11 @@ export default function Chat() {
         )
         setCompletingTasks(false)
       }
-
+      setRecentEmails(prev => {
+        const updated = [mentorEmail, ...prev.filter(e => e !== mentorEmail)].slice(0, 3)
+        localStorage.setItem('trackme-recent-emails', JSON.stringify(updated))
+        return updated
+      })
       setSentMentorEmail(mentorEmail)
       setStage('done')
       toast.success('Sent to mentor!')
@@ -395,6 +399,16 @@ export default function Chat() {
                 ✏️ Edit Log
               </button>
             )}
+            {!editMode && (
+              <button
+                className="btn btn-ghost"
+                onClick={() => setStage('answered')}
+                disabled={loading}
+                style={{ color: 'var(--text-muted)', fontSize: 13 }}
+              >
+                Skip test →
+              </button>
+            )}
             <button
               className="btn btn-primary"
               onClick={handleGenerateQuestion}
@@ -467,37 +481,52 @@ export default function Chat() {
       )}
 
       {/* ── STAGE: ANSWERED ────────────────────────────────── */}
-      {stage === 'answered' && evaluation && (
+      {stage === 'answered' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Score card */}
-          <div className="card" style={{
-            textAlign: 'center', padding: '32px 24px',
-            background: evaluation.passed
-              ? 'linear-gradient(135deg, #064E3B 0%, #059669 100%)'
-              : 'linear-gradient(135deg, #450A0A 0%, #DC2626 100%)',
-            border: 'none', color: '#fff',
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>
-              {evaluation.passed ? '🎉' : '💪'}
+          {/* Score card — only if they took the test */}
+          {evaluation && (
+            <div className="card" style={{
+              textAlign: 'center', padding: '32px 24px',
+              background: evaluation.passed
+                ? 'linear-gradient(135deg, #064E3B 0%, #059669 100%)'
+                : 'linear-gradient(135deg, #450A0A 0%, #DC2626 100%)',
+              border: 'none', color: '#fff',
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>
+                {evaluation.passed ? '🎉' : '💪'}
+              </div>
+              <h2 style={{ marginBottom: 8 }}>
+                {evaluation.passed ? 'Well done!' : 'Keep pushing!'}
+              </h2>
+              <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 12 }}>
+                {evaluation.score}
+                <span style={{ fontSize: 18, fontWeight: 600, opacity: 0.8 }}>/100</span>
+              </div>
+              <p style={{ opacity: 0.9, lineHeight: 1.6, maxWidth: 400, margin: '0 auto' }}>
+                {evaluation.feedback}
+              </p>
             </div>
-            <h2 style={{ marginBottom: 8 }}>
-              {evaluation.passed ? 'Well done!' : 'Keep pushing!'}
-            </h2>
-            <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 12 }}>
-              {evaluation.score}
-              <span style={{ fontSize: 18, fontWeight: 600, opacity: 0.8 }}>/100</span>
+          )}
+
+          {/* Skip notice — only if they skipped the test */}
+          {!evaluation && (
+            <div className="card" style={{
+              textAlign: 'center', padding: '24px',
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>
+                Test skipped. Your log is ready to send to your mentor.
+              </p>
             </div>
-            <p style={{ opacity: 0.9, lineHeight: 1.6, maxWidth: 400, margin: '0 auto' }}>
-              {evaluation.feedback}
-            </p>
-          </div>
+          )}
 
           {/* Send to mentor card */}
           <div className="card" style={{ padding: '24px' }}>
             <h3 style={{ marginBottom: 16 }}>Send to Mentor</h3>
 
-            {/* Email + send button */}
+            {/* Email input + send button */}
             <div
               className="chat-send-row"
               style={{ display: 'flex', gap: 10, marginBottom: 14 }}
@@ -521,6 +550,35 @@ export default function Chat() {
                   : 'Send →'}
               </button>
             </div>
+
+            {/* Recent mentor emails */}
+            {recentEmails.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6 }}>
+                  Recent mentors
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {recentEmails.map(email => (
+                    <button
+                      key={email}
+                      onClick={() => setMentorEmail(email)}
+                      style={{
+                        background: mentorEmail === email ? 'var(--accent-soft)' : 'var(--surface-2)',
+                        border: `1px solid ${mentorEmail === email ? 'var(--accent)' : 'var(--border)'}`,
+                        borderRadius: 8, padding: '8px 12px', cursor: 'pointer',
+                        fontFamily: 'Urbanist, sans-serif', fontSize: 13,
+                        color: mentorEmail === email ? 'var(--accent)' : 'var(--text-secondary)',
+                        textAlign: 'left', transition: 'all 0.15s',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                      }}
+                    >
+                      <span style={{ fontSize: 14 }}>📧</span>
+                      {email}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Project selector */}
             {projects.length > 0 && (
@@ -557,25 +615,18 @@ export default function Chat() {
                   gap: 8, marginBottom: 12,
                 }}>
                   <span style={{ fontSize: 16 }}>🔗</span>
-                  <div style={{
-                    fontSize: 13, fontWeight: 700,
-                    color: 'var(--text-primary)',
-                  }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                     Link to Weekly Tasks
                   </div>
                   {matchingTasks && (
-                    <span style={{
-                      fontSize: 11, color: 'var(--accent)',
-                      fontWeight: 600, marginLeft: 4,
-                    }}>
+                    <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, marginLeft: 4 }}>
                       AI matching...
                     </span>
                   )}
                   {suggestedTasks.length > 0 && !matchingTasks && (
                     <span style={{
                       fontSize: 11, padding: '2px 8px', borderRadius: 20,
-                      background: 'var(--accent-soft)', color: 'var(--accent)',
-                      fontWeight: 600,
+                      background: 'var(--accent-soft)', color: 'var(--accent)', fontWeight: 600,
                     }}>
                       {suggestedTasks.length} suggested
                     </span>
@@ -606,7 +657,6 @@ export default function Chat() {
                           transition: 'all 0.18s',
                         }}
                       >
-                        {/* Custom checkbox */}
                         <div style={{
                           width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                           border: `2px solid ${isConfirmed ? 'var(--accent)' : 'var(--border-strong)'}`,
@@ -621,9 +671,8 @@ export default function Chat() {
 
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
-                            fontSize: 13, fontWeight: 600,
+                            fontSize: 13, fontWeight: 600, marginBottom: 2,
                             color: isConfirmed ? 'var(--accent)' : 'var(--text-primary)',
-                            marginBottom: 2,
                           }}>
                             {task.title}
                           </div>

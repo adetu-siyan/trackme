@@ -47,6 +47,7 @@ export const logsApi = {
   myLogs: () => request('GET', '/logs/my-logs'),
   streak: () => request('GET', '/logs/streak'),
   delete: (logId) => request('DELETE', `/logs/${logId}`),
+  matchTasks: (body) => request('POST', '/logs/match-tasks', body),
 }
 
 // ============================================================
@@ -65,24 +66,21 @@ export const projectsApi = {
   myProjects: () => request('GET', '/projects/my-projects'),
   myMentees: () => request('GET', '/projects/mentees'),
   getCompletion: (projectId) => request('GET', `/projects/${projectId}/completion`),
+  endProject: (projectId) => request('PATCH', `/projects/${projectId}/end`),
 }
 
 // ============================================================
 // WEEKLY FOCUS
 // ============================================================
 export const weeklyFocusApi = {
-  // Mentor creates focus for a mentee
   create: (body) => request('POST', '/projects/weekly-focus/create', body),
-  // Mentor views a mentee's current week
   getMenteeFocus: (menteeId) => request('GET', `/projects/weekly-focus/mentee/${menteeId}`),
-  // Mentee views their own tasks
   myTasks: () => request('GET', '/projects/weekly-focus/my-tasks'),
-  // Mentee toggles a task
   updateTask: (taskId, completed) => request('PATCH', `/projects/weekly-tasks/${taskId}`, { completed }),
-  // Get all past weeks
+  updateTaskContent: (taskId, body) => request('PATCH', `/projects/weekly-tasks/${taskId}/content`, body),
   history: () => request('GET', '/projects/weekly-focus/history'),
-  // Send weekly review email
   sendReview: (focusId) => request('POST', `/projects/weekly-focus/${focusId}/send-review`),
+  getReviewPreview: (focusId) => request('GET', `/projects/weekly-focus/${focusId}/review-preview`),
 }
 
 // ============================================================

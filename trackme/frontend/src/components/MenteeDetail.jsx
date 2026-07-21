@@ -29,7 +29,6 @@ export default function MenteeDetail({ mentee, onBack }) {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(null)
 
-  // Weekly focus state
   const [currentFocus, setCurrentFocus] = useState(null)
   const [focusTasks, setFocusTasks] = useState([])
   const [focusLoading, setFocusLoading] = useState(true)
@@ -37,8 +36,12 @@ export default function MenteeDetail({ mentee, onBack }) {
   const [focusInput, setFocusInput] = useState('')
   const [creatingFocus, setCreatingFocus] = useState(false)
   const [focusResult, setFocusResult] = useState(null)
+
+  // Review state — two step: preview then send
   const [sendingReview, setSendingReview] = useState(false)
   const [reviewSent, setReviewSent] = useState(false)
+  const [reviewPreview, setReviewPreview] = useState(null)
+  const [showReviewModal, setShowReviewModal] = useState(false)
 
   const profile = mentee.profile || {}
   const stats = mentee.stats || {}
@@ -92,7 +95,6 @@ export default function MenteeDetail({ mentee, onBack }) {
       setFocusResult(res)
       setShowFocusInput(false)
       setFocusInput('')
-      // Reload focus
       const updated = await weeklyFocusApi.getMenteeFocus(mentee.mentee_id)
       setCurrentFocus(updated.focus)
       setFocusTasks(updated.tasks || [])
@@ -103,12 +105,28 @@ export default function MenteeDetail({ mentee, onBack }) {
     }
   }
 
-  async function handleSendReview() {
+  // Step 1: generate preview, show to mentor
+  async function handlePreviewReview() {
     if (!currentFocus) return
+    setSendingReview(true)
+    try {
+      const res = await weeklyFocusApi.getReviewPreview(currentFocus.id)
+      setReviewPreview(res)
+      setShowReviewModal(true)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setSendingReview(false)
+    }
+  }
+
+  // Step 2: mentor approves, send to mentee
+  async function handleConfirmSendReview() {
     setSendingReview(true)
     try {
       await weeklyFocusApi.sendReview(currentFocus.id)
       setReviewSent(true)
+      setShowReviewModal(false)
     } catch (e) {
       alert(e.message)
     } finally {
@@ -177,21 +195,17 @@ export default function MenteeDetail({ mentee, onBack }) {
             </div>
           </div>
 
-          {/* Actions */}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              className="btn btn-secondary"
-              onClick={() => setShowFocusInput(true)}
-            >
+            <button className="btn btn-secondary" onClick={() => setShowFocusInput(true)}>
               📅 Set Weekly Focus
             </button>
             {currentFocus && (
               <button
                 className="btn btn-secondary"
-                onClick={handleSendReview}
+                onClick={handlePreviewReview}
                 disabled={sendingReview || reviewSent}
               >
-                {reviewSent ? '✅ Review Sent' : sendingReview ? 'Sending...' : '📊 Send Weekly Review'}
+                {reviewSent ? '✅ Review Sent' : sendingReview ? 'Generating...' : '📊 Preview & Send Review'}
               </button>
             )}
           </div>
@@ -219,7 +233,7 @@ export default function MenteeDetail({ mentee, onBack }) {
             <textarea
               className="input"
               style={{ minHeight: 160, lineHeight: 1.7, marginBottom: 16 }}
-              placeholder={`Example:\n"This week focus on completing the TxGuard ML pipeline. Finish the Random Forest model, validate PR-AUC above 0.8, and write documentation for the feature engineering steps. Also start reviewing the GraphSAGE paper."`}
+              placeholder={`Example:\n"This week focus on completing the TxGuard ML pipeline. Finish the Random Forest model, validate PR-AUC above 0.8, and write documentation for the feature engineering steps."`}
               value={focusInput}
               onChange={e => setFocusInput(e.target.value)}
               autoFocus
@@ -234,9 +248,7 @@ export default function MenteeDetail({ mentee, onBack }) {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setShowFocusInput(false)}>
-                Cancel
-              </button>
+              <button className="btn btn-secondary" onClick={() => setShowFocusInput(false)}>Cancel</button>
               <button
                 className="btn btn-primary"
                 onClick={handleCreateFocus}
@@ -284,19 +296,12 @@ export default function MenteeDetail({ mentee, onBack }) {
           { emoji: '📊', label: 'Sign Rate', value: `${stats.sign_rate || 0}%` },
           { emoji: '🔥', label: 'Streak', value: streak.current_streak || 0 },
           { emoji: '🏆', label: 'Best Streak', value: streak.longest_streak || 0 },
-          {
-            emoji: '🕐', label: 'Most Active',
-            value: overview?.stats?.most_active_time || (loading ? '...' : '—')
-          },
+          { emoji: '🕐', label: 'Most Active', value: overview?.stats?.most_active_time || (loading ? '...' : '—') },
         ].map((stat, i) => (
           <div key={i} className="card" style={{ textAlign: 'center', padding: '16px 12px' }}>
             <div style={{ fontSize: 20, marginBottom: 6 }}>{stat.emoji}</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--accent)', marginBottom: 4 }}>
-              {stat.value}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {stat.label}
-            </div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--accent)', marginBottom: 4 }}>{stat.value}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
           </div>
         ))}
       </div>
@@ -320,27 +325,20 @@ export default function MenteeDetail({ mentee, onBack }) {
           ) : !currentFocus ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>📅</div>
-              <p className="text-muted" style={{ fontSize: 14, marginBottom: 16 }}>
-                No weekly focus set for this week yet.
-              </p>
+              <p className="text-muted" style={{ fontSize: 14, marginBottom: 16 }}>No weekly focus set for this week yet.</p>
               <button className="btn btn-primary btn-sm" onClick={() => setShowFocusInput(true)}>
                 Set This Week's Focus
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Summary + progress */}
               <div>
                 <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 14 }}>
                   {currentFocus.summary}
                 </p>
-
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
                   <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', width: `${completionRate}%`,
-                      background: barColor, borderRadius: 3, transition: 'width 0.3s',
-                    }} />
+                    <div style={{ height: '100%', width: `${completionRate}%`, background: barColor, borderRadius: 3, transition: 'width 0.3s' }} />
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 700, color: barColor, flexShrink: 0 }}>
                     {completedTasks.length}/{focusTasks.length} done
@@ -348,9 +346,7 @@ export default function MenteeDetail({ mentee, onBack }) {
                 </div>
               </div>
 
-              {/* Tasks split view */}
               <div className="focus-tasks-grid">
-                {/* Pending */}
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>
                     Pending ({pendingTasks.length})
@@ -365,31 +361,20 @@ export default function MenteeDetail({ mentee, onBack }) {
                         border: `1px solid ${task.carried_over ? 'var(--danger-soft)' : 'var(--border)'}`,
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>
-                            {task.title}
-                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{task.title}</span>
                           {task.carried_over && (
-                            <span style={{
-                              fontSize: 9, fontWeight: 700, color: 'var(--danger)',
-                              background: 'rgba(220,38,38,0.1)', padding: '2px 6px', borderRadius: 4,
-                            }}>CARRY</span>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--danger)', background: 'rgba(220,38,38,0.1)', padding: '2px 6px', borderRadius: 4 }}>CARRY</span>
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <span style={{
-                            fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 20,
-                            background: catStyle(task.category).bg, color: catStyle(task.category).color,
-                          }}>{task.category}</span>
-                          {task.suggested_time && (
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>🕐 {task.suggested_time}</span>
-                          )}
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 20, background: catStyle(task.category).bg, color: catStyle(task.category).color }}>{task.category}</span>
+                          {task.suggested_time && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>🕐 {task.suggested_time}</span>}
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Completed */}
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>
                     Completed ({completedTasks.length})
@@ -398,19 +383,9 @@ export default function MenteeDetail({ mentee, onBack }) {
                     {completedTasks.length === 0 ? (
                       <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nothing completed yet.</p>
                     ) : completedTasks.map(task => (
-                      <div key={task.id} style={{
-                        padding: '10px 14px', borderRadius: 10,
-                        background: 'var(--success-soft)',
-                        border: '1px solid var(--success-soft)',
-                        opacity: 0.8,
-                      }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--success)', textDecoration: 'line-through', marginBottom: 4 }}>
-                          {task.title}
-                        </div>
-                        <span style={{
-                          fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 20,
-                          background: catStyle(task.category).bg, color: catStyle(task.category).color,
-                        }}>{task.category}</span>
+                      <div key={task.id} style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--success-soft)', border: '1px solid var(--success-soft)', opacity: 0.8 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--success)', textDecoration: 'line-through', marginBottom: 4 }}>{task.title}</div>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 20, background: catStyle(task.category).bg, color: catStyle(task.category).color }}>{task.category}</span>
                       </div>
                     ))}
                   </div>
@@ -426,11 +401,7 @@ export default function MenteeDetail({ mentee, onBack }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <span style={{ fontSize: 20 }}>🤖</span>
           <h3>AI Overview</h3>
-          <span style={{
-            marginLeft: 'auto', padding: '3px 10px', borderRadius: 20,
-            background: 'var(--accent-soft)', color: 'var(--accent)',
-            fontSize: 11, fontWeight: 700,
-          }}>
+          <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 20, background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: 11, fontWeight: 700 }}>
             Powered by Groq
           </span>
         </div>
@@ -444,53 +415,28 @@ export default function MenteeDetail({ mentee, onBack }) {
         ) : overview?.ai_overview ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
-                Focus Areas
-              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>Focus Areas</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {(overview.ai_overview.focus_areas || []).map((area, i) => (
                   <span key={i} className="badge badge-accent">{area}</span>
                 ))}
               </div>
             </div>
-
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
-                Overview
-              </div>
-              <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary)' }}>
-                {overview.ai_overview.overview}
-              </p>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>Overview</div>
+              <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary)' }}>{overview.ai_overview.overview}</p>
             </div>
-
-            <div style={{
-              padding: '12px 16px', borderRadius: 10,
-              background: 'var(--surface-2)', border: '1px solid var(--border)',
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 6 }}>
-                Activity Pattern
-              </div>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
-                {overview.ai_overview.activity_pattern}
-              </p>
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 6 }}>Activity Pattern</div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>{overview.ai_overview.activity_pattern}</p>
             </div>
-
-            <div style={{
-              padding: '14px 16px', borderRadius: 10,
-              background: 'var(--accent-soft)', border: '1px solid var(--border)',
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
-                Recommendations for You
-              </div>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.7 }}>
-                {overview.ai_overview.recommendations}
-              </p>
+            <div style={{ padding: '14px 16px', borderRadius: 10, background: 'var(--accent-soft)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>Recommendations</div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.7 }}>{overview.ai_overview.recommendations}</p>
             </div>
           </div>
         ) : (
-          <p className="text-muted" style={{ fontSize: 14 }}>
-            No overview available yet. Mentee needs more logs.
-          </p>
+          <p className="text-muted" style={{ fontSize: 14 }}>No overview available yet. Mentee needs more logs.</p>
         )}
       </div>
 
@@ -502,9 +448,7 @@ export default function MenteeDetail({ mentee, onBack }) {
 
         {loading ? (
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} className="skeleton" style={{ height: 60, borderRadius: 10 }} />
-            ))}
+            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 60, borderRadius: 10 }} />)}
           </div>
         ) : logs.length === 0 ? (
           <div style={{ padding: '40px 24px', textAlign: 'center' }}>
@@ -518,16 +462,10 @@ export default function MenteeDetail({ mentee, onBack }) {
               const isSent = log.sent_to_mentor
 
               return (
-                <div key={log.id} style={{
-                  borderBottom: i < logs.length - 1 ? '1px solid var(--border)' : 'none',
-                }}>
+                <div key={log.id} style={{ borderBottom: i < logs.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <div
                     onClick={() => setExpanded(isExpanded ? null : log.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 14,
-                      padding: '14px 24px', cursor: 'pointer',
-                      transition: 'background 0.15s',
-                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 24px', cursor: 'pointer', transition: 'background 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
@@ -545,10 +483,7 @@ export default function MenteeDetail({ mentee, onBack }) {
                       </div>
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                         {(log.structured_topics || []).slice(0, 3).map((t, j) => (
-                          <span key={j} style={{
-                            background: 'var(--accent-soft)', color: 'var(--accent)',
-                            padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                          }}>{t}</span>
+                          <span key={j} style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{t}</span>
                         ))}
                       </div>
                     </div>
@@ -561,25 +496,14 @@ export default function MenteeDetail({ mentee, onBack }) {
                       }}>
                         {isSigned ? 'Signed' : isSent ? 'Sent' : 'Draft'}
                       </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                        {formatDate(log.log_date)}
-                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDate(log.log_date)}</span>
                     </div>
 
-                    <span style={{
-                      color: 'var(--text-muted)', fontSize: 11,
-                      transform: isExpanded ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 0.18s', display: 'inline-block',
-                    }}>▼</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 11, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s', display: 'inline-block' }}>▼</span>
                   </div>
 
                   {isExpanded && (
-                    <div style={{
-                      padding: '16px 24px 20px 74px',
-                      background: 'var(--surface-2)',
-                      borderTop: '1px solid var(--border)',
-                      animation: 'fadeIn 0.15s ease',
-                    }}>
+                    <div style={{ padding: '16px 24px 20px 74px', background: 'var(--surface-2)', borderTop: '1px solid var(--border)' }}>
                       {log.test_attempted && (
                         <div style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -591,14 +515,9 @@ export default function MenteeDetail({ mentee, onBack }) {
                           {log.test_passed ? '✅ Test passed' : '❌ Test not passed'} · {log.difficulty_level}
                         </div>
                       )}
-
-                      <p style={{
-                        fontSize: 14, lineHeight: 1.8,
-                        color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', margin: 0,
-                      }}>
+                      <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', margin: 0 }}>
                         {log.structured_content || log.raw_content}
                       </p>
-
                       {isSigned && log.signed_at && (
                         <div style={{ marginTop: 12, fontSize: 12, color: 'var(--success)', fontWeight: 600 }}>
                           ✍️ Signed {formatDate(log.signed_at)}
@@ -612,6 +531,87 @@ export default function MenteeDetail({ mentee, onBack }) {
           </div>
         )}
       </div>
+
+      {/* Weekly Review Preview Modal */}
+      {showReviewModal && reviewPreview && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+            zIndex: 400, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', padding: 20,
+          }}
+          onClick={() => setShowReviewModal(false)}
+        >
+          <div
+            style={{
+              background: 'var(--surface)', borderRadius: 16, padding: '32px',
+              width: '100%', maxWidth: 600, maxHeight: '85vh', overflowY: 'auto',
+              display: 'flex', flexDirection: 'column', gap: 20,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ margin: 0, marginBottom: 4 }}>Weekly Review Preview</h3>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+                  This is what {profile.full_name?.split(' ')[0]} will receive. Review before sending.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--text-muted)' }}
+              >×</button>
+            </div>
+
+            <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '20px 24px', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 16 }}>
+                AI Weekly Review · {reviewPreview.week_label || currentFocus?.week_start}
+              </div>
+
+              {reviewPreview.summary && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Summary</div>
+                  <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', margin: 0 }}>{reviewPreview.summary}</p>
+                </div>
+              )}
+
+              {reviewPreview.progress && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Progress</div>
+                  <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', margin: 0 }}>{reviewPreview.progress}</p>
+                </div>
+              )}
+
+              {reviewPreview.recommendations && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Recommendations</div>
+                  <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', margin: 0 }}>{reviewPreview.recommendations}</p>
+                </div>
+              )}
+
+              {reviewPreview.next_week_focus && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Next Week</div>
+                  <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', margin: 0 }}>{reviewPreview.next_week_focus}</p>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowReviewModal(false)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleConfirmSendReview}
+                disabled={sendingReview}
+              >
+                {sendingReview ? 'Sending...' : `✉️ Send to ${profile.full_name?.split(' ')[0]}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

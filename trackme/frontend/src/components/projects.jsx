@@ -18,10 +18,99 @@ function categoryStyle(cat) {
   return CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other
 }
 
+function TaskCard({ task, onToggle, toggling, isMentor, onEdit }) {
+  const catStyle = categoryStyle(task.category)
+  const isToggling = toggling === task.id
+
+  return (
+    <div style={{
+      background: 'var(--surface)',
+      border: `1px solid ${task.carried_over ? 'var(--danger-soft)' : 'var(--border)'}`,
+      borderRadius: 12,
+      padding: '14px 18px',
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 14,
+      opacity: task.completed ? 0.65 : 1,
+      transition: 'all 0.18s',
+    }}>
+      <button
+        onClick={() => onToggle(task.id, task.completed)}
+        disabled={isToggling}
+        style={{
+          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+          border: `2px solid ${task.completed ? 'var(--success)' : 'var(--border-strong)'}`,
+          background: task.completed ? 'var(--success)' : 'transparent',
+          cursor: isToggling ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.18s', marginTop: 1,
+        }}
+      >
+        {task.completed && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
+        {isToggling && <span style={{ fontSize: 10 }}>⏳</span>}
+      </button>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontWeight: 600, fontSize: 14, marginBottom: 4,
+          textDecoration: task.completed ? 'line-through' : 'none',
+          color: task.completed ? 'var(--text-muted)' : 'var(--text-primary)',
+        }}>
+          {task.title}
+          {task.carried_over && !task.completed && (
+            <span style={{
+              marginLeft: 8, fontSize: 10, fontWeight: 700,
+              color: 'var(--danger)', background: 'var(--danger-soft)',
+              padding: '2px 6px', borderRadius: 4,
+            }}>CARRY-OVER</span>
+          )}
+        </div>
+        {task.description && (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 6px' }}>
+            {task.description}
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{
+            padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+            background: catStyle.bg, color: catStyle.color,
+          }}>
+            {task.category}
+          </span>
+          {task.suggested_time && (
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              🕐 {task.suggested_time}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {isMentor && onEdit && (
+        <button
+          onClick={() => onEdit(task)}
+          style={{
+            background: 'var(--surface-2)', border: '1px solid var(--border)',
+            borderRadius: 8, padding: '5px 10px', cursor: 'pointer',
+            fontSize: 12, color: 'var(--text-muted)',
+            fontFamily: 'Urbanist, sans-serif', fontWeight: 600,
+            flexShrink: 0, transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+        >
+          ✏️ Edit
+        </button>
+      )}
+    </div>
+  )
+}
+
 function WeeklyTasksView({ isMentor }) {
   const [data, setData] = useState({ focus: null, tasks: [], stats: null })
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(null)
+  const [editingTask, setEditingTask] = useState(null)
+  const [savingEdit, setSavingEdit] = useState(false)
 
   useEffect(() => {
     weeklyFocusApi.myTasks()
@@ -58,6 +147,29 @@ function WeeklyTasksView({ isMentor }) {
       alert(e.message)
     } finally {
       setToggling(null)
+    }
+  }
+
+  async function handleSaveTaskEdit() {
+    if (!editingTask) return
+    setSavingEdit(true)
+    try {
+      await weeklyFocusApi.updateTaskContent(editingTask.id, {
+        title: editingTask.title,
+        description: editingTask.description,
+        category: editingTask.category,
+      })
+      setData(prev => ({
+        ...prev,
+        tasks: prev.tasks.map(t =>
+          t.id === editingTask.id ? { ...t, ...editingTask } : t
+        )
+      }))
+      setEditingTask(null)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setSavingEdit(false)
     }
   }
 
@@ -110,8 +222,6 @@ function WeeklyTasksView({ isMentor }) {
             </div>
           </div>
         </div>
-
-        {/* Progress bar */}
         <div style={{ height: 8, background: 'var(--surface-3)', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{
             height: '100%',
@@ -134,7 +244,14 @@ function WeeklyTasksView({ isMentor }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {carriedOver.map(task => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} toggling={toggling} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                toggling={toggling}
+                isMentor={isMentor}
+                onEdit={isMentor ? (t) => setEditingTask({ ...t }) : null}
+              />
             ))}
           </div>
         </div>
@@ -148,7 +265,14 @@ function WeeklyTasksView({ isMentor }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {regular.map(task => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} toggling={toggling} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                toggling={toggling}
+                isMentor={isMentor}
+                onEdit={isMentor ? (t) => setEditingTask({ ...t }) : null}
+              />
             ))}
           </div>
         </div>
@@ -162,83 +286,92 @@ function WeeklyTasksView({ isMentor }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {done.map(task => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} toggling={toggling} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                toggling={toggling}
+                isMentor={isMentor}
+                onEdit={isMentor ? (t) => setEditingTask({ ...t }) : null}
+              />
             ))}
           </div>
         </div>
       )}
-    </div>
-  )
-}
 
-function TaskCard({ task, onToggle, toggling }) {
-  const catStyle = categoryStyle(task.category)
-  const isToggling = toggling === task.id
+      {/* Edit task modal */}
+      {editingTask && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            zIndex: 300, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', padding: 20,
+          }}
+          onClick={() => setEditingTask(null)}
+        >
+          <div
+            style={{
+              background: 'var(--surface)', borderRadius: 16, padding: '28px',
+              width: '100%', maxWidth: 500,
+              display: 'flex', flexDirection: 'column', gap: 16,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ margin: 0 }}>Edit Task</h3>
 
-  return (
-    <div style={{
-      background: 'var(--surface)',
-      border: `1px solid ${task.completed ? 'var(--border)' : task.carried_over ? 'var(--danger-soft)' : 'var(--border)'}`,
-      borderRadius: 12,
-      padding: '14px 18px',
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: 14,
-      opacity: task.completed ? 0.65 : 1,
-      transition: 'all 0.18s',
-    }}>
-      {/* Checkbox */}
-      <button
-        onClick={() => onToggle(task.id, task.completed)}
-        disabled={isToggling}
-        style={{
-          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-          border: `2px solid ${task.completed ? 'var(--success)' : 'var(--border-strong)'}`,
-          background: task.completed ? 'var(--success)' : 'transparent',
-          cursor: isToggling ? 'not-allowed' : 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.18s', marginTop: 1,
-        }}
-      >
-        {task.completed && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
-        {isToggling && <span style={{ fontSize: 10 }}>⏳</span>}
-      </button>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Title
+              </label>
+              <input
+                className="input"
+                value={editingTask.title}
+                onChange={e => setEditingTask(prev => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontWeight: 600, fontSize: 14, marginBottom: 4,
-          textDecoration: task.completed ? 'line-through' : 'none',
-          color: task.completed ? 'var(--text-muted)' : 'var(--text-primary)',
-        }}>
-          {task.title}
-          {task.carried_over && !task.completed && (
-            <span style={{
-              marginLeft: 8, fontSize: 10, fontWeight: 700,
-              color: 'var(--danger)', background: 'var(--danger-soft)',
-              padding: '2px 6px', borderRadius: 4,
-            }}>CARRY-OVER</span>
-          )}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Description (optional)
+              </label>
+              <textarea
+                className="input"
+                style={{ minHeight: 80, lineHeight: 1.6 }}
+                value={editingTask.description || ''}
+                onChange={e => setEditingTask(prev => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Category
+              </label>
+              <select
+                className="input"
+                value={editingTask.category}
+                onChange={e => setEditingTask(prev => ({ ...prev, category: e.target.value }))}
+              >
+                {['Backend', 'Frontend', 'Database', 'AI/ML', 'DevOps', 'Reading', 'Writing', 'Other'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setEditingTask(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveTaskEdit}
+                disabled={savingEdit || !editingTask.title.trim()}
+              >
+                {savingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
-        {task.description && (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 6px' }}>
-            {task.description}
-          </p>
-        )}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{
-            padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-            background: catStyle.bg, color: catStyle.color,
-          }}>
-            {task.category}
-          </span>
-          {task.suggested_time && (
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              🕐 {task.suggested_time}
-            </span>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -247,6 +380,8 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
   const [completion, setCompletion] = useState(null)
   const [loadingCompletion, setLoadingCompletion] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [ending, setEnding] = useState(false)
+  const [ended, setEnded] = useState(p.status === 'completed')
 
   async function loadCompletion() {
     if (completion) { setExpanded(e => !e); return }
@@ -262,6 +397,19 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
     }
   }
 
+  async function handleEndProject() {
+    if (!window.confirm('End this project? This marks it as completed.')) return
+    setEnding(true)
+    try {
+      await projectsApi.endProject(p.id)
+      setEnded(true)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setEnding(false)
+    }
+  }
+
   const barColor = !completion ? 'var(--accent)'
     : completion.completion_rate >= 80 ? 'var(--success)'
     : completion.completion_rate >= 50 ? 'var(--warning)'
@@ -273,11 +421,11 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
         <h3 style={{ fontSize: 16, lineHeight: 1.4 }}>{p.title}</h3>
         <span style={{
           padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-          background: statusBg[p.status] || 'var(--surface-2)',
-          color: statusColor[p.status] || 'var(--text-muted)',
+          background: ended ? 'var(--surface-2)' : statusBg[p.status] || 'var(--surface-2)',
+          color: ended ? 'var(--text-muted)' : statusColor[p.status] || 'var(--text-muted)',
           flexShrink: 0,
         }}>
-          {p.status}
+          {ended ? 'completed' : p.status}
         </span>
       </div>
 
@@ -295,7 +443,6 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
         }}>
           {p.role === 'creator' ? '👑 Owner' : '👤 Member'}
         </span>
-
         {p.deadline && (
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             Due {new Date(p.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -303,7 +450,7 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
         )}
       </div>
 
-      {/* Completion toggle */}
+      {/* AI Completion button */}
       <button
         onClick={loadCompletion}
         style={{
@@ -311,8 +458,7 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
           borderRadius: 8, padding: '7px 12px', cursor: 'pointer',
           fontFamily: 'Urbanist, sans-serif', fontSize: 12, fontWeight: 600,
           color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6,
-          transition: 'all 0.18s',
-          width: '100%', justifyContent: 'center',
+          transition: 'all 0.18s', width: '100%', justifyContent: 'center',
         }}
       >
         {loadingCompletion
@@ -320,13 +466,45 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
           : expanded ? '▲ Hide AI Completion' : '🤖 Check AI Completion'}
       </button>
 
+      {/* End project button — creator only */}
+      {p.role === 'creator' && !ended && (
+        <button
+          onClick={handleEndProject}
+          disabled={ending}
+          style={{
+            background: 'none',
+            border: '1px solid var(--danger-soft)',
+            borderRadius: 8, padding: '7px 12px',
+            cursor: ending ? 'not-allowed' : 'pointer',
+            fontFamily: 'Urbanist, sans-serif',
+            fontSize: 12, fontWeight: 600,
+            color: 'var(--danger)',
+            display: 'flex', alignItems: 'center', gap: 6,
+            transition: 'all 0.18s',
+            width: '100%', justifyContent: 'center',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-soft)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+        >
+          {ending ? '⏳ Ending...' : '🔴 End Project'}
+        </button>
+      )}
+
+      {ended && (
+        <div style={{
+          textAlign: 'center', fontSize: 12, fontWeight: 600,
+          color: 'var(--text-muted)', padding: '6px 0',
+        }}>
+          ✅ Project completed
+        </div>
+      )}
+
+      {/* Completion panel */}
       {expanded && completion && (
         <div style={{
           background: 'var(--surface-2)', borderRadius: 10,
           padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12,
-          animation: 'fadeIn 0.2s ease',
         }}>
-          {/* Progress bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
@@ -347,12 +525,10 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
             </div>
           </div>
 
-          {/* Assessment */}
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
             {completion.assessment}
           </p>
 
-          {/* Covered + Missing */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {completion.covered_areas?.length > 0 && (
               <div>
@@ -360,9 +536,7 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
                   ✅ Covered
                 </div>
                 {completion.covered_areas.map((a, i) => (
-                  <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '3px 0' }}>
-                    · {a}
-                  </div>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '3px 0' }}>· {a}</div>
                 ))}
               </div>
             )}
@@ -372,9 +546,7 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
                   ⬜ Missing
                 </div>
                 {completion.missing_areas.map((a, i) => (
-                  <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '3px 0' }}>
-                    · {a}
-                  </div>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '3px 0' }}>· {a}</div>
                 ))}
               </div>
             )}
@@ -390,7 +562,7 @@ export default function Projects() {
   const [projects, setProjects] = useState({ created: [], assigned: [] })
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
-  const [activeTab, setActiveTab] = useState('tasks') // 'tasks' | 'projects'
+  const [activeTab, setActiveTab] = useState('tasks')
 
   async function load() {
     try {
@@ -420,7 +592,6 @@ export default function Projects() {
   return (
     <div className="page">
 
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <h1>Projects</h1>
         <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
@@ -428,13 +599,11 @@ export default function Projects() {
         </button>
       </div>
 
-      {/* Tab bar */}
       <div style={{
         display: 'flex', gap: 4,
         background: 'var(--surface-2)',
         borderRadius: 12, padding: 4,
-        marginBottom: 24,
-        width: 'fit-content',
+        marginBottom: 24, width: 'fit-content',
       }}>
         {[
           { id: 'tasks', label: '📅 Weekly Focus' },
@@ -458,12 +627,10 @@ export default function Projects() {
         ))}
       </div>
 
-      {/* Weekly Focus tab */}
       {activeTab === 'tasks' && (
         <WeeklyTasksView isMentor={isMentor} />
       )}
 
-      {/* Projects tab */}
       {activeTab === 'projects' && (
         <>
           {loading ? (
