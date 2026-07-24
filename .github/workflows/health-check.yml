@@ -1,0 +1,58 @@
+name: Trackme Health Check
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # every hour
+  workflow_dispatch:       # manual trigger from GitHub UI
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Trackme Health
+        id: health
+        run: |
+          RESPONSE=$(curl -s -o /tmp/health.json -w "%{http_code}" \
+            -H "X-Health-Key: ${{ secrets.HEALTH_SECRET }}" \
+            ${{ secrets.BACKEND_URL }}/api/health)
+          
+          echo "status_code=$RESPONSE" >> $GITHUB_OUTPUT
+          cat /tmp/health.json
+
+      - name: Parse for failures
+        id: parse
+        run: |
+          BODY=$(cat /tmp/health.json)
+          
+          # Check if any service is in error state
+          if echo "$BODY" | grep -q '"status": "error"'; then
+            echo "has_errors=true" >> $GITHUB_OUTPUT
+            echo "ALERT: Service error detected"
+          elif echo "$BODY" | grep -q '"status": "critical"'; then
+            echo "has_errors=true" >> $GITHUB_OUTPUT
+            echo "ALERT: Critical state detected"
+          else
+            echo "has_errors=false" >> $GITHUB_OUTPUT
+            echo "All systems OK"
+          fi
+
+      - name: Send alert email
+        if: steps.parse.outputs.has_errors == 'true' || steps.health.outputs.status_code != '200'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "🚨 Trackme Health Alert — Something is down"
+          to: adetusiyan@gmail.com
+          from: Trackme Monitor <${{ secrets.GMAIL_USER }}>
+          body: |
+            Trackme health check detected an issue.
+            
+            Status Code: ${{ steps.health.outputs.status_code }}
+            
+            Check your dashboard: ${{ secrets.BACKEND_URL }}/health-dashboard
+            
+            — Trackme Monitor
