@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     allowed_hosts: str = "*"
     debug: bool = False
+    health_secret: str = "default-secret"  # Add this line
 
     @property
     def cors_origins_list(self) -> List[str]:

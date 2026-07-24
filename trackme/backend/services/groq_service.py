@@ -1,4 +1,5 @@
 import json
+import re
 from groq import Groq
 from config import settings
 
@@ -6,12 +7,19 @@ client = Groq(api_key=settings.groq_api_key)
 MODEL = "llama-3.3-70b-versatile"
 
 
+def get_groq_client():
+    """Returns the module-level Groq client for use in routes."""
+    return client
+
+
+def _clean_json(text: str) -> str:
+    """Strip markdown fences and thinking tags from LLM output."""
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+    text = text.replace("```json", "").replace("```", "").strip()
+    return text
+
+
 async def restructure_log(raw_content: str) -> dict:
-    """
-    Takes raw mentee log and restructures into a professional log.
-    Summary capped at 700 characters for structured_content.
-    Returns: { title, topics: [], structured_content }
-    """
     prompt = f"""You are a learning log assistant for a tech mentorship platform.
 
 A mentee has written their daily learning log below. Your job is to:
@@ -43,12 +51,10 @@ Raw log:
         max_tokens=800,
     )
 
-    text = response.choices[0].message.content.strip()
-    text = text.replace("```json", "").replace("```", "").strip()
+    text = _clean_json(response.choices[0].message.content.strip())
 
     try:
         result = json.loads(text)
-        # Hard enforce 700 char limit
         if len(result.get("structured_content", "")) > 700:
             result["structured_content"] = result["structured_content"][:697] + "..."
         return result
@@ -61,12 +67,8 @@ Raw log:
 
 
 async def detect_difficulty(structured_content: str) -> str:
-    """
-    Analyse the log and determine appropriate test difficulty.
-    Uses llama-3.3-70b-versatile for better reasoning.
-    """
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=MODEL,
         messages=[{
             "role": "user",
             "content": f"""Read this learning log and respond with ONE word only: beginner, intermediate, or advanced.
@@ -84,26 +86,16 @@ One word:"""
         temperature=0.1,
         max_tokens=5,
     )
-    result = response.choices[0].message.content.strip().lower()
-    # Strip any <think> tags from qwen3
-    import re
-    result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+    result = _clean_json(response.choices[0].message.content.strip()).lower()
     if result not in ['beginner', 'intermediate', 'advanced']:
         return 'intermediate'
     return result
+
 
 async def generate_verification_question(
     structured_content: str,
     difficulty: str
 ) -> dict:
-    """
-    Generates ONE scenario-based verification question.
-    Uses llama-3.3-70b-versatile for industrial-level question quality.
-    Format: real-world scenario → sharp focused question.
-    Returns: { question, correct_answer }
-    """
-    import re
-
     difficulty_guide = {
         "beginner": (
             "Create a simple real-world scenario that a beginner would relate to. "
@@ -150,23 +142,20 @@ Critical rules:
 - The correct answer should be 3-5 sentences, specific and technical
 - Keep the scenario SHORT — the question does the heavy lifting
 
-Respond with ONLY valid JSON, no markdown, no <think> tags:
+Respond with ONLY valid JSON, no markdown:
 {{
   "question": "Scenario: [2-3 sentence real context]. Question: [sharp focused question]?",
   "correct_answer": "[specific technical answer drawing from the log content]"
 }}"""
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.5,
         max_tokens=600,
     )
 
-    text = response.choices[0].message.content.strip()
-    # Strip qwen3 thinking tags
-    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
-    text = text.replace("```json", "").replace("```", "").strip()
+    text = _clean_json(response.choices[0].message.content.strip())
 
     try:
         return json.loads(text)
@@ -183,10 +172,6 @@ async def evaluate_answer(
     user_answer: str,
     difficulty: str
 ) -> dict:
-    """
-    Evaluates the mentee's answer against the correct answer.
-    Returns: { passed: bool, feedback: str, score: int (0-100) }
-    """
     prompt = f"""You are a fair and encouraging technical mentor evaluating a mentee's answer.
 
 Question: {question}
@@ -215,8 +200,7 @@ Respond with ONLY valid JSON, no markdown:
         max_tokens=300,
     )
 
-    text = response.choices[0].message.content.strip()
-    text = text.replace("```json", "").replace("```", "").strip()
+    text = _clean_json(response.choices[0].message.content.strip())
 
     try:
         return json.loads(text)
@@ -229,11 +213,6 @@ Respond with ONLY valid JSON, no markdown:
 
 
 async def summarise_mentee_logs(logs: list, mentee_name: str) -> dict:
-    """
-    Mentor AI feature — reads all of a mentee's logs and generates
-    an overview of what they've been focusing on plus mentor recommendations.
-    Returns: { focus_areas, overview, recommendations, activity_pattern }
-    """
     if not logs:
         return {
             "focus_areas": [],
@@ -242,9 +221,8 @@ async def summarise_mentee_logs(logs: list, mentee_name: str) -> dict:
             "activity_pattern": "No data"
         }
 
-    # Build a condensed version of all logs for context
     log_summaries = []
-    for log in logs[:20]:  # Cap at 20 most recent logs
+    for log in logs[:20]:
         log_summaries.append(
             f"[{log.get('log_date', 'unknown date')}] "
             f"{log.get('structured_title', 'Untitled')} — "
@@ -280,8 +258,7 @@ Respond with ONLY valid JSON, no markdown:
         max_tokens=600,
     )
 
-    text = response.choices[0].message.content.strip()
-    text = text.replace("```json", "").replace("```", "").strip()
+    text = _clean_json(response.choices[0].message.content.strip())
 
     try:
         return json.loads(text)
@@ -292,20 +269,14 @@ Respond with ONLY valid JSON, no markdown:
             "recommendations": "Review logs manually.",
             "activity_pattern": "Unknown"
         }
-    
+
+
 async def generate_weekly_tasks(
     raw_input: str,
     mentee_name: str,
     mentee_logs: list,
     previous_incomplete: list
 ) -> dict:
-    """
-    Takes mentor's weekly focus text and generates structured tasks.
-    Cross-references mentee's recent logs and any incomplete tasks from last week.
-    Returns: { summary, tasks: [{ title, description, category, suggested_time, priority, carried_over }] }
-    """
-
-    # Build context from recent logs
     log_context = ""
     if mentee_logs:
         recent = mentee_logs[:5]
@@ -314,7 +285,6 @@ async def generate_weekly_tasks(
             for l in recent
         ])
 
-    # Build carry-over context
     carry_context = ""
     if previous_incomplete:
         carry_context = "\nIncomplete tasks from last week (carry these over as high priority):\n" + "\n".join([
@@ -366,8 +336,7 @@ Respond with ONLY valid JSON, no markdown:
         max_tokens=1500,
     )
 
-    text = response.choices[0].message.content.strip()
-    text = text.replace("```json", "").replace("```", "").strip()
+    text = _clean_json(response.choices[0].message.content.strip())
 
     try:
         return json.loads(text)
@@ -384,15 +353,10 @@ async def generate_weekly_review(
     week_start: str,
     week_end: str
 ) -> str:
-    """
-    Generates a plain-text weekly review paragraph for the Sunday email.
-    Honest, specific, encouraging.
-    """
     total = len(tasks)
     completed = sum(1 for t in tasks if t.get("completed"))
     incomplete = [t for t in tasks if not t.get("completed")]
     completion_rate = round((completed / total * 100) if total > 0 else 0)
-
     incomplete_titles = ", ".join([t.get("title", "") for t in incomplete[:3]])
 
     prompt = f"""Write a weekly review paragraph for a mentorship accountability platform.
@@ -420,14 +384,70 @@ Do not use greetings or sign-offs. Just the paragraph."""
 
     return response.choices[0].message.content.strip()
 
-async def restructure_project_description(title: str, raw_description: str) -> str:
-    """
-    Restructures a project description into clear, comparable task language.
-    Makes log-vs-project comparison more accurate.
-    Uses llama-3.3-70b for speed.
-    """
-    import re
 
+async def generate_review_preview(
+    focus: dict,
+    tasks: list,
+    logs: list
+) -> dict:
+    """
+    Generates the four-paragraph weekly review for mentor preview.
+    Called before send — mentor sees and approves first.
+    Returns: { summary, progress, recommendations, next_week_focus, week_label }
+    """
+    tasks_summary = "\n".join([
+        f"- [{'DONE' if t['completed'] else 'PENDING'}] {t['title']} ({t['category']})"
+        for t in tasks
+    ])
+    logs_summary = "\n".join([
+        f"- {l.get('structured_title', 'Untitled')}: {(l.get('structured_content') or '')[:200]}"
+        for l in logs
+    ]) or "No logs submitted this week."
+
+    prompt = f"""You are reviewing a mentee's week for their mentor.
+
+Week: {focus['week_start']} to {focus['week_end']}
+Weekly goal: {focus['summary']}
+
+Tasks:
+{tasks_summary}
+
+Logs submitted this week:
+{logs_summary}
+
+Write a weekly review for the mentee with these four sections. Each section must be a full paragraph of prose — no bullet points, no lists, no task titles repeated verbatim.
+
+Return ONLY valid JSON with these exact keys:
+{{
+  "summary": "A paragraph summarising what the mentee accomplished this week overall",
+  "progress": "A paragraph on their task completion rate and what it reflects about their effort and consistency",
+  "recommendations": "A paragraph with specific, actionable advice for next week based on what was pending or missed",
+  "next_week_focus": "A paragraph previewing what they should prioritise going into next week",
+  "week_label": "{focus['week_start']} – {focus['week_end']}"
+}}"""
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        max_tokens=1000,
+    )
+
+    text = _clean_json(response.choices[0].message.content.strip())
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {
+            "summary": "Could not generate summary.",
+            "progress": "Could not generate progress review.",
+            "recommendations": "Could not generate recommendations.",
+            "next_week_focus": "Could not generate next week focus.",
+            "week_label": f"{focus['week_start']} – {focus['week_end']}"
+        }
+
+
+async def restructure_project_description(title: str, raw_description: str) -> str:
     if not raw_description or len(raw_description.strip()) < 10:
         return raw_description or title
 
@@ -451,8 +471,7 @@ just clean sentences separated by newlines."""
         max_tokens=300,
     )
 
-    result = response.choices[0].message.content.strip()
-    result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
+    result = _clean_json(response.choices[0].message.content.strip())
     return result
 
 
@@ -461,13 +480,6 @@ async def estimate_project_completion(
     project_description: str,
     logs: list
 ) -> dict:
-    """
-    AI reads all logs tagged to a project and estimates completion rate.
-    Compares log content against project description/tasks.
-    Returns: { completion_rate, covered_areas, missing_areas, assessment }
-    """
-    import re
-
     if not logs:
         return {
             "completion_rate": 0,
@@ -502,15 +514,13 @@ Respond with ONLY valid JSON, no markdown:
 }}"""
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=400,
     )
 
-    text = response.choices[0].message.content.strip()
-    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
-    text = text.replace("```json", "").replace("```", "").strip()
+    text = _clean_json(response.choices[0].message.content.strip())
 
     try:
         return json.loads(text)

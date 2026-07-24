@@ -121,7 +121,7 @@ export default function History() {
   const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a))
 
   return (
-    <div style={{ padding: '32px 40px', width: '100%', boxSizing: 'border-box' }}>
+    <div className="page">
 
       {/* Header */}
       <div style={{

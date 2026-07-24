@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trackme Health</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0A0A0F;
+      color: #E8E0D0;
+      font-family: 'Urbanist', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 40px 32px;
+    }
+
+    #app { max-width: 1100px; margin: 0 auto; }
+
+    /* ── KEY SCREEN ───────────────────────────────── */
+    .key-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      text-align: center;
+      gap: 16px;
+    }
+
+    .logo {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: #7C3AED; }
+
+    .subtitle {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #444;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .key-hint {
+      font-size: 13px;
+      color: #555;
+      margin-top: 8px;
+    }
+
+    .key-input {
+      background: #111118;
+      border: 1px solid #2A2A4A;
+      border-radius: 12px;
+      padding: 14px 24px;
+      color: #E8E0D0;
+      font-size: 15px;
+      font-family: 'Courier New', monospace;
+      width: 360px;
+      max-width: 90vw;
+      outline: none;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .key-input:focus { border-color: #7C3AED; }
+
+    .key-submit {
+      background: linear-gradient(135deg, #7C3AED, #6D28D9);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      padding: 14px 40px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      width: 360px;
+      max-width: 90vw;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .key-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+    .key-submit:active { transform: translateY(0); }
+
+    .key-error {
+      font-size: 13px;
+      color: #F87171;
+      display: none;
+    }
+
+    /* ── DASHBOARD ────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-left .logo { font-size: 20px; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .last-checked {
+      font-size: 12px;
+      color: #444;
+      font-weight: 500;
+    }
+
+    .refresh-btn {
+      background: #111118;
+      border: 1px solid #2A2A4A;
+      color: #7C3AED;
+      padding: 8px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { background: #7C3AED; color: #fff; border-color: #7C3AED; }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid #2A2A2A;
+      color: #555;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .logout-btn:hover { border-color: #F87171; color: #F87171; }
+
+    /* ── CARDS ────────────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #111118;
+      border: 1px solid #1E1E2E;
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .card-title {
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      font-weight: 700;
+      color: #7C3AED;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #1A1A2E;
+      gap: 12px;
+    }
+    .row:last-child { border-bottom: none; }
+
+    .row-label {
+      font-size: 13px;
+      color: #888;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .row-value {
+      font-size: 13px;
+      color: #E8E0D0;
+      font-weight: 600;
+      text-align: right;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+    }
+
+    /* ── BADGES ───────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .badge-ok       { background: rgba(5,150,105,0.12); color: #10B981; border: 1px solid rgba(5,150,105,0.25); }
+    .badge-error    { background: rgba(220,38,38,0.12); color: #F87171; border: 1px solid rgba(220,38,38,0.25); }
+    .badge-warning  { background: rgba(245,158,11,0.12); color: #F59E0B; border: 1px solid rgba(245,158,11,0.25); }
+    .badge-critical { background: rgba(220,38,38,0.25); color: #F87171; border: 1px solid rgba(220,38,38,0.5); }
+    .badge-missing  { background: rgba(220,38,38,0.12); color: #F87171; border: 1px solid rgba(220,38,38,0.25); }
+    .badge-set      { background: rgba(5,150,105,0.12); color: #10B981; border: 1px solid rgba(5,150,105,0.25); }
+    .badge-skipped  { background: rgba(100,100,100,0.1); color: #555; border: 1px solid #222; }
+    .badge-breach   { background: rgba(220,38,38,0.4); color: #fff; border: 1px solid #F87171; animation: pulse 1s infinite; }
+    .badge-missing_key { background: rgba(220,38,38,0.12); color: #F87171; border: 1px solid rgba(220,38,38,0.25); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+
+    /* ── PROGRESS ─────────────────────────────────── */
+    .progress-wrap {
+      padding: 2px 0 12px;
+    }
+    .progress-meta {
+      font-size: 12px;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .progress-bar {
+      height: 6px;
+      background: #1E1E2E;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+    .fill-ok       { background: #10B981; }
+    .fill-warning  { background: #F59E0B; }
+    .fill-critical { background: #F87171; }
+
+    /* ── STAT BOXES ───────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-box {
+      background: #0D0D18;
+      border: 1px solid #1E1E2E;
+      border-radius: 10px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 900;
+      color: #7C3AED;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    /* ── STATES ───────────────────────────────────── */
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: #444;
+      font-size: 14px;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #1E1E2E;
+      border-top-color: #7C3AED;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    /* ── LATENCY COLOUR ───────────────────────────── */
+    .latency-fast   { color: #10B981; }
+    .latency-medium { color: #F59E0B; }
+    .latency-slow   { color: #F87171; }
+
+    /* ── RESPONSIVE ───────────────────────────────── */
+    @media (max-width: 640px) {
+      body { padding: 24px 16px; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .key-input, .key-submit { width: 90vw; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Key Screen -->
+  <div id="key-screen" class="key-screen">
+    <div>
+      <div class="logo">Trackm<span>e</span></div>
+      <div class="subtitle">Health Dashboard</div>
+    </div>
+    <p class="key-hint">Enter your health key to continue</p>
+    <input
+      id="key-input"
+      class="key-input"
+      type="password"
+      placeholder="••••••••••••••••"
+      onkeydown="if(event.key==='Enter') loadHealth()"
+      autocomplete="off"
+    />
+    <button class="key-submit" onclick="loadHealth()">Access Dashboard →</button>
+    <p id="key-error" class="key-error">Invalid key — check your HEALTH_SECRET in .env</p>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none;">
+    <div class="header">
+      <div class="header-left">
+        <div class="logo">Trackm<span>e</span> <span style="color:#333;font-size:14px;font-weight:500;">/ Health</span></div>
+        <div class="subtitle" style="margin-top:4px;">System Status</div>
+      </div>
+      <div class="header-right">
+        <span class="last-checked" id="last-checked">–</span>
+        <button class="refresh-btn" onclick="fetchHealth()">↻ Refresh</button>
+        <button class="logout-btn" onclick="logout()">Sign out</button>
+      </div>
+    </div>
+    <div id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        Loading health data...
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // When served via /health-dashboard, this is empty — same origin, no CORS
+  const API_BASE = ''
+  let healthKey = ''
+  let autoRefreshTimer = null
+
+  function loadHealth() {
+    const input = document.getElementById('key-input')
+    const key = input.value.trim()
+    if (!key) {
+      input.focus()
+      return
+    }
+    healthKey = key
+    document.getElementById('key-error').style.display = 'none'
+    document.getElementById('key-screen').style.display = 'none'
+    document.getElementById('dashboard').style.display = 'block'
+    fetchHealth()
+    startAutoRefresh()
+  }
+
+  function logout() {
+    healthKey = ''
+    clearInterval(autoRefreshTimer)
+    document.getElementById('dashboard').style.display = 'none'
+    document.getElementById('key-screen').style.display = 'flex'
+    document.getElementById('key-input').value = ''
+    document.getElementById('key-error').style.display = 'none'
+  }
+
+  function startAutoRefresh() {
+    clearInterval(autoRefreshTimer)
+    autoRefreshTimer = setInterval(() => {
+      if (healthKey) fetchHealth()
+    }, 60000)
+  }
+
+  async function fetchHealth() {
+    document.getElementById('content').innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        Fetching health data...
+      </div>
+    `
+
+    try {
+      const res = await fetch(`${API_BASE}/api/health`, {
+        headers: { 'X-Health-Key': healthKey }
+      })
+
+      if (res.status === 401) {
+        clearInterval(autoRefreshTimer)
+        healthKey = ''
+        document.getElementById('dashboard').style.display = 'none'
+        document.getElementById('key-screen').style.display = 'flex'
+        document.getElementById('key-error').style.display = 'block'
+        document.getElementById('key-input').value = ''
+        document.getElementById('key-input').focus()
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error(`Server returned ${res.status}`)
+      }
+
+      const data = await res.json()
+      const ts = new Date(data.timestamp)
+      document.getElementById('last-checked').textContent =
+        'Last updated: ' + ts.toLocaleTimeString()
+      renderDashboard(data)
+
+    } catch (e) {
+      document.getElementById('content').innerHTML = `
+        <div class="error-state">
+          <div style="font-size:52px;margin-bottom:16px;">⚠️</div>
+          <div style="font-size:18px;font-weight:700;color:#F87171;margin-bottom:8px;">
+            Cannot reach backend
+          </div>
+          <div style="font-size:13px;color:#555;margin-bottom:24px;line-height:1.6;">
+            Make sure FastAPI is running<br>
+            <code style="font-size:11px;color:#444;">${e.message}</code>
+          </div>
+          <button onclick="fetchHealth()" style="
+            background:#7C3AED;border:none;border-radius:10px;
+            color:#fff;padding:12px 28px;font-size:14px;
+            font-weight:700;font-family:inherit;cursor:pointer;
+          ">↻ Try Again</button>
+        </div>
+      `
+    }
+  }
+
+  // ── RENDER HELPERS ──────────────────────────────────────────────
+
+  function badge(status) {
+    const map = {
+      ok:          ['badge-ok',       '✓ OK'],
+      error:       ['badge-error',    '✗ Error'],
+      warning:     ['badge-warning',  '⚠ Warning'],
+      critical:    ['badge-critical', '🚨 Critical'],
+      MISSING:     ['badge-missing',  '✗ Missing'],
+      set:         ['badge-set',      '✓ Set'],
+      BREACH:      ['badge-breach',   '🚨 BREACH'],
+      skipped:     ['badge-skipped',  '– Skipped'],
+      missing_key: ['badge-missing_key', '✗ No Key'],
+    }
+    const [cls, label] = map[status] || ['badge-skipped', status]
+    return `<span class="badge ${cls}">${label}</span>`
+  }
+
+  function latencyBadge(ms) {
+    if (ms === undefined || ms === null) return ''
+    const cls = ms < 200 ? 'latency-fast' : ms < 800 ? 'latency-medium' : 'latency-slow'
+    return `<span class="${cls}" style="font-size:11px;font-weight:600;">${ms}ms</span>`
+  }
+
+  function progressBar(pct, status) {
+    const fillClass = status === 'ok' ? 'fill-ok'
+      : status === 'warning' ? 'fill-warning'
+      : 'fill-critical'
+    return `
+      <div class="progress-bar">
+        <div class="progress-fill ${fillClass}" style="width:${Math.min(pct || 0, 100)}%"></div>
+      </div>
+    `
+  }
+
+  function formatDate(str) {
+    if (!str || str === 'never') return '–'
+    return new Date(str).toLocaleString()
+  }
+
+  // ── RENDER DASHBOARD ────────────────────────────────────────────
+
+  function renderDashboard(d) {
+    const s   = d.services  || {}
+    const db  = d.database  || {}
+    const sec = d.security  || {}
+    const q   = d.quotas    || {}
+    const act = d.activity  || {}
+
+    let html = '<div class="grid">'
+
+    // ── SERVICES ───────────────────────────────────
+    html += `<div class="card">
+      <div class="card-title">⚡ Services</div>
+      ${Object.entries(s).map(([name, info]) => `
+        <div class="row">
+          <span class="row-label">${name}</span>
+          <span style="display:flex;align-items:center;gap:10px;">
+            ${badge(info.status)}
+            ${info.latency_ms !== undefined ? latencyBadge(info.latency_ms) : ''}
+          </span>
+        </div>
+      `).join('')}
+    </div>`
+
+    // ── ACTIVITY ───────────────────────────────────
+    html += `<div class="card">
+      <div class="card-title">📊 Activity</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-value">${act.logs_today ?? '–'}</div>
+          <div class="stat-label">Today</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${act.logs_this_week ?? '–'}</div>
+          <div class="stat-label">This Week</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${act.unique_active_users_week ?? '–'}</div>
+          <div class="stat-label">Active Users</div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Total Users</span>
+        <span class="row-value">${act.total_users ?? '–'}</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Last Log</span>
+        <span class="row-value" style="font-size:11px;">${formatDate(act.last_log_at)}</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Last Signup</span>
+        <span class="row-value" style="font-size:11px;">${formatDate(act.last_signup_at)}</span>
+      </div>
+    </div>`
+
+    // ── DATABASE TABLES ────────────────────────────
+    const tables   = db.tables    || {}
+    const rowLimit = db.row_limit || {}
+    const storage  = db.storage   || {}
+
+    html += `<div class="card">
+      <div class="card-title">🗄 Database Tables</div>
+      ${Object.entries(tables).map(([table, count]) => `
+        <div class="row">
+          <span class="row-label" style="font-family:monospace;font-size:12px;">${table}</span>
+          <span class="row-value">${typeof count === 'number' ? count.toLocaleString() + ' rows' : count}</span>
+        </div>
+      `).join('')}
+      <div class="row" style="margin-top:6px;border-top:1px solid #2A2A4A;padding-top:12px;">
+        <span class="row-label">Total rows</span>
+        <span class="row-value">${(db.total_rows || 0).toLocaleString()}</span>
+      </div>
+    </div>`
+
+    // ── QUOTAS ─────────────────────────────────────
+    const resend = q.resend_emails || {}
+
+    html += `<div class="card">
+      <div class="card-title">📈 Free Tier Quotas</div>
+
+      <div class="row">
+        <span class="row-label">Row usage</span>
+        ${badge(rowLimit.status || 'ok')}
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-meta">
+          ${(rowLimit.used || 0).toLocaleString()} / ${(rowLimit.limit || 50000).toLocaleString()} rows
+          · ${rowLimit.percent || 0}%
+        </div>
+        ${progressBar(rowLimit.percent, rowLimit.status || 'ok')}
+      </div>
+
+      ${storage.used_mb !== 'unavailable' && storage.used_mb !== undefined ? `
+        <div class="row">
+          <span class="row-label">Storage</span>
+          ${badge(storage.status || 'ok')}
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            ${storage.used_mb}MB / ${storage.limit_mb}MB · ${storage.percent}%
+          </div>
+          ${progressBar(storage.percent, storage.status || 'ok')}
+        </div>
+      ` : `
+        <div class="row">
+          <span class="row-label">Storage</span>
+          <span class="row-value" style="font-size:11px;color:#444;">
+            ${storage.note || 'Run get_db_size_mb() RPC in Supabase'}
+          </span>
+        </div>
+      `}
+
+      ${resend.sent_this_month !== undefined && resend.sent_this_month !== 'unavailable' ? `
+        <div class="row">
+          <span class="row-label">Resend emails</span>
+          ${badge(resend.status || 'ok')}
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            ${resend.sent_this_month} / ${resend.free_limit || 3000} this month
+            · ${resend.percent || 0}%
+          </div>
+          ${progressBar(resend.percent, resend.status || 'ok')}
+        </div>
+      ` : `
+        <div class="row">
+          <span class="row-label">Resend emails</span>
+          <span class="row-value" style="font-size:11px;color:#444;">
+            ${resend.note || 'Create email_logs table to track'}
+          </span>
+        </div>
+      `}
+    </div>`
+
+    // ── SECURITY ───────────────────────────────────
+    const envVars = sec.env_vars  || {}
+    const rls     = sec.rls_probe || {}
+
+    html += `<div class="card">
+      <div class="card-title">🔒 Security</div>
+
+      <div class="row">
+        <span class="row-label">RLS Probe</span>
+        ${badge(rls.status || 'skipped')}
+      </div>
+      <div style="font-size:11px;color:#555;padding:4px 0 12px;line-height:1.6;">
+        ${rls.detail || '–'}
+      </div>
+
+      <div class="row">
+        <span class="row-label">CORS Origins</span>
+        <span class="row-value" style="font-size:10px;max-width:180px;">
+          ${(sec.cors_origins || []).join(', ') || 'not configured'}
+        </span>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div style="font-size:10px;color:#444;margin-bottom:10px;
+          text-transform:uppercase;letter-spacing:1.5px;font-weight:700;">
+          Environment Variables
+        </div>
+        ${Object.entries(envVars).map(([key, val]) => `
+          <div class="row">
+            <span class="row-label" style="font-family:monospace;font-size:11px;">${key}</span>
+            ${badge(val)}
+          </div>
+        `).join('')}
+      </div>
+    </div>`
+
+    html += '</div>'
+    document.getElementById('content').innerHTML = html
+  }
+</script>
+</body>
+</html>

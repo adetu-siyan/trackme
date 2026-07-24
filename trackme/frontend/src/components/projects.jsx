@@ -376,12 +376,11 @@ function WeeklyTasksView({ isMentor }) {
   )
 }
 
-function ProjectCard({ project: p, statusBg, statusColor }) {
+function ProjectCard({ project: p, statusBg, statusColor, onEnded }) {
   const [completion, setCompletion] = useState(null)
   const [loadingCompletion, setLoadingCompletion] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [ending, setEnding] = useState(false)
-  const [ended, setEnded] = useState(p.status === 'completed')
 
   async function loadCompletion() {
     if (completion) { setExpanded(e => !e); return }
@@ -398,14 +397,13 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
   }
 
   async function handleEndProject() {
-    if (!window.confirm('End this project? This marks it as completed.')) return
+    if (!window.confirm('End this project? It will be removed from your projects list.')) return
     setEnding(true)
     try {
       await projectsApi.endProject(p.id)
-      setEnded(true)
+      if (onEnded) onEnded(p.id)
     } catch (e) {
       alert(e.message)
-    } finally {
       setEnding(false)
     }
   }
@@ -421,11 +419,11 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
         <h3 style={{ fontSize: 16, lineHeight: 1.4 }}>{p.title}</h3>
         <span style={{
           padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-          background: ended ? 'var(--surface-2)' : statusBg[p.status] || 'var(--surface-2)',
-          color: ended ? 'var(--text-muted)' : statusColor[p.status] || 'var(--text-muted)',
+          background: statusBg[p.status] || 'var(--surface-2)',
+          color: statusColor[p.status] || 'var(--text-muted)',
           flexShrink: 0,
         }}>
-          {ended ? 'completed' : p.status}
+          {p.status}
         </span>
       </div>
 
@@ -450,7 +448,6 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
         )}
       </div>
 
-      {/* AI Completion button */}
       <button
         onClick={loadCompletion}
         style={{
@@ -466,8 +463,7 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
           : expanded ? '▲ Hide AI Completion' : '🤖 Check AI Completion'}
       </button>
 
-      {/* End project button — creator only */}
-      {p.role === 'creator' && !ended && (
+      {p.role === 'creator' && (
         <button
           onClick={handleEndProject}
           disabled={ending}
@@ -483,23 +479,13 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
             transition: 'all 0.18s',
             width: '100%', justifyContent: 'center',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-soft)' }}
+          onMouseEnter={e => { if (!ending) e.currentTarget.style.background = 'var(--danger-soft)' }}
           onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
         >
           {ending ? '⏳ Ending...' : '🔴 End Project'}
         </button>
       )}
 
-      {ended && (
-        <div style={{
-          textAlign: 'center', fontSize: 12, fontWeight: 600,
-          color: 'var(--text-muted)', padding: '6px 0',
-        }}>
-          ✅ Project completed
-        </div>
-      )}
-
-      {/* Completion panel */}
       {expanded && completion && (
         <div style={{
           background: 'var(--surface-2)', borderRadius: 10,
@@ -524,17 +510,13 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
               Based on {completion.log_count} log{completion.log_count !== 1 ? 's' : ''} tagged to this project
             </div>
           </div>
-
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
             {completion.assessment}
           </p>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {completion.covered_areas?.length > 0 && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>
-                  ✅ Covered
-                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>✅ Covered</div>
                 {completion.covered_areas.map((a, i) => (
                   <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '3px 0' }}>· {a}</div>
                 ))}
@@ -542,9 +524,7 @@ function ProjectCard({ project: p, statusBg, statusColor }) {
             )}
             {completion.missing_areas?.length > 0 && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>
-                  ⬜ Missing
-                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>⬜ Missing</div>
                 {completion.missing_areas.map((a, i) => (
                   <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '3px 0' }}>· {a}</div>
                 ))}
@@ -577,6 +557,13 @@ export default function Projects() {
 
   useEffect(() => { load() }, [])
 
+  function handleProjectEnded(projectId) {
+    setProjects(prev => ({
+      created: prev.created.filter(p => p.id !== projectId),
+      assigned: prev.assigned.filter(p => p.id !== projectId),
+    }))
+  }
+
   const allProjects = [
     ...projects.created.map(p => ({ ...p, role: 'creator' })),
     ...projects.assigned.map(p => ({ ...p, role: 'member' })),
@@ -591,7 +578,6 @@ export default function Projects() {
 
   return (
     <div className="page">
-
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <h1>Projects</h1>
         <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
@@ -660,6 +646,7 @@ export default function Projects() {
                   project={p}
                   statusBg={statusBg}
                   statusColor={statusColor}
+                  onEnded={handleProjectEnded}
                 />
               ))}
             </div>

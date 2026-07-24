@@ -126,7 +126,7 @@ async function signLog() {{
   btn.textContent = 'Signing...';
   
   try {{
-    const res = await fetch('/sign/{token}/confirm', {{
+    const res = await fetch(`/api/sign/{token}/confirm`, {{
       method: 'POST',
       headers: {{ 'Content-Type': 'application/json' }},
       body: JSON.stringify({{ message: message }})
@@ -194,8 +194,8 @@ async def confirm_sign(token: str, body: SignConfirmRequest = None):
 
     if mentee_id:
        notif_message = f"Your mentor signed your log: \"{log.get('structured_title', 'Daily Log')}\""
-    if mentor_message:
-        notif_message += f"\n\nMentor's note: {mentor_message}"
+       if mentor_message:
+          notif_message += f"\n\nMentor's note: {mentor_message}"
 
     await create_notification(
         mentee_id,
@@ -224,21 +224,18 @@ async def confirm_sign(token: str, body: SignConfirmRequest = None):
                 if mentor_profile.data:
                     mentor_name = mentor_profile.data[0]["full_name"]
 
-            send_signed_notification_to_mentee(
-                mentee_email=mentee_email,
-                mentee_name=mentee_name,
-                mentor_name=mentor_name,
-                log_title=log.get("structured_title", "Daily Log"),
-            )
-
-            send_signed_notification_to_mentee(
+            await send_signed_notification_to_mentee(
                 mentee_email=mentee_email,
                 mentee_name=mentee_name,
                 mentor_name=mentor_name,
                 log_title=log.get("structured_title", "Daily Log"),
                 mentor_message=mentor_message,
-          )
+            )
+            
     except Exception:
         pass  # Don't fail the request if notification email errors
 
     return {"success": True}
+
+
+

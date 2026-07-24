@@ -66,7 +66,7 @@ export const projectsApi = {
   myProjects: () => request('GET', '/projects/my-projects'),
   myMentees: () => request('GET', '/projects/mentees'),
   getCompletion: (projectId) => request('GET', `/projects/${projectId}/completion`),
-  endProject: (projectId) => request('PATCH', `/projects/${projectId}/end`),
+  endProject: (projectId) => request('PATCH', `/projects/end/${projectId}`),
 }
 
 // ============================================================
@@ -79,7 +79,7 @@ export const weeklyFocusApi = {
   updateTask: (taskId, completed) => request('PATCH', `/projects/weekly-tasks/${taskId}`, { completed }),
   updateTaskContent: (taskId, body) => request('PATCH', `/projects/weekly-tasks/${taskId}/content`, body),
   history: () => request('GET', '/projects/weekly-focus/history'),
-  sendReview: (focusId) => request('POST', `/projects/weekly-focus/${focusId}/send-review`),
+  sendReview: (focusId, previewData) => request('POST', `/projects/weekly-focus/${focusId}/send-review`, previewData || {}),
   getReviewPreview: (focusId) => request('GET', `/projects/weekly-focus/${focusId}/review-preview`),
 }
 

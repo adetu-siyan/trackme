@@ -44,74 +44,101 @@ const CalendarIcon = () => (
 
 function ComingSoon() {
   return (
-    <div className="page" style={{
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      minHeight: '70vh', textAlign: 'center', padding: '40px 20px',
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0, 0, 0, 0.55)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
+      zIndex: 100,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
       fontFamily: 'Urbanist, sans-serif',
     }}>
       <div style={{
-        background: 'linear-gradient(135deg, var(--accent-soft) 0%, var(--surface-3) 100%)',
-        border: '1px solid var(--border)',
-        borderRadius: 24, padding: '48px 40px', maxWidth: 480, width: '100%',
-        position: 'relative', overflow: 'hidden',
+        background: '#fff',
+        borderRadius: 20,
+        padding: '48px 40px',
+        maxWidth: 520,
+        width: '100%',
+        textAlign: 'center',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.25)',
+        position: 'relative',
       }}>
-        <div style={{
-          position: 'absolute', top: -60, right: -60,
-          width: 200, height: 200,
-          background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)',
-          opacity: 0.12, borderRadius: '50%', pointerEvents: 'none',
-        }} />
-
+        {/* Icon */}
         <div style={{ fontSize: 56, marginBottom: 20 }}>⚡</div>
 
-        <div style={{
-          fontSize: 11, letterSpacing: 3, fontWeight: 700,
-          color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 12,
-        }}>
-          Coming Soon
-        </div>
-
+        {/* Title */}
         <h2 style={{
-          fontSize: 28, fontWeight: 900, letterSpacing: '-0.5px',
-          marginBottom: 12,
-          background: 'linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          fontSize: 26, fontWeight: 800,
+          color: '#111', marginBottom: 12,
+          letterSpacing: '-0.5px',
         }}>
-          MyFlow
+          MyFlow is coming soon
         </h2>
 
+        {/* Subtitle */}
         <p style={{
-          fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.7,
-          marginBottom: 32,
+          fontSize: 15, color: '#666',
+          lineHeight: 1.7, marginBottom: 32,
+          maxWidth: 400, margin: '0 auto 32px',
         }}>
           Your personal AI planning workspace is almost ready. We're building something that turns your chaos into clarity.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+        {/* Feature list — matches the HOW IT WORKS style */}
+        <div style={{
+          background: '#F5F3FF',
+          borderRadius: 14,
+          padding: '20px 24px',
+          marginBottom: 32,
+          textAlign: 'left',
+        }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: 2,
+            color: '#7C3AED', textTransform: 'uppercase', marginBottom: 16,
+          }}>
+            What's coming
+          </div>
+
           {[
-            { icon: '✨', text: 'Dump tasks in plain English — AI structures them instantly' },
-            { icon: '⏱', text: 'Smart time suggestions based on your learning patterns' },
-            { icon: '📅', text: 'One-click sync to Google Calendar' },
-            { icon: '💭', text: 'Quick notes and ideas — always autosaved' },
-            { icon: '📊', text: 'Daily momentum tracking and progress streaks' },
-          ].map(({ icon, text }) => (
-            <div key={text} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 12,
-              padding: '12px 16px', borderRadius: 12,
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              textAlign: 'left',
+            { num: 1, text: 'Dump tasks in plain English — AI structures them instantly' },
+            { num: 2, text: 'Smart time suggestions based on your learning patterns' },
+            { num: 3, text: 'One-click sync to Google Calendar' },
+            { num: 4, text: 'Quick notes and ideas — always autosaved' },
+            { num: 5, text: 'Daily momentum tracking and progress streaks' },
+          ].map(({ num, text }) => (
+            <div key={num} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 14,
+              marginBottom: num === 5 ? 0 : 14,
             }}>
-              <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{icon}</span>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{text}</span>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: '#7C3AED', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, fontWeight: 700, flexShrink: 0,
+              }}>
+                {num}
+              </div>
+              <span style={{
+                fontSize: 14, color: '#333',
+                lineHeight: 1.6, paddingTop: 4,
+              }}>
+                {text}
+              </span>
             </div>
           ))}
         </div>
 
+        {/* CTA button */}
         <div style={{
-          padding: '12px 20px', borderRadius: 12,
-          background: 'var(--accent-soft)', border: '1px solid var(--border)',
-          fontSize: 13, color: 'var(--accent)', fontWeight: 600,
+          background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+          borderRadius: 12, padding: '16px 32px',
+          fontSize: 15, fontWeight: 700, color: '#fff',
+          cursor: 'default',
+          letterSpacing: '0.2px',
         }}>
           🔔 You'll be notified the moment it drops
         </div>

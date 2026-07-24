@@ -1,6 +1,6 @@
 import secrets
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from models import (
     CreateLogRequest, DifficultyRequest,
     VerifyAnswerRequest, EditLogRequest, SendToMentorRequest
@@ -14,16 +14,15 @@ from services.groq_service import (
 from services.resend_service import send_log_to_mentor
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from fastapi import Request
 
 limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/logs", tags=["logs"])
 
+
 @router.post("/create")
 @limiter.limit("10/minute")
 async def create_log(request: Request, body: CreateLogRequest, user=Depends(get_current_user)):
-    """Step 1: Mentee submits raw log. AI restructures it."""
     user_id = str(user.id)
     today = str(date.today())
 
@@ -64,7 +63,6 @@ async def create_log(request: Request, body: CreateLogRequest, user=Depends(get_
 @router.post("/generate-question")
 @limiter.limit("20/minute")
 async def generate_question(request: Request, body: DifficultyRequest, user=Depends(get_current_user)):
-    """Step 2: AI detects difficulty and generates one verification question."""
     log = supabase.table("daily_logs") \
         .select("*").eq("id", body.log_id).eq("user_id", str(user.id)).execute()
 
@@ -73,7 +71,6 @@ async def generate_question(request: Request, body: DifficultyRequest, user=Depe
 
     log_data = log.data[0]
 
-    # Auto-detect difficulty from log content
     if not body.difficulty or body.difficulty == 'auto':
         difficulty = await detect_difficulty(log_data["structured_content"])
     else:
@@ -97,7 +94,6 @@ async def generate_question(request: Request, body: DifficultyRequest, user=Depe
 
 @router.post("/verify-answer")
 async def verify_answer(body: VerifyAnswerRequest, user=Depends(get_current_user)):
-    """Step 3: Mentee submits answer → AI evaluates."""
     log = supabase.table("daily_logs") \
         .select("*").eq("id", body.log_id).eq("user_id", str(user.id)).execute()
 
@@ -132,7 +128,6 @@ async def verify_answer(body: VerifyAnswerRequest, user=Depends(get_current_user
 
 @router.put("/edit")
 async def edit_log(body: EditLogRequest, user=Depends(get_current_user)):
-    """Step 4a: Mentee edits the structured log before sending."""
     supabase.table("daily_logs").update({
         "structured_content": body.structured_content,
         "structured_title": body.structured_title,
@@ -145,7 +140,6 @@ async def edit_log(body: EditLogRequest, user=Depends(get_current_user)):
 @router.post("/send-to-mentor")
 @limiter.limit("10/minute")
 async def send_to_mentor(request: Request, body: SendToMentorRequest, user=Depends(get_current_user)):
-    """Step 4b: Mentee sends log to mentor via email."""
     user_id = str(user.id)
 
     log = supabase.table("daily_logs") \
@@ -159,7 +153,6 @@ async def send_to_mentor(request: Request, body: SendToMentorRequest, user=Depen
     if log_data.get("sent_to_mentor"):
         raise HTTPException(400, "Log already sent to mentor")
 
-    # Validate mentor email belongs to an active mentor relationship
     active_mentor = supabase.table("mentor_relationships") \
         .select("*, profiles!mentor_relationships_mentor_id_fkey(email, full_name)") \
         .eq("mentee_id", user_id) \
@@ -178,7 +171,6 @@ async def send_to_mentor(request: Request, body: SendToMentorRequest, user=Depen
                 break
 
     if not mentor_validated:
-        # Check if the email even exists in profiles
         email_exists = supabase.table("profiles") \
             .select("id, full_name") \
             .eq("email", body.mentor_email) \
@@ -197,7 +189,6 @@ async def send_to_mentor(request: Request, body: SendToMentorRequest, user=Depen
                 "suggestion": "invite"
             })
 
-    # Get mentee name
     profile = supabase.table("profiles") \
         .select("full_name").eq("id", user_id).execute()
     mentee_name = profile.data[0]["full_name"] if profile.data else user.email
@@ -215,7 +206,7 @@ async def send_to_mentor(request: Request, body: SendToMentorRequest, user=Depen
 
     supabase.table("daily_logs").update(update_payload).eq("id", body.log_id).execute()
 
-    send_log_to_mentor(
+    await send_log_to_mentor(
         mentor_email=body.mentor_email,
         mentor_name=mentor_name,
         mentee_name=mentee_name,
@@ -232,9 +223,9 @@ async def send_to_mentor(request: Request, body: SendToMentorRequest, user=Depen
         "mentor_email": body.mentor_email
     }
 
+
 @router.get("/my-logs")
 async def get_my_logs(user=Depends(get_current_user)):
-    """Get all logs for the current user."""
     result = supabase.table("daily_logs") \
         .select("*").eq("user_id", str(user.id)) \
         .order("created_at", desc=True).execute()
@@ -243,7 +234,6 @@ async def get_my_logs(user=Depends(get_current_user)):
 
 @router.get("/streak")
 async def get_streak(user=Depends(get_current_user)):
-    """Get current user streak data."""
     result = supabase.table("streaks").select("*").eq("user_id", str(user.id)).execute()
     if not result.data:
         return {"current_streak": 0, "longest_streak": 0}
@@ -252,13 +242,8 @@ async def get_streak(user=Depends(get_current_user)):
 
 @router.get("/mentee/{mentee_id}")
 async def get_mentee_logs(mentee_id: str, user=Depends(get_current_user)):
-    """
-    Mentor fetches a specific mentee's logs.
-    Only works if an active mentor relationship exists.
-    """
     mentor_id = str(user.id)
 
-    # Verify relationship
     rel = supabase.table("mentor_relationships") \
         .select("id") \
         .eq("mentor_id", mentor_id) \
@@ -280,12 +265,8 @@ async def get_mentee_logs(mentee_id: str, user=Depends(get_current_user)):
 
 @router.get("/mentee/{mentee_id}/overview")
 async def get_mentee_overview(mentee_id: str, user=Depends(get_current_user)):
-    """
-    AI-generated overview of a mentee's logs for the mentor dashboard.
-    """
     mentor_id = str(user.id)
 
-    # Verify relationship
     rel = supabase.table("mentor_relationships") \
         .select("id") \
         .eq("mentor_id", mentor_id) \
@@ -296,11 +277,9 @@ async def get_mentee_overview(mentee_id: str, user=Depends(get_current_user)):
     if not rel.data:
         raise HTTPException(403, "You are not this mentee's mentor")
 
-    # Get mentee profile
     profile = supabase.table("profiles").select("full_name").eq("id", mentee_id).execute()
     mentee_name = profile.data[0]["full_name"] if profile.data else "Your mentee"
 
-    # Get logs
     logs = supabase.table("daily_logs") \
         .select("*") \
         .eq("user_id", mentee_id) \
@@ -309,16 +288,13 @@ async def get_mentee_overview(mentee_id: str, user=Depends(get_current_user)):
 
     log_list = logs.data or []
 
-    # Generate AI overview
     overview = await summarise_mentee_logs(log_list, mentee_name)
 
-    # Compute stats
     total = len(log_list)
     signed = sum(1 for l in log_list if l.get("signed"))
     sent = sum(1 for l in log_list if l.get("sent_to_mentor"))
     passed = sum(1 for l in log_list if l.get("test_passed"))
 
-    # Most active hour from created_at timestamps
     hours = []
     for l in log_list:
         try:
@@ -330,7 +306,6 @@ async def get_mentee_overview(mentee_id: str, user=Depends(get_current_user)):
     most_active_hour = None
     if hours:
         most_active_hour = max(set(hours), key=hours.count)
-        # Format as readable time
         h = most_active_hour
         most_active_hour = f"{'12' if h == 0 else h if h <= 12 else h - 12}{'am' if h < 12 else 'pm'}"
 
@@ -351,7 +326,6 @@ async def get_mentee_overview(mentee_id: str, user=Depends(get_current_user)):
 
 @router.delete("/{log_id}")
 async def delete_log(log_id: str, user=Depends(get_current_user)):
-    """Delete a log — only allowed if not yet sent to mentor."""
     log = supabase.table("daily_logs") \
         .select("sent_to_mentor, signed") \
         .eq("id", log_id) \

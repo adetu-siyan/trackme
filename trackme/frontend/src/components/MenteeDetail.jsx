@@ -42,6 +42,7 @@ export default function MenteeDetail({ mentee, onBack }) {
   const [reviewSent, setReviewSent] = useState(false)
   const [reviewPreview, setReviewPreview] = useState(null)
   const [showReviewModal, setShowReviewModal] = useState(false)
+  const [editingReview, setEditingReview] = useState(false)
 
   const profile = mentee.profile || {}
   const stats = mentee.stats || {}
@@ -124,9 +125,10 @@ export default function MenteeDetail({ mentee, onBack }) {
   async function handleConfirmSendReview() {
     setSendingReview(true)
     try {
-      await weeklyFocusApi.sendReview(currentFocus.id)
+      await weeklyFocusApi.sendReview(currentFocus.id, reviewPreview)
       setReviewSent(true)
       setShowReviewModal(false)
+      setEditingReview(false)
     } catch (e) {
       alert(e.message)
     } finally {
@@ -540,74 +542,160 @@ export default function MenteeDetail({ mentee, onBack }) {
             zIndex: 400, display: 'flex', alignItems: 'center',
             justifyContent: 'center', padding: 20,
           }}
-          onClick={() => setShowReviewModal(false)}
+          onClick={() => {
+            setShowReviewModal(false)
+            setEditingReview(false)
+          }}
         >
           <div
             style={{
               background: 'var(--surface)', borderRadius: 16, padding: '32px',
-              width: '100%', maxWidth: 600, maxHeight: '85vh', overflowY: 'auto',
+              width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto',
               display: 'flex', flexDirection: 'column', gap: 20,
             }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {/* Modal header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div>
                 <h3 style={{ margin: 0, marginBottom: 4 }}>Weekly Review Preview</h3>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
-                  This is what {profile.full_name?.split(' ')[0]} will receive. Review before sending.
+                  {editingReview
+                    ? 'Editing — changes will be sent to ' + (profile.full_name?.split(' ')[0] || 'mentee')
+                    : 'This is what ' + (profile.full_name?.split(' ')[0] || 'your mentee') + ' will receive. Review before sending.'}
                 </p>
               </div>
-              <button
-                onClick={() => setShowReviewModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--text-muted)' }}
-              >×</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  onClick={() => {
+                    if (editingReview) {
+                      setEditingReview(false)
+                    } else {
+                      setEditingReview(true)
+                    }
+                  }}
+                  style={{
+                    background: editingReview ? 'var(--accent-soft)' : 'var(--surface-2)',
+                    border: `1px solid ${editingReview ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 8, padding: '6px 14px', cursor: 'pointer',
+                    fontFamily: 'Urbanist, sans-serif', fontSize: 12,
+                    fontWeight: 600,
+                    color: editingReview ? 'var(--accent)' : 'var(--text-muted)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {editingReview ? '👁 Preview' : '✏️ Edit'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowReviewModal(false)
+                    setEditingReview(false)
+                  }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 22, color: 'var(--text-muted)', lineHeight: 1,
+                  }}
+                >×</button>
+              </div>
             </div>
 
-            <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '20px 24px', border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 11, letterSpacing: 2, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 16 }}>
+            {/* Content — edit mode or preview mode */}
+            <div style={{
+              background: 'var(--surface-2)', borderRadius: 12,
+              padding: '20px 24px', border: '1px solid var(--border)',
+            }}>
+              <div style={{
+                fontSize: 11, letterSpacing: 2, fontWeight: 700,
+                color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 20,
+              }}>
                 AI Weekly Review · {reviewPreview.week_label || currentFocus?.week_start}
               </div>
 
-              {reviewPreview.summary && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Summary</div>
-                  <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', margin: 0 }}>{reviewPreview.summary}</p>
+              {editingReview ? (
+                // ── EDIT MODE ──────────────────────────────────
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {[
+                    { key: 'summary', label: 'Summary', color: 'var(--text-muted)' },
+                    { key: 'progress', label: 'Progress', color: 'var(--text-muted)' },
+                    { key: 'recommendations', label: 'Recommendations', color: 'var(--accent)' },
+                    { key: 'next_week_focus', label: 'Next Week', color: 'var(--text-muted)' },
+                  ].map(({ key, label, color }) => (
+                    <div key={key}>
+                      <div style={{
+                        fontSize: 12, fontWeight: 700, color,
+                        textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
+                      }}>
+                        {label}
+                      </div>
+                      <textarea
+                        value={reviewPreview[key] || ''}
+                        onChange={e => setReviewPreview(prev => ({ ...prev, [key]: e.target.value }))}
+                        style={{
+                          width: '100%', minHeight: 100,
+                          background: 'var(--surface)', border: '1.5px solid var(--border)',
+                          borderRadius: 10, padding: '12px 14px',
+                          color: 'var(--text-primary)', fontSize: 14,
+                          fontFamily: 'Urbanist, sans-serif', lineHeight: 1.7,
+                          resize: 'vertical', outline: 'none',
+                          boxSizing: 'border-box', transition: 'border-color 0.15s',
+                        }}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                      />
+                    </div>
+                  ))}
                 </div>
-              )}
-
-              {reviewPreview.progress && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Progress</div>
-                  <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', margin: 0 }}>{reviewPreview.progress}</p>
-                </div>
-              )}
-
-              {reviewPreview.recommendations && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Recommendations</div>
-                  <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', margin: 0 }}>{reviewPreview.recommendations}</p>
-                </div>
-              )}
-
-              {reviewPreview.next_week_focus && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Next Week</div>
-                  <p style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', margin: 0 }}>{reviewPreview.next_week_focus}</p>
+              ) : (
+                // ── PREVIEW MODE ───────────────────────────────
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {[
+                    { key: 'summary', label: 'Summary', color: 'var(--text-muted)' },
+                    { key: 'progress', label: 'Progress', color: 'var(--text-muted)' },
+                    { key: 'recommendations', label: 'Recommendations', color: 'var(--accent)' },
+                    { key: 'next_week_focus', label: 'Next Week', color: 'var(--text-muted)' },
+                  ].map(({ key, label, color }) => reviewPreview[key] && (
+                    <div key={key}>
+                      <div style={{
+                        fontSize: 12, fontWeight: 700, color,
+                        textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
+                      }}>
+                        {label}
+                      </div>
+                      <p style={{
+                        fontSize: 14, lineHeight: 1.8,
+                        color: 'var(--text-secondary)', margin: 0,
+                      }}>
+                        {reviewPreview[key]}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setShowReviewModal(false)}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleConfirmSendReview}
-                disabled={sendingReview}
-              >
-                {sendingReview ? 'Sending...' : `✉️ Send to ${profile.full_name?.split(' ')[0]}`}
-              </button>
+            {/* Footer */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {editingReview && '✏️ Your edits will be sent exactly as written above'}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowReviewModal(false)
+                    setEditingReview(false)
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleConfirmSendReview}
+                  disabled={sendingReview}
+                >
+                  {sendingReview ? 'Sending...' : `✉️ Send to ${profile.full_name?.split(' ')[0]}`}
+                </button>
+              </div>
             </div>
           </div>
         </div>

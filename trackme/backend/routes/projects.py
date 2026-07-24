@@ -1,30 +1,51 @@
-from datetime import date, timedelta
+import json
+from datetime import date, timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 from models import CreateProjectRequest
 from dependencies import get_current_user
 from services.supabase_service import supabase, create_notification
-from services.groq_service import generate_weekly_tasks, generate_weekly_review
 from services.resend_service import send_email
-from config import settings
 from services.groq_service import (
-    generate_weekly_tasks, generate_weekly_review,
-    restructure_project_description, estimate_project_completion
+    generate_weekly_tasks,
+    generate_weekly_review,
+    generate_review_preview,
+    restructure_project_description,
+    estimate_project_completion,
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 # ============================================================
-# EXISTING PROJECT ROUTES
+# PYDANTIC MODELS
+# ============================================================
+
+class CreateWeeklyFocusRequest(BaseModel):
+    mentee_id: str
+    raw_input: str
+    week_start: Optional[str] = None
+
+
+class UpdateTaskRequest(BaseModel):
+    completed: bool
+
+
+class UpdateTaskContentRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+
+
+# ============================================================
+# PROJECT ROUTES
 # ============================================================
 
 @router.post("/create")
 async def create_project(body: CreateProjectRequest, user=Depends(get_current_user)):
     creator_id = str(user.id)
 
-    # AI restructures description for better log comparison
     structured_description = body.description or ""
     if body.description and len(body.description.strip()) > 10:
         try:
@@ -94,16 +115,38 @@ async def get_my_mentees(user=Depends(get_current_user)):
         .eq("mentor_id", str(user.id)).eq("status", "active").execute()
     return {"mentees": relationships.data or []}
 
+
+# NOTE: /end/{project_id} is intentionally structured this way to avoid
+# collision with /{project_id}/completion — FastAPI matches top to bottom
+@router.patch("/end/{project_id}")
+async def end_project(
+    project_id: str,
+    user=Depends(get_current_user)
+):
+    project_res = supabase.table("projects") \
+        .select("id, creator_id") \
+        .eq("id", project_id) \
+        .execute()
+
+    if not project_res.data:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project_res.data[0]["creator_id"] != str(user.id):
+        raise HTTPException(status_code=403, detail="Only the project creator can end this project")
+
+    result = supabase.table("projects") \
+        .update({"status": "completed"}) \
+        .eq("id", project_id) \
+        .execute()
+
+    return {"success": True, "project": result.data[0] if result.data else {}}
+
+
 @router.get("/{project_id}/completion")
 async def get_project_completion(
     project_id: str,
     user=Depends(get_current_user)
 ):
-    """
-    AI estimates project completion rate by comparing
-    project description against logs tagged to this project.
-    """
-    # Get project
     project = supabase.table("projects") \
         .select("*") \
         .eq("id", project_id) \
@@ -114,7 +157,6 @@ async def get_project_completion(
 
     p = project.data[0]
 
-    # Verify access — creator or assigned mentee
     is_creator = p["creator_id"] == str(user.id)
     is_member = supabase.table("project_assignments") \
         .select("id") \
@@ -125,7 +167,6 @@ async def get_project_completion(
     if not is_creator and not is_member.data:
         raise HTTPException(403, "Not authorised")
 
-    # Get logs tagged to this project
     logs = supabase.table("daily_logs") \
         .select("structured_title, structured_topics, structured_content, log_date") \
         .eq("project_id", project_id) \
@@ -145,32 +186,18 @@ async def get_project_completion(
         **result
     }
 
+
 # ============================================================
-# WEEKLY FOCUS ROUTES
+# WEEKLY FOCUS — all specific paths before /{focus_id}/...
 # ============================================================
-
-class CreateWeeklyFocusRequest(BaseModel):
-    mentee_id: str
-    raw_input: str
-    week_start: Optional[str] = None  # defaults to this Monday
-
-
-class UpdateTaskRequest(BaseModel):
-    completed: bool
-
 
 @router.post("/weekly-focus/create")
 async def create_weekly_focus(
     body: CreateWeeklyFocusRequest,
     user=Depends(get_current_user)
 ):
-    """
-    Mentor submits a weekly focus for a mentee.
-    AI generates tasks, cross-referencing mentee's logs and last week's incomplete tasks.
-    """
     mentor_id = str(user.id)
 
-    # Verify mentor relationship
     rel = supabase.table("mentor_relationships") \
         .select("id").eq("mentor_id", mentor_id) \
         .eq("mentee_id", body.mentee_id).eq("status", "active").execute()
@@ -178,27 +205,22 @@ async def create_weekly_focus(
     if not rel.data:
         raise HTTPException(403, "You are not this mentee's mentor")
 
-    # Calculate week bounds
     today = date.today()
     if body.week_start:
         week_start = date.fromisoformat(body.week_start)
     else:
-        # Default to this Monday
         week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
 
-    # Get mentee name
     profile = supabase.table("profiles") \
         .select("full_name").eq("id", body.mentee_id).execute()
     mentee_name = profile.data[0]["full_name"] if profile.data else "Mentee"
 
-    # Get mentee's recent logs for context
     logs = supabase.table("daily_logs") \
         .select("structured_title, structured_topics, log_date") \
         .eq("user_id", body.mentee_id) \
         .order("log_date", desc=True).limit(7).execute()
 
-    # Get last week's incomplete tasks for carry-over
     last_week_start = week_start - timedelta(days=7)
     prev_focus = supabase.table("weekly_focus") \
         .select("id").eq("mentor_id", mentor_id) \
@@ -213,7 +235,6 @@ async def create_weekly_focus(
             .eq("completed", False).execute()
         previous_incomplete = prev_tasks.data or []
 
-    # Generate tasks with AI
     ai_result = await generate_weekly_tasks(
         raw_input=body.raw_input,
         mentee_name=mentee_name,
@@ -221,7 +242,6 @@ async def create_weekly_focus(
         previous_incomplete=previous_incomplete
     )
 
-    # Save weekly focus
     focus_result = supabase.table("weekly_focus").insert({
         "mentor_id": mentor_id,
         "mentee_id": body.mentee_id,
@@ -236,7 +256,6 @@ async def create_weekly_focus(
 
     focus_id = focus_result.data[0]["id"]
 
-    # Save tasks
     tasks_to_insert = []
     for task in ai_result.get("tasks", []):
         tasks_to_insert.append({
@@ -254,7 +273,6 @@ async def create_weekly_focus(
     if tasks_to_insert:
         supabase.table("weekly_tasks").insert(tasks_to_insert).execute()
 
-    # Notify mentee
     await create_notification(
         body.mentee_id,
         "project_assigned",
@@ -273,40 +291,37 @@ async def create_weekly_focus(
     }
 
 
-@router.get("/weekly-focus/mentee/{mentee_id}")
-async def get_mentee_weekly_focus(
-    mentee_id: str,
-    user=Depends(get_current_user)
-):
-    """Get current week's focus and tasks for a mentee (mentor view)."""
-    today = date.today()
-    week_start = today - timedelta(days=today.weekday())
-
-    focus = supabase.table("weekly_focus") \
+@router.get("/weekly-focus/history")
+async def get_focus_history(user=Depends(get_current_user)):
+    focus_list = supabase.table("weekly_focus") \
         .select("*") \
-        .eq("mentor_id", str(user.id)) \
-        .eq("mentee_id", mentee_id) \
-        .eq("week_start", str(week_start)) \
+        .eq("mentee_id", str(user.id)) \
+        .order("week_start", desc=True) \
         .execute()
 
-    if not focus.data:
-        return {"focus": None, "tasks": []}
+    result = []
+    for focus in (focus_list.data or []):
+        tasks = supabase.table("weekly_tasks") \
+            .select("id, title, completed, carried_over, category, priority") \
+            .eq("focus_id", focus["id"]) \
+            .execute()
 
-    focus_data = focus.data[0]
-    tasks = supabase.table("weekly_tasks") \
-        .select("*") \
-        .eq("focus_id", focus_data["id"]) \
-        .order("priority").execute()
+        task_list = tasks.data or []
+        total = len(task_list)
+        completed = sum(1 for t in task_list if t.get("completed"))
 
-    return {"focus": focus_data, "tasks": tasks.data or []}
+        result.append({
+            **focus,
+            "task_count": total,
+            "completed_count": completed,
+            "completion_rate": round((completed / total * 100) if total > 0 else 0),
+        })
+
+    return {"history": result}
 
 
 @router.get("/weekly-focus/my-tasks")
 async def get_my_weekly_tasks(user=Depends(get_current_user)):
-    """
-    Mentee gets their current week's tasks.
-    Sorted by: carried_over first, then priority.
-    """
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
 
@@ -343,15 +358,39 @@ async def get_my_weekly_tasks(user=Depends(get_current_user)):
     }
 
 
+@router.get("/weekly-focus/mentee/{mentee_id}")
+async def get_mentee_weekly_focus(
+    mentee_id: str,
+    user=Depends(get_current_user)
+):
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+
+    focus = supabase.table("weekly_focus") \
+        .select("*") \
+        .eq("mentor_id", str(user.id)) \
+        .eq("mentee_id", mentee_id) \
+        .eq("week_start", str(week_start)) \
+        .execute()
+
+    if not focus.data:
+        return {"focus": None, "tasks": []}
+
+    focus_data = focus.data[0]
+    tasks = supabase.table("weekly_tasks") \
+        .select("*") \
+        .eq("focus_id", focus_data["id"]) \
+        .order("priority").execute()
+
+    return {"focus": focus_data, "tasks": tasks.data or []}
+
+
 @router.patch("/weekly-tasks/{task_id}")
 async def update_task(
     task_id: str,
     body: UpdateTaskRequest,
     user=Depends(get_current_user)
 ):
-    """Mentee toggles a task as complete or incomplete."""
-    from datetime import datetime
-
     update_data = {"completed": body.completed}
     if body.completed:
         update_data["completed_at"] = datetime.utcnow().isoformat()
@@ -370,46 +409,102 @@ async def update_task(
     return {"success": True, "completed": body.completed}
 
 
-@router.get("/weekly-focus/history")
-async def get_focus_history(user=Depends(get_current_user)):
-    """Get all past weekly focus plans for the current user (as mentee)."""
-    focus_list = supabase.table("weekly_focus") \
-        .select("*") \
-        .eq("mentee_id", str(user.id)) \
-        .order("week_start", desc=True) \
+@router.patch("/weekly-tasks/{task_id}/content")
+async def update_task_content(
+    task_id: str,
+    body: UpdateTaskContentRequest,
+    user=Depends(get_current_user)
+):
+    # Step 1: get the task and its focus_id
+    task_res = supabase.table("weekly_tasks") \
+        .select("id, focus_id") \
+        .eq("id", task_id) \
         .execute()
 
-    result = []
-    for focus in (focus_list.data or []):
-        tasks = supabase.table("weekly_tasks") \
-            .select("id, title, completed, carried_over, category, priority") \
-            .eq("focus_id", focus["id"]) \
-            .execute()
+    if not task_res.data:
+        raise HTTPException(status_code=404, detail="Task not found")
 
-        task_list = tasks.data or []
-        total = len(task_list)
-        completed = sum(1 for t in task_list if t.get("completed"))
+    focus_id = task_res.data[0]["focus_id"]
 
-        result.append({
-            **focus,
-            "task_count": total,
-            "completed_count": completed,
-            "completion_rate": round((completed / total * 100) if total > 0 else 0),
-        })
+    # Step 2: get the focus and verify this user is the mentor
+    focus_res = supabase.table("weekly_focus") \
+        .select("id, mentor_id") \
+        .eq("id", focus_id) \
+        .execute()
 
-    return {"history": result}
+    if not focus_res.data:
+        raise HTTPException(status_code=404, detail="Focus week not found")
+
+    if focus_res.data[0]["mentor_id"] != str(user.id):
+        raise HTTPException(status_code=403, detail="Only the assigned mentor can edit this task")
+
+    update_data = {}
+    if body.title is not None:
+        update_data["title"] = body.title
+    if body.description is not None:
+        update_data["description"] = body.description
+    if body.category is not None:
+        update_data["category"] = body.category
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+
+    result = supabase.table("weekly_tasks") \
+        .update(update_data) \
+        .eq("id", task_id) \
+        .execute()
+
+    return {"success": True, "task": result.data[0] if result.data else {}}
 
 
+@router.get("/weekly-focus/{focus_id}/review-preview")
+async def get_review_preview(
+    focus_id: str,
+    user=Depends(get_current_user)
+):
+    focus_res = supabase.table("weekly_focus") \
+        .select("*") \
+        .eq("id", focus_id) \
+        .execute()
+
+    if not focus_res.data:
+        raise HTTPException(status_code=404, detail="Focus week not found")
+
+    focus = focus_res.data[0]
+
+    if focus["mentor_id"] != str(user.id):
+        raise HTTPException(status_code=403, detail="Only the mentor can preview this review")
+
+    tasks_res = supabase.table("weekly_tasks") \
+        .select("*") \
+        .eq("focus_id", focus_id) \
+        .execute()
+    tasks = tasks_res.data or []
+
+    logs_res = supabase.table("daily_logs") \
+        .select("structured_title, structured_topics, structured_content, log_date") \
+        .eq("user_id", focus["mentee_id"]) \
+        .gte("log_date", focus["week_start"]) \
+        .lte("log_date", focus["week_end"]) \
+        .execute()
+    logs = logs_res.data or []
+
+    result = await generate_review_preview(focus=focus, tasks=tasks, logs=logs)
+    return result
+
+
+class SendReviewRequest(BaseModel):
+    summary: Optional[str] = None
+    progress: Optional[str] = None
+    recommendations: Optional[str] = None
+    next_week_focus: Optional[str] = None
+    week_label: Optional[str] = None
+    
 @router.post("/weekly-focus/{focus_id}/send-review")
 async def send_weekly_review(
     focus_id: str,
     user=Depends(get_current_user)
 ):
-    """
-    Manually trigger the weekly review email.
-    Sends to both mentor and mentee.
-    In production this would be triggered by pg_cron every Sunday.
-    """
     focus = supabase.table("weekly_focus") \
         .select("*").eq("id", focus_id).execute()
 
@@ -418,7 +513,6 @@ async def send_weekly_review(
 
     focus_data = focus.data[0]
 
-    # Verify requester is mentor or mentee
     if str(user.id) not in [focus_data["mentor_id"], focus_data["mentee_id"]]:
         raise HTTPException(403, "Not authorised")
 
@@ -426,17 +520,14 @@ async def send_weekly_review(
         .select("*").eq("focus_id", focus_id).execute()
     task_list = tasks.data or []
 
-    # Get mentee name
     mentee_profile = supabase.table("profiles") \
         .select("full_name").eq("id", focus_data["mentee_id"]).execute()
     mentee_name = mentee_profile.data[0]["full_name"] if mentee_profile.data else "Mentee"
 
-    # Get mentor name
     mentor_profile = supabase.table("profiles") \
         .select("full_name").eq("id", focus_data["mentor_id"]).execute()
     mentor_name = mentor_profile.data[0]["full_name"] if mentor_profile.data else "Mentor"
 
-    # AI review paragraph
     review_text = await generate_weekly_review(
         mentee_name=mentee_name,
         tasks=task_list,
@@ -449,7 +540,8 @@ async def send_weekly_review(
     completion_rate = round((completed / total * 100) if total > 0 else 0)
     incomplete = [t for t in task_list if not t.get("completed")]
 
-    # Build email HTML
+    bar_color = "#059669" if completion_rate >= 80 else "#D97706" if completion_rate >= 50 else "#DC2626"
+
     completed_html = "".join([
         f'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F0EEF8;">'
         f'<span style="color:#059669;font-size:16px;">✅</span>'
@@ -468,9 +560,6 @@ async def send_weekly_review(
         for t in incomplete
     ]) or '<p style="color:#aaa;font-size:13px;">All tasks completed! 🎉</p>'
 
-    # Progress bar
-    bar_color = "#059669" if completion_rate >= 80 else "#D97706" if completion_rate >= 50 else "#DC2626"
-
     html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -479,68 +568,42 @@ async def send_weekly_review(
 </head>
 <body style="margin:0;padding:0;background:#F5F4FF;font-family:Urbanist,Arial,sans-serif;">
   <div style="max-width:600px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(124,58,237,0.08);">
-
     <div style="background:#0A0A0F;padding:28px 36px;">
       <div style="font-size:22px;font-weight:800;color:#fff;">Trackm<span style="color:#7C3AED;">e</span></div>
       <div style="color:#555;font-size:11px;margin-top:4px;letter-spacing:4px;">S / Y A N</div>
     </div>
-
     <div style="padding:36px 40px;">
-      <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#7C3AED;text-transform:uppercase;margin-bottom:8px;">
-        Weekly Review
-      </div>
-      <h1 style="font-size:20px;font-weight:800;color:#0D0D0D;margin:0 0 4px;letter-spacing:-0.3px;">
-        {mentee_name}'s Week
-      </h1>
-      <p style="color:#aaa;font-size:13px;margin:0 0 28px;">
-        {focus_data['week_start']} → {focus_data['week_end']}
-      </p>
-
-      <!-- Progress -->
+      <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#7C3AED;text-transform:uppercase;margin-bottom:8px;">Weekly Review</div>
+      <h1 style="font-size:20px;font-weight:800;color:#0D0D0D;margin:0 0 4px;letter-spacing:-0.3px;">{mentee_name}'s Week</h1>
+      <p style="color:#aaa;font-size:13px;margin:0 0 28px;">{focus_data['week_start']} → {focus_data['week_end']}</p>
       <div style="background:#F8F6FF;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <span style="font-weight:700;font-size:15px;color:#0D0D0D;">{completed}/{total} tasks completed</span>
           <span style="font-size:22px;font-weight:900;color:{bar_color};">{completion_rate}%</span>
         </div>
         <div style="height:8px;background:#E8E5FF;border-radius:4px;overflow:hidden;">
-          <div style="height:100%;width:{completion_rate}%;background:{bar_color};border-radius:4px;transition:width 0.3s;"></div>
+          <div style="height:100%;width:{completion_rate}%;background:{bar_color};border-radius:4px;"></div>
         </div>
       </div>
-
-      <!-- AI Review -->
       <div style="background:#F8F6FF;border-left:3px solid #7C3AED;padding:16px 20px;border-radius:0 10px 10px 0;margin-bottom:28px;">
-        <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#7C3AED;text-transform:uppercase;margin-bottom:8px;">
-          Mentor's AI Assessment
-        </div>
+        <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#7C3AED;text-transform:uppercase;margin-bottom:8px;">Mentor's AI Assessment</div>
         <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">{review_text}</p>
       </div>
-
-      <!-- Completed tasks -->
       <div style="margin-bottom:24px;">
-        <div style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
-          ✅ Completed
-        </div>
+        <div style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">✅ Completed</div>
         {completed_html}
       </div>
-
-      <!-- Incomplete tasks -->
       <div style="margin-bottom:28px;">
-        <div style="font-size:12px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
-          ⬜ Carrying Over
-        </div>
+        <div style="font-size:12px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">⬜ Carrying Over</div>
         {incomplete_html}
       </div>
-
       <hr style="border:none;border-top:1px solid #F0EEF8;margin:0 0 18px;">
-      <p style="color:#ccc;font-size:11px;text-align:center;margin:0;">
-        Powered by Trackme · S / Y A N
-      </p>
+      <p style="color:#ccc;font-size:11px;text-align:center;margin:0;">Powered by Trackme · S / Y A N</p>
     </div>
   </div>
 </body>
 </html>"""
 
-    # Get emails
     try:
         all_users = supabase.auth.admin.list_users()
         mentee_email = None
