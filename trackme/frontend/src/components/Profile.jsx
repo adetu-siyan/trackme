@@ -591,7 +591,7 @@ export default function Profile() {
             </h4>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
               {isMe
-                ? 'Full access to all Trackme features — mentee tracking, mentor connection, and premium tools.'
+                ? 'Full access to all Dôti features — mentee tracking, mentor connection, and premium tools.'
                 : roleMentor
                 ? 'Mentees connect using your email. Their logs arrive for your review and sign-off.'
                 : 'Add a mentor by email. They receive your logs and sign off on your progress.'}

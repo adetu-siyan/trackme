@@ -6,7 +6,7 @@ from models import (
     RespondMentorRequest, ChangePasswordRequest, AccessRequestModel
 )
 from services.supabase_service import create_notification
-from services.resend_service import send_email
+from services.brevo_service import send_email
 from config import settings
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -51,6 +51,20 @@ async def mark_all_read(user=Depends(get_current_user)):
         .eq("user_id", str(user.id)) \
         .execute()
     return {"success": True}
+
+@router.post("/schedule")
+async def schedule_reminder(request: Request, user=Depends(get_current_user)):
+    body = await request.json()
+    reminder_time = body.get("time", "09:00")  # HH:MM
+    slot = body.get("slot", "morning")          # morning | evening | mentor
+
+    # Store preference in Supabase
+    supabase.table("profiles").update({
+        "reminder_time": reminder_time,
+        "reminder_slot": slot,
+    }).eq("id", str(user.id)).execute()
+
+    return {"success": True, "scheduled": reminder_time, "slot": slot}
 
 
 # ============================================================
@@ -128,14 +142,14 @@ async def request_access(request: Request, body: AccessRequestModel):
 <body style="font-family:Urbanist,Arial,sans-serif;background:#F5F4FF;padding:40px 20px;">
   <div style="max-width:500px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(124,58,237,0.08);">
     <div style="background:#0A0A0F;padding:24px 32px;">
-      <div style="font-size:20px;font-weight:800;color:#fff;">Trackm<span style="color:#7C3AED;">e</span></div>
+      <div style="font-size:20px;font-weight:800;color:#fff;">Dôti</div>
     </div>
     <div style="padding:32px;">
       <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#7C3AED;text-transform:uppercase;margin-bottom:8px;">
         New Access Request
       </div>
       <h2 style="font-size:18px;font-weight:700;color:#0D0D0D;margin:0 0 20px;">
-        Someone wants to join Trackme
+        Someone wants to join Dôti
       </h2>
       <div style="background:#F8F6FF;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
         <div style="font-size:12px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Name</div>
@@ -147,7 +161,7 @@ async def request_access(request: Request, body: AccessRequestModel):
       </div>
       {f'<div style="background:#F8F6FF;border-radius:10px;padding:16px 20px;margin-bottom:16px;"><div style="font-size:12px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Reason</div><div style="font-size:14px;color:#444;line-height:1.6;">{body.reason}</div></div>' if body.reason else ''}
       <p style="color:#aaa;font-size:12px;margin:0;text-align:center;">
-        Trackme · S / Y A N
+        Dôti · S / Y A N
       </p>
     </div>
   </div>
@@ -157,7 +171,7 @@ async def request_access(request: Request, body: AccessRequestModel):
     try:
         send_email(
             to=PREMIUM_EMAIL,
-            subject=f"🔔 Trackme Access Request — {body.full_name}",
+            subject=f"🔔 Dôti Access Request — {body.full_name}",
             html=html
         )
     except Exception:
@@ -207,7 +221,7 @@ async def request_mentor(request: Request, body: MentorRequestModel, user=Depend
     if not mentor_profile.data:
         return {
             "success": False,
-            "message": f"No Trackme account found for {body.mentor_email}. Make sure they've signed up first."
+            "message": f"No Dôti account found for {body.mentor_email}. Make sure they've signed up first."
         }
 
     mentor_id = mentor_profile.data[0]["id"]

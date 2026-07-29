@@ -4,12 +4,12 @@ const ThemeContext = createContext()
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('trackme-theme') || 'light'
+    return localStorage.getItem('Dôti-theme') || 'light'
   })
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('trackme-theme', theme)
+    localStorage.setItem('Dôti-theme', theme)
   }, [theme])
 
   const toggle = () => setTheme(t => t === 'light' ? 'dark' : 'light')

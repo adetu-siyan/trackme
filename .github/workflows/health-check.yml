@@ -1,4 +1,4 @@
-name: Trackme Health Check
+name: Dôti Health Check
 
 on:
   schedule:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check Trackme Health
+      - name: Check Dôti Health
         id: health
         run: |
           RESPONSE=$(curl -s -o /tmp/health.json -w "%{http_code}" \
@@ -45,14 +45,14 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USER }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "🚨 Trackme Health Alert — Something is down"
+          subject: "🚨 Dôti Health Alert — Something is down"
           to: adetusiyan@gmail.com
-          from: Trackme Monitor <${{ secrets.GMAIL_USER }}>
+          from: Dôti Monitor <${{ secrets.GMAIL_USER }}>
           body: |
-            Trackme health check detected an issue.
+            Dôti health check detected an issue.
             
             Status Code: ${{ steps.health.outputs.status_code }}
             
             Check your dashboard: ${{ secrets.BACKEND_URL }}/health-dashboard
             
-            — Trackme Monitor
+            — Dôti Monitor

@@ -47,25 +47,40 @@ export function AuthProvider({ children }) {
   }
 
   async function signUp(email, password, fullName, role) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName, role } }
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName, role } }
+  })
+  if (error) throw error
+
+  if (data.user) {
+    await supabase.from('profiles').upsert({
+      id: data.user.id,
+      full_name: fullName,
+      role,
+      email: email.toLowerCase(),
     })
-    if (error) throw error
 
-    // Ensure email is saved to profile
-    if (data.user) {
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        full_name: fullName,
-        role,
-        email: email.toLowerCase(),
+    // Send welcome email
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/auth/welcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          full_name: fullName,
+          role,
+        }),
       })
+    } catch (e) {
+      console.error('Welcome email failed:', e)
+      // Don't throw — signup already succeeded
     }
-
-    return data
   }
+
+  return data
+}
 
   async function signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })

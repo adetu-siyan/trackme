@@ -23,12 +23,12 @@ export default function Settings() {
 
     setCalendarConnected(!!localStorage.getItem('gcal-token'))
 
-    const notifs = JSON.parse(localStorage.getItem('trackme-notifs') || '{}')
+    const notifs = JSON.parse(localStorage.getItem('Dôti-notifs') || '{}')
     if ('logSigned' in notifs) setNotifLogSigned(notifs.logSigned)
     if ('weeklyReview' in notifs) setNotifWeeklyReview(notifs.weeklyReview)
     if ('projectAssigned' in notifs) setNotifProjectAssigned(notifs.projectAssigned)
 
-    const emails = JSON.parse(localStorage.getItem('trackme-recent-emails') || '[]')
+    const emails = JSON.parse(localStorage.getItem('Dôti-recent-emails') || '[]')
     setRecentEmails(emails)
   }, [])
 
@@ -47,8 +47,27 @@ export default function Settings() {
     setTimeout(() => setReminderSaved(false), 3000)
   }
 
+  async function saveReminder() {
+  setReminderLoading(true)
+  const slot = isMentor ? 'mentor' : time >= '18:00' ? 'evening' : 'morning'
+  try {
+    await fetch('/api/notifications/schedule', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token}`
+      },
+      body: JSON.stringify({ time, slot }),
+    })
+  } catch {}
+  localStorage.setItem('flow-reminder-time', time)
+  setReminderSaved(true)
+  setReminderLoading(false)
+  setTimeout(() => setReminderSaved(false), 3000)
+}
+
   function saveNotifPrefs() {
-    localStorage.setItem('trackme-notifs', JSON.stringify({
+    localStorage.setItem('Dôti-notifs', JSON.stringify({
       logSigned: notifLogSigned,
       weeklyReview: notifWeeklyReview,
       projectAssigned: notifProjectAssigned,
@@ -60,7 +79,7 @@ export default function Settings() {
   function removeRecentEmail(email) {
     const updated = recentEmails.filter(e => e !== email)
     setRecentEmails(updated)
-    localStorage.setItem('trackme-recent-emails', JSON.stringify(updated))
+    localStorage.setItem('Dôti-recent-emails', JSON.stringify(updated))
   }
 
   function connectCalendar() {
@@ -97,8 +116,8 @@ export default function Settings() {
   function clearLocalData() {
     localStorage.removeItem('myflow-cards')
     localStorage.removeItem('myflow-notes')
-    localStorage.removeItem('trackme-recent-emails')
-    localStorage.removeItem('trackme-notifs')
+    localStorage.removeItem('Dôti-recent-emails')
+    localStorage.removeItem('Dôti-notifs')
     localStorage.removeItem('gcal-token')
     setRecentEmails([])
     setCalendarConnected(false)

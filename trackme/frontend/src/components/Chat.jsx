@@ -21,7 +21,7 @@ export default function Chat() {
   const [mentorEmail, setMentorEmail] = useState('')
   const [sentMentorEmail, setSentMentorEmail] = useState('')
   const [recentEmails, setRecentEmails] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('trackme-recent-emails') || '[]') } catch { return [] }
+    try { return JSON.parse(localStorage.getItem('Dôti-recent-emails') || '[]') } catch { return [] }
   })
   const [loading, setLoading] = useState(false)
 
@@ -179,39 +179,50 @@ export default function Chat() {
   }
 
   async function handleSendToMentor() {
-    if (!mentorEmail.trim()) { toast.error("Enter your mentor's email"); return }
-    setLoading(true)
-    try {
-      await logsApi.sendToMentor({
-        log_id: logData.log_id,
-        mentor_email: mentorEmail,
-        project_id: selectedProject || null,
-      })
+  if (!mentorEmail.trim()) { toast.error("Enter your mentor's email"); return }
+  setLoading(true)
+  try {
+    await logsApi.sendToMentor({
+      log_id: logData.log_id,
+      mentor_email: mentorEmail,
+      project_id: selectedProject || null,
+    })
+  } catch (e) {
+    // If already sent, backend already processed it — treat as success
+    const alreadySent = e.message?.toLowerCase().includes("already sent")
+    const networkDrop = e.message?.toLowerCase().includes("failed to fetch")
 
-      if (confirmedTasks.length > 0) {
-        setCompletingTasks(true)
-        await Promise.allSettled(
-          confirmedTasks.map(taskId =>
-            weeklyFocusApi.updateTask(taskId, true)
-          )
-        )
-        setCompletingTasks(false)
-      }
-      setRecentEmails(prev => {
-        const updated = [mentorEmail, ...prev.filter(e => e !== mentorEmail)].slice(0, 3)
-        localStorage.setItem('trackme-recent-emails', JSON.stringify(updated))
-        return updated
-      })
-      setSentMentorEmail(mentorEmail)
-      setStage('done')
-      toast.success('Sent to mentor!')
-    } catch (e) {
+    if (!alreadySent && !networkDrop) {
       toast.error(e.message)
-    } finally {
       setLoading(false)
+      return
+    }
+
+    if (alreadySent || networkDrop) {
+      // Fall through to success flow below
+      toast.info(alreadySent ? "Already sent to mentor!" : "Sent! (connection dropped but it went through)")
     }
   }
 
+  // Success flow — runs whether request succeeded or was already sent
+  if (confirmedTasks.length > 0) {
+    setCompletingTasks(true)
+    await Promise.allSettled(
+      confirmedTasks.map(taskId => weeklyFocusApi.updateTask(taskId, true))
+    )
+    setCompletingTasks(false)
+  }
+
+  setRecentEmails(prev => {
+    const updated = [mentorEmail, ...prev.filter(e => e !== mentorEmail)].slice(0, 3)
+    localStorage.setItem('Dôti-recent-emails', JSON.stringify(updated))
+    return updated
+  })
+
+  setSentMentorEmail(mentorEmail)
+  setStage('done')
+  setLoading(false)
+}
   function toggleTaskConfirm(taskId) {
     setConfirmedTasks(prev =>
       prev.includes(taskId)

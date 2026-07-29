@@ -43,7 +43,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
           <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
           <h3 style={{ marginBottom: 8 }}>No mentees yet</h3>
           <p className="text-muted" style={{ fontSize: 14 }}>
-            Share your email with someone and ask them to add you as their mentor in Trackme.
+            Share your email with someone and ask them to add you as their mentor in Dôti.
           </p>
         </div>
       ) : (

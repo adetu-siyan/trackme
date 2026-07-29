@@ -6,7 +6,7 @@ from typing import Optional
 from models import CreateProjectRequest
 from dependencies import get_current_user
 from services.supabase_service import supabase, create_notification
-from services.resend_service import send_email
+from services.brevo_service import send_signed_notification_to_mentee
 from services.groq_service import (
     generate_weekly_tasks,
     generate_weekly_review,
@@ -56,11 +56,19 @@ async def create_project(body: CreateProjectRequest, user=Depends(get_current_us
             structured_description = body.description
 
     project_data = {
-        "creator_id": creator_id,
-        "title": body.title,
-        "description": structured_description,
-        "deadline": str(body.deadline) if body.deadline else None,
-    }
+    "creator_id": creator_id,
+    "title": body.title,
+    "description": structured_description,
+    "deadline": str(body.deadline) if body.deadline else None,
+    "project_type": body.project_type or "tech",
+    "objectives": body.objectives,
+    "deliverables": body.deliverables,
+    "requirements": body.requirements,
+    "tech_stack": body.tech_stack,
+    "resources": body.resources,
+    "submission_channel": body.submission_channel,
+    "submission_notes": body.submission_notes,
+}
 
     result = supabase.table("projects").insert(project_data).execute()
     if not result.data:
@@ -598,7 +606,7 @@ async def send_weekly_review(
         {incomplete_html}
       </div>
       <hr style="border:none;border-top:1px solid #F0EEF8;margin:0 0 18px;">
-      <p style="color:#ccc;font-size:11px;text-align:center;margin:0;">Powered by Trackme · S / Y A N</p>
+      <p style="color:#ccc;font-size:11px;text-align:center;margin:0;">Powered by Dôti · S / Y A N</p>
     </div>
   </div>
 </body>

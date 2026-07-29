@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     supabase_service_role_key: str
     supabase_anon_key: str
     groq_api_key: str
+    brevo_api_key: str
     gmail_user: str
     gmail_app_password: str
     app_url: str = "http://localhost:5173"

@@ -19,7 +19,7 @@ export default function BecomeMentorModal({ onClose }) {
           }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, letterSpacing: '1px', textTransform: 'uppercase' }}>How it works</div>
             {[
-              'Share your Trackme account email with your mentee',
+              'Share your Dôti account email with your mentee',
               'They add you as mentor using that email',
               'Their daily AI-structured logs land in your inbox',
               'One click to review and sign',

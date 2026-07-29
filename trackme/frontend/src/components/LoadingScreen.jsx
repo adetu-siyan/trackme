@@ -45,8 +45,8 @@ export default function LoadingScreen({ onComplete }) {
   animation: 'fadeIn 0.8s ease 0.3s both',
 }}>
   <img
-    src="/trackme-dark.png"
-    alt="Trackme"
+    src="/Doti-dark.png"
+    alt="Dôti"
     style={{ width: 220, objectFit: 'contain' }}
   />
 </div>

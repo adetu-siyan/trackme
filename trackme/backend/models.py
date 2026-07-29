@@ -70,8 +70,16 @@ class SendToMentorRequest(BaseModel):
 class CreateProjectRequest(BaseModel):
     title: str
     description: Optional[str] = None
-    deadline: Optional[date] = None
-    mentee_ids: List[str] = []
+    deadline: Optional[str] = None
+    mentee_ids: Optional[List[str]] = []
+    project_type: Optional[str] = "tech"
+    objectives: Optional[str] = None
+    deliverables: Optional[str] = None
+    requirements: Optional[str] = None
+    tech_stack: Optional[str] = None
+    resources: Optional[str] = None
+    submission_channel: Optional[str] = None
+    submission_notes: Optional[str] = None
 
 
 # ============================================================

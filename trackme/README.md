@@ -1,4 +1,4 @@
-# Trackme — AI Accountability Platform
+# Dôti — AI Accountability Platform
 
 > Built by **S / Y A N** · Daily learning logs, AI restructuring, mentor sign-off flow.
 
@@ -102,7 +102,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 SUPABASE_ANON_KEY=your-anon-key
 GROQ_API_KEY=your-groq-key
 RESEND_API_KEY=your-resend-key
-RESEND_FROM_EMAIL=trackme@yourdomain.com
+RESEND_FROM_EMAIL=Dôti@yourdomain.com
 APP_URL=http://localhost:5173
 BACKEND_URL=http://localhost:8000
 SECRET_KEY=change-this-in-production
@@ -171,7 +171,7 @@ Update `APP_URL` in backend `.env` to your Vercel URL so signing email links poi
 ## Project Structure
 
 ```
-trackme/
+Dôti/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
@@ -221,4 +221,4 @@ trackme/
 
 ---
 
-Built with ♟ by Adetu Siyan · Trackme v1.0
+Built with ♟ by Adetu Siyan · Dôti v1.0

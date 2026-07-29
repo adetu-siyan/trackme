@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { logsApi, mentorApi, projectsApi } from '../lib/api'
-import CreateProjectModal from './modals/CreateProjectModal'
+import MentorCreateProjectModal from './modals/MentorCreateProjectModal'
+import MenteeCreateProjectModal from './modals/MenteeCreateProjectModal'
 import AddMentorModal from './modals/AddMentorModal'
 import BecomeMentorModal from './modals/BecomeMentorModal'
 
@@ -9,6 +10,7 @@ export default function Home({ setPage }) {
   const { user, profile } = useAuth()
   const [streak, setStreak] = useState({ current_streak: 0, longest_streak: 0 })
   const [recentLogs, setRecentLogs] = useState([])
+  const [allLogs, setAllLogs] = useState([])
   const [myMentor, setMyMentor] = useState(null)
   const [projects, setProjects] = useState({ created: [], assigned: [] })
   const [loading, setLoading] = useState(true)
@@ -29,7 +31,9 @@ export default function Home({ setPage }) {
           projectsApi.myProjects(),
         ])
         setStreak(streakData)
-        setRecentLogs((logsData.logs || []).slice(0, 3))
+        const allLogsData = logsData.logs || []
+        setAllLogs(allLogsData)
+        setRecentLogs(allLogsData.slice(0, 3))
         setProjects(projectsData)
 
         if (!isMentor) {
@@ -65,20 +69,12 @@ export default function Home({ setPage }) {
           margin-bottom: 16px;
         }
         @media (max-width: 1024px) {
-          .home-grid-top {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          .home-grid-bottom {
-            grid-template-columns: 1fr 1fr;
-          }
+          .home-grid-top { grid-template-columns: repeat(2, 1fr); }
+          .home-grid-bottom { grid-template-columns: 1fr 1fr; }
         }
         @media (max-width: 640px) {
-          .home-grid-top {
-            grid-template-columns: 1fr;
-          }
-          .home-grid-bottom {
-            grid-template-columns: 1fr;
-          }
+          .home-grid-top { grid-template-columns: 1fr; }
+          .home-grid-bottom { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -93,13 +89,9 @@ export default function Home({ setPage }) {
           </p>
         </div>
         <div style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: 'var(--text-muted)',
-          letterSpacing: '1px',
-          textTransform: 'uppercase',
-          paddingTop: 8,
-          flexShrink: 0,
+          fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
+          letterSpacing: '1px', textTransform: 'uppercase',
+          paddingTop: 8, flexShrink: 0,
         }}>
           {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </div>
@@ -111,8 +103,7 @@ export default function Home({ setPage }) {
         {/* Streak Card */}
         <div className="card" style={{
           background: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%)',
-          border: 'none',
-          color: '#fff',
+          border: 'none', color: '#fff',
           animation: streak.current_streak > 0 ? 'streakBounce 2s ease infinite' : 'none',
         }}>
           <div style={{ fontSize: 11, letterSpacing: '2px', fontWeight: 600, opacity: 0.7, marginBottom: 12, textTransform: 'uppercase' }}>
@@ -129,23 +120,42 @@ export default function Home({ setPage }) {
           </div>
         </div>
 
-        {/* Be a Mentor Card */}
-        <div
-          className="card card-clickable"
-          onClick={() => setShowBecomeMentor(true)}
-          style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
-        >
-          <div>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>🎯</div>
-            <h3 style={{ marginBottom: 6 }}>Be a Mentor</h3>
-            <p className="text-muted" style={{ fontSize: 13 }}>
-              Guide someone on their learning journey. Accept mentee requests.
-            </p>
+        {/* Mentor: Check Your Mentees | Non-mentor: Be a Mentor */}
+        {isMentor ? (
+          <div
+            className="card card-clickable"
+            onClick={() => setPage('mentees')}
+            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+          >
+            <div>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>👥</div>
+              <h3 style={{ marginBottom: 6 }}>Your Mentees</h3>
+              <p className="text-muted" style={{ fontSize: 13 }}>
+                See who you're guiding, review their logs, and track their progress.
+              </p>
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <span className="badge badge-accent">View Dashboard →</span>
+            </div>
           </div>
-          <div style={{ marginTop: 16 }}>
-            <span className="badge badge-accent">Set Up</span>
+        ) : (
+          <div
+            className="card card-clickable"
+            onClick={() => setShowBecomeMentor(true)}
+            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+          >
+            <div>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>🎯</div>
+              <h3 style={{ marginBottom: 6 }}>Be a Mentor</h3>
+              <p className="text-muted" style={{ fontSize: 13 }}>
+                Guide someone on their learning journey. Accept mentee requests.
+              </p>
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <span className="badge badge-accent">Set Up</span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Add a Mentor Card */}
         <div
@@ -154,7 +164,7 @@ export default function Home({ setPage }) {
           style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
         >
           <div>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>👥</div>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>👤</div>
             <h3 style={{ marginBottom: 6 }}>
               {myMentor ? `Mentor: ${myMentor.profiles?.full_name}` : 'Add a Mentor'}
             </h3>
@@ -199,16 +209,11 @@ export default function Home({ setPage }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {projects.created.slice(0, 2).map(p => (
                   <div key={p.id} style={{
-                    padding: '8px 12px',
-                    background: 'var(--surface-2)',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
+                    padding: '8px 12px', background: 'var(--surface-2)',
+                    borderRadius: 8, fontSize: 13, fontWeight: 500,
+                    display: 'flex', alignItems: 'center', gap: 8,
                   }}>
-                    <span style={{ width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }}/>
+                    <span style={{ width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />
                     {p.title}
                   </div>
                 ))}
@@ -226,9 +231,7 @@ export default function Home({ setPage }) {
           className="card card-clickable"
           onClick={() => setPage('chat')}
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
+            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
             background: hasLoggedToday
               ? 'linear-gradient(135deg, #064E3B 0%, #059669 100%)'
               : 'linear-gradient(135deg, var(--accent-soft) 0%, var(--surface-3) 100%)',
@@ -243,8 +246,7 @@ export default function Home({ setPage }) {
               {hasLoggedToday ? 'Logged Today!' : "Log Today's Activity"}
             </h3>
             <p style={{
-              fontSize: 13,
-              lineHeight: 1.6,
+              fontSize: 13, lineHeight: 1.6,
               color: hasLoggedToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)',
             }}>
               {hasLoggedToday
@@ -254,11 +256,8 @@ export default function Home({ setPage }) {
           </div>
           <div style={{ marginTop: 20 }}>
             <span style={{
-              display: 'inline-block',
-              padding: '6px 14px',
-              borderRadius: 20,
-              fontSize: 12,
-              fontWeight: 600,
+              display: 'inline-block', padding: '6px 14px', borderRadius: 20,
+              fontSize: 12, fontWeight: 600,
               background: hasLoggedToday ? 'rgba(255,255,255,0.2)' : 'var(--accent)',
               color: '#fff',
             }}>
@@ -269,16 +268,9 @@ export default function Home({ setPage }) {
       </div>
 
       {/* Bottom strip — History + Stats */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr',
-        gap: 16,
-      }}>
-        {/* History shortcut */}
-        <div
-          className="card card-clickable"
-          onClick={() => setPage('history')}
-        >
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+
+        <div className="card card-clickable" onClick={() => setPage('history')}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <span style={{ fontSize: 28 }}>🕓</span>
@@ -293,16 +285,14 @@ export default function Home({ setPage }) {
           </div>
         </div>
 
-        {/* Quick stats */}
         <div className="card" style={{ display: 'flex', gap: 0, padding: 0, overflow: 'hidden' }}>
           {[
-            { label: 'Total Logs', value: recentLogs.length > 0 ? recentLogs.length : '—' },
-            { label: 'Signed', value: recentLogs.filter(l => l.signed).length || '—' },
+           { label: 'Total Logs', value: allLogs.length || '—' },
+           { label: 'Signed', value: allLogs.filter(l => l.signed).length || '—' },
+           
           ].map((stat, i) => (
             <div key={i} style={{
-              flex: 1,
-              padding: '20px 16px',
-              textAlign: 'center',
+              flex: 1, padding: '20px 16px', textAlign: 'center',
               borderRight: i === 0 ? '1px solid var(--border)' : 'none',
             }}>
               <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)', marginBottom: 4 }}>
@@ -318,13 +308,23 @@ export default function Home({ setPage }) {
 
       {/* Modals */}
       {showCreateProject && (
-        <CreateProjectModal
-          onClose={() => setShowCreateProject(false)}
-          onCreated={() => {
-            setShowCreateProject(false)
-            projectsApi.myProjects().then(d => setProjects(d))
-          }}
-        />
+        isMentor ? (
+          <MentorCreateProjectModal
+            onClose={() => setShowCreateProject(false)}
+            onCreated={() => {
+              setShowCreateProject(false)
+              projectsApi.myProjects().then(d => setProjects(d))
+            }}
+          />
+        ) : (
+          <MenteeCreateProjectModal
+            onClose={() => setShowCreateProject(false)}
+            onCreated={() => {
+              setShowCreateProject(false)
+              projectsApi.myProjects().then(d => setProjects(d))
+            }}
+          />
+        )
       )}
       {showAddMentor && (
         <AddMentorModal onClose={() => setShowAddMentor(false)} />

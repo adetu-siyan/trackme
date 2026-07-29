@@ -118,7 +118,7 @@ export default function AuthPage() {
             <>
               <h2 style={{ marginBottom: 6 }}>Request Access</h2>
               <p className="text-muted" style={{ fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
-                Trackme is currently in private beta. Tell the admin who you are and we'll get back to you.
+               Dôti is currently in private beta. Tell the admin who you are and we'll get back to you.
               </p>
               <form onSubmit={handleAccessRequest} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
@@ -211,7 +211,7 @@ export default function AuthPage() {
             borderRadius: 10, padding: '14px 16px', marginBottom: 20,
           }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--warning)', marginBottom: 4 }}>
-              🔒 Trackme is in private beta
+              🔒 Dôti is in private beta
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 12px' }}>
               We're not accepting new accounts right now. You can request access and the admin will review it.
