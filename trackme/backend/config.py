@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     brevo_api_key: str
     gmail_user: str
     gmail_app_password: str
-    app_url: str = "http://localhost:5173"
-    backend_url: str = "http://localhost:8000"
+    app_url: str = "https://doti-alpha.vercel.app"
+    backend_url: str = "https://doti-hjq5.onrender.com"
     secret_key: str = "change-me-in-production"
     cors_origins: str = "http://localhost:5173"
     allowed_hosts: str = "*"
