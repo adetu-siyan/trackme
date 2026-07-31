@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
 
     // Send welcome email
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/api/auth/welcome`, {
+      fetch(`${import.meta.env.VITE_API_URL}/api/auth/welcome`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
