@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     app_url: str = "https://doti-alpha.vercel.app"
     backend_url: str = "https://doti-hjq5.onrender.com"
     secret_key: str = "change-me-in-production"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,https://doti-alpha.vercel.app,https://doti-rkqm10oza-adetu-siyan-s-projects.vercel.app"
     allowed_hosts: str = "*"
     debug: bool = False
     health_secret: str = "default-secret"  # Add this line
