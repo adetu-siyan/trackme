@@ -385,3 +385,192 @@ async def send_reminder_email(
 </html>"""
 
     await send_email(to=mentee_email, subject=subject, html=html)
+    
+async def send_project_assigned_email(
+    mentee_email: str,
+    mentee_name: str,
+    mentor_name: str,
+    project_title: str,
+    project_id: str,
+):
+    first_name = mentee_name.split(" ")[0] if mentee_name else "there"
+
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#F5F4FF;font-family:Urbanist,Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;
+              overflow:hidden;box-shadow:0 4px 24px rgba(124,58,237,0.08);">
+    <div style="background:#0A0A0F;padding:24px 32px;">
+      <div style="font-size:22px;font-weight:800;color:#fff;">Dôti</div>
+    </div>
+    <div style="padding:36px 40px;">
+      <div style="font-size:36px;margin-bottom:16px;">📋</div>
+      <h1 style="font-size:20px;font-weight:800;color:#0D0D0D;margin:0 0 8px;">
+        You've been added to a project
+      </h1>
+      <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 24px;">
+        Hey {first_name}, <strong>{mentor_name}</strong> just assigned you to a new project.
+      </p>
+      <div style="background:#F8F6FF;border:1.5px solid #E8E5FF;border-radius:12px;
+                  padding:20px 24px;margin-bottom:28px;">
+        <div style="font-size:10px;letter-spacing:2px;color:#7C3AED;font-weight:700;
+                    text-transform:uppercase;margin-bottom:8px;">Project</div>
+        <div style="font-size:18px;font-weight:700;color:#0D0D0D;">{project_title}</div>
+      </div>
+      <div style="text-align:center;margin-bottom:28px;">
+        <a href="{settings.app_url}"
+           style="display:inline-block;background:#7C3AED;color:#fff;
+                  text-decoration:none;padding:14px 40px;border-radius:10px;
+                  font-weight:700;font-size:15px;font-family:Urbanist,Arial,sans-serif;">
+          → View Project
+        </a>
+      </div>
+      <hr style="border:none;border-top:1px solid #F0EEF8;margin:0 0 16px;">
+      <p style="color:#ccc;font-size:11px;text-align:center;margin:0;">
+        Powered by Dôti &nbsp;·&nbsp; Built by S / Y A N
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    await send_email(
+        to=mentee_email,
+        subject=f"📋 {mentor_name} added you to \"{project_title}\"",
+        html=html
+    )
+
+
+async def send_weekly_focus_email(
+    mentee_email: str,
+    mentee_name: str,
+    mentor_name: str,
+    summary: str,
+    task_count: int,
+    week_start: str,
+    week_end: str,
+):
+    first_name = mentee_name.split(" ")[0] if mentee_name else "there"
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#F5F4FF;font-family:Urbanist,Arial,sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;
+              overflow:hidden;box-shadow:0 4px 24px rgba(124,58,237,0.08);">
+    <div style="background:#0A0A0F;padding:24px 32px;">
+      <div style="font-size:22px;font-weight:800;color:#fff;">Dôti</div>
+    </div>
+    <div style="padding:36px 40px;">
+      <div style="font-size:36px;margin-bottom:16px;">📅</div>
+      <h1 style="font-size:20px;font-weight:800;color:#0D0D0D;margin:0 0 8px;">
+        Your weekly focus is set
+      </h1>
+      <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 24px;">
+        Hey {first_name}, <strong>{mentor_name}</strong> just set your focus for the week of
+        <strong>{week_start}</strong> → <strong>{week_end}</strong>.
+      </p>
+      <div style="background:#F8F6FF;border:1.5px solid #E8E5FF;border-radius:12px;
+                  padding:20px 24px;margin-bottom:16px;">
+        <div style="font-size:10px;letter-spacing:2px;color:#7C3AED;font-weight:700;
+                    text-transform:uppercase;margin-bottom:8px;">This Week's Focus</div>
+        <p style="font-size:15px;color:#0D0D0D;font-weight:600;margin:0 0 12px;">{summary}</p>
+        <div style="display:inline-flex;align-items:center;gap:6px;
+                    background:#7C3AED;color:#fff;padding:6px 14px;
+                    border-radius:20px;font-size:13px;font-weight:700;">
+          {task_count} tasks waiting for you
+        </div>
+      </div>
+      <div style="background:#F0FDF4;border-radius:10px;padding:14px 18px;margin-bottom:28px;">
+        <p style="color:#166534;font-size:13px;margin:0;line-height:1.6;">
+          🔥 Log every day this week and keep the streak alive.
+        </p>
+      </div>
+      <div style="text-align:center;margin-bottom:28px;">
+        <a href="{settings.app_url}"
+           style="display:inline-block;background:#7C3AED;color:#fff;
+                  text-decoration:none;padding:14px 40px;border-radius:10px;
+                  font-weight:700;font-size:15px;font-family:Urbanist,Arial,sans-serif;">
+          → View Weekly Plan
+        </a>
+      </div>
+      <hr style="border:none;border-top:1px solid #F0EEF8;margin:0 0 16px;">
+      <p style="color:#ccc;font-size:11px;text-align:center;margin:0;">
+        Powered by Dôti &nbsp;·&nbsp; Built by S / Y A N
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    await send_email(
+        to=mentee_email,
+        subject=f"📅 {mentor_name} set your focus for this week — {task_count} tasks",
+        html=html
+    )
+
+
+async def send_mentor_request_accepted_email(
+    mentee_email: str,
+    mentee_name: str,
+    mentor_name: str,
+):
+    first_name = mentee_name.split(" ")[0] if mentee_name else "there"
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#F5F4FF;font-family:Urbanist,Arial,sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#fff;border-radius:16px;
+              overflow:hidden;box-shadow:0 4px 24px rgba(124,58,237,0.08);">
+    <div style="background:#0A0A0F;padding:24px 32px;">
+      <div style="font-size:22px;font-weight:800;color:#fff;">Dôti</div>
+    </div>
+    <div style="padding:36px 40px;text-align:center;">
+      <div style="font-size:52px;margin-bottom:14px;">🎉</div>
+      <h1 style="font-size:20px;font-weight:800;color:#0D0D0D;margin:0 0 10px;">
+        Your mentor request was accepted!
+      </h1>
+      <p style="color:#555;font-size:15px;line-height:1.7;margin:0 0 24px;">
+        Hey {first_name}, <strong>{mentor_name}</strong> accepted your request.
+        You're now connected — start logging and send your first log today.
+      </p>
+      <div style="background:#F0FDF4;border-radius:10px;padding:14px 18px;margin-bottom:28px;">
+        <p style="color:#166534;font-size:13px;margin:0;line-height:1.6;">
+          🔥 Your streak starts now. Log something today.
+        </p>
+      </div>
+      <a href="{settings.app_url}"
+         style="display:inline-block;background:#7C3AED;color:#fff;
+                text-decoration:none;padding:14px 40px;border-radius:10px;
+                font-weight:700;font-size:15px;font-family:Urbanist,Arial,sans-serif;">
+        → Start Logging
+      </a>
+      <hr style="border:none;border-top:1px solid #F0EEF8;margin:28px 0 16px;">
+      <p style="color:#ccc;font-size:11px;margin:0;">
+        Powered by Dôti &nbsp;·&nbsp; Built by S / Y A N
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    await send_email(
+        to=mentee_email,
+        subject=f"🎉 {mentor_name} accepted your mentor request — you're connected!",
+        html=html
+    )
