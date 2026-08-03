@@ -1,14 +1,15 @@
 import json
 from datetime import date, timedelta, datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from models import CreateProjectRequest
 from dependencies import get_current_user
 from services.supabase_service import supabase, create_notification
 from services.brevo_service import (
     send_signed_notification_to_mentee,
     send_weekly_focus_set_email,
+    send_project_assigned_email,
 )
 from services.groq_service import (
     generate_weekly_tasks,
@@ -46,31 +47,134 @@ class UpdateTaskContentRequest(BaseModel):
 # ============================================================
 
 @router.post("/create")
-async def create_project(body: CreateProjectRequest, user=Depends(get_current_user)):
+async def create_project(
+    title: str = Form(...),
+    description: str = Form(None),
+    deadline: str = Form(None),
+    project_type: str = Form("tech"),
+    objectives: str = Form(None),  # JSON string
+    deliverables: str = Form(None),  # JSON string
+    requirements: str = Form(None),  # JSON string
+    tech_stack: str = Form(None),  # JSON string
+    resources: str = Form(None),  # JSON string
+    submission_channel: str = Form(None),
+    submission_notes: str = Form(None),
+    mentee_ids: str = Form(None),  # JSON array of mentee IDs
+    files: List[UploadFile] = File(None),
+    user=Depends(get_current_user)
+):
     creator_id = str(user.id)
+    mentor_name = user.full_name or "Mentor"
 
-    structured_description = body.description or ""
-    if body.description and len(body.description.strip()) > 10:
+    # Parse JSON strings back to lists
+    import json as json_module
+    
+    mentee_list = []
+    if mentee_ids:
+        try:
+            mentee_list = json_module.loads(mentee_ids)
+        except:
+            pass
+    
+    objectives_list = []
+    if objectives:
+        try:
+            objectives_list = json_module.loads(objectives)
+        except:
+            pass
+    
+    deliverables_list = []
+    if deliverables:
+        try:
+            deliverables_list = json_module.loads(deliverables)
+        except:
+            pass
+    
+    requirements_list = []
+    if requirements:
+        try:
+            requirements_list = json_module.loads(requirements)
+        except:
+            pass
+    
+    tech_stack_list = []
+    if tech_stack:
+        try:
+            tech_stack_list = json_module.loads(tech_stack)
+        except:
+            pass
+    
+    resources_list = []
+    if resources:
+        try:
+            resources_list = json_module.loads(resources)
+        except:
+            pass
+
+    # Verify all mentees belong to this mentor
+    if mentee_list:
+        for mentee_id in mentee_list:
+            rel = supabase.table("mentor_relationships") \
+                .select("id").eq("mentor_id", creator_id) \
+                .eq("mentee_id", mentee_id).eq("status", "active").execute()
+            if not rel.data:
+                raise HTTPException(403, f"Mentee {mentee_id} is not your active mentee")
+
+    # Restructure description with AI if provided
+    structured_description = description or ""
+    if description and len(description.strip()) > 10:
         try:
             structured_description = await restructure_project_description(
-                body.title, body.description
+                title, description
             )
-        except Exception:
-            structured_description = body.description
+        except Exception as e:
+            print(f"[AI RESTRUCTURE] Failed: {e}")
+            structured_description = description
+
+    # Handle file uploads
+    uploaded_files = []
+    if files:
+        for file in files:
+            try:
+                content = await file.read()
+                file_path = f"project-files/{creator_id}/{datetime.utcnow().timestamp()}_{file.filename}"
+                
+                # Upload to Supabase Storage
+                storage_result = supabase.storage \
+                    .from_("project-assets") \
+                    .upload(file_path, content, {
+                        "content-type": file.content_type or "application/octet-stream"
+                    })
+                
+                # Get public URL
+                file_url = supabase.storage \
+                    .from_("project-assets") \
+                    .get_public_url(file_path)
+                
+                uploaded_files.append({
+                    "name": file.filename,
+                    "url": file_url,
+                    "type": file.content_type,
+                    "size": len(content)
+                })
+            except Exception as e:
+                print(f"[FILE UPLOAD ERROR] {file.filename}: {e}")
+                # Continue with other files even if one fails
 
     project_data = {
         "creator_id": creator_id,
-        "title": body.title,
+        "title": title,
         "description": structured_description,
-        "deadline": str(body.deadline) if body.deadline else None,
-        "project_type": body.project_type or "tech",
-        "objectives": body.objectives,
-        "deliverables": body.deliverables,
-        "requirements": body.requirements,
-        "tech_stack": body.tech_stack,
-        "resources": body.resources,
-        "submission_channel": body.submission_channel,
-        "submission_notes": body.submission_notes,
+        "deadline": deadline,
+        "project_type": project_type or "tech",
+        "objectives": objectives_list,
+        "deliverables": deliverables_list,
+        "requirements": requirements_list,
+        "tech_stack": tech_stack_list,
+        "resources": resources_list,
+        "submission_channel": submission_channel,
+        "submission_notes": submission_notes,
+        "files": uploaded_files if uploaded_files else None,
     }
 
     result = supabase.table("projects").insert(project_data).execute()
@@ -80,22 +184,83 @@ async def create_project(body: CreateProjectRequest, user=Depends(get_current_us
     project = result.data[0]
     project_id = project["id"]
 
-    if body.mentee_ids:
+    # Assign mentees and send notifications
+    if mentee_list:
         assignments = [
             {"project_id": project_id, "mentee_id": mid, "assigned_by": creator_id}
-            for mid in body.mentee_ids
+            for mid in mentee_list
         ]
         supabase.table("project_assignments").insert(assignments).execute()
 
-        for mentee_id in body.mentee_ids:
-            await create_notification(
-                mentee_id, "project_assigned",
-                "📋 New Project Assigned",
-                f"You've been assigned to: \"{body.title}\"",
-                {"project_id": project_id}
-            )
+        # Get mentee emails and send notifications
+        try:
+            all_users = supabase.auth.admin.list_users()
+            
+            for mentee_id in mentee_list:
+                # Create in-app notification
+                await create_notification(
+                    mentee_id, "project_assigned",
+                    "📋 New Project Assigned",
+                    f"You've been assigned to: \"{title}\"",
+                    {"project_id": project_id}
+                )
+                
+                # Send email notification
+                mentee_email = None
+                for u in all_users:
+                    if str(u.id) == mentee_id:
+                        mentee_email = u.email
+                        break
+                
+                if mentee_email:
+                    # Get mentee name
+                    mentee_profile = supabase.table("profiles") \
+                        .select("full_name").eq("id", mentee_id).execute()
+                    mentee_name = mentee_profile.data[0]["full_name"] if mentee_profile.data else "there"
+                    
+                    await send_project_assigned_email(
+                        mentee_email=mentee_email,
+                        mentee_name=mentee_name,
+                        mentor_name=mentor_name,
+                        project_title=title,
+                        project_id=project_id,
+                    )
+        except Exception as e:
+            print(f"[PROJECT NOTIFICATIONS] Error: {e}")
+            # Don't fail the whole request if notifications fail
 
-    return {"success": True, "project": project}
+    return {
+        "success": True,
+        "project": project,
+        "assigned_mentees": len(mentee_list),
+        "files_uploaded": len(uploaded_files)
+    }
+
+
+@router.get("/available-mentees")
+async def get_available_mentees(user=Depends(get_current_user)):
+    """Get list of active mentees that can be assigned to projects"""
+    mentor_id = str(user.id)
+    
+    relationships = supabase.table("mentor_relationships") \
+        .select("mentee_id, profiles!mentor_relationships_mentee_id_fkey(id, full_name, username, field_of_study, avatar_url)") \
+        .eq("mentor_id", mentor_id) \
+        .eq("status", "active") \
+        .execute()
+    
+    mentees = []
+    for rel in (relationships.data or []):
+        profile = rel.get("profiles", {})
+        if profile:
+            mentees.append({
+                "id": profile.get("id"),
+                "full_name": profile.get("full_name"),
+                "username": profile.get("username"),
+                "field_of_study": profile.get("field_of_study"),
+                "avatar_url": profile.get("avatar_url"),
+            })
+    
+    return {"mentees": mentees}
 
 
 @router.get("/my-projects")
@@ -296,7 +461,6 @@ async def create_weekly_focus(
 
     # Send email notification to mentee
     try:
-        # Get mentee email from Supabase Auth
         all_users = supabase.auth.admin.list_users()
         mentee_email = None
         
@@ -316,13 +480,9 @@ async def create_weekly_focus(
                 week_end=week_end.strftime("%b %d, %Y"),
                 carried_over_count=sum(1 for t in tasks_to_insert if t.get("carried_over")),
             )
-            print(f"[WEEKLY FOCUS EMAIL] ✅ Sent to {mentee_email}")
-        else:
-            print(f"[WEEKLY FOCUS EMAIL] ⚠️ Could not find email for mentee {body.mentee_id}")
             
     except Exception as e:
-        print(f"[WEEKLY FOCUS EMAIL] ❌ Failed to send email: {type(e).__name__}: {e}")
-        # Don't raise — email failure shouldn't break the API response
+        print(f"[WEEKLY FOCUS EMAIL] Failed to send: {e}")
 
     return {
         "success": True,
@@ -673,7 +833,6 @@ async def send_weekly_review(
         raise HTTPException(500, f"Failed to send review emails: {str(e)}")
 
     return {"success": True, "completion_rate": completion_rate}
-
 
 
 # import json

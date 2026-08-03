@@ -676,7 +676,7 @@ const CATEGORY_COLORS = {
   Frontend:  { bg: '#E0F2FE', color: '#0369A1' },
   Database:  { bg: '#FEF3C7', color: '#D97706' },
   'AI/ML':   { bg: '#D1FAE5', color: '#059669' },
-  DevOps:    { bg: '#FCE7F3', color: '#DB2777' },
+  DevOps:    { bg: '#FCE7F3', color: '#b993a4' },
   Reading:   { bg: '#F3F4F6', color: '#6B7280' },
   Writing:   { bg: '#FFF7ED', color: '#C2410C' },
   Other:     { bg: '#F5F3FF', color: '#7C3AED' },
