@@ -23,6 +23,20 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 # ============================================================
+# HELPERS
+# ============================================================
+
+async def get_user_email(user_id: str) -> Optional[str]:
+    """Fetch a single user's email via get_user_by_id — no pagination issues."""
+    try:
+        res = await supabase.auth.admin.get_user_by_id(user_id)
+        return res.user.email if res and res.user else None
+    except Exception as e:
+        print(f"[GET_USER_EMAIL] Failed for {user_id}: {e}")
+        return None
+
+
+# ============================================================
 # PYDANTIC MODELS
 # ============================================================
 
@@ -52,73 +66,42 @@ async def create_project(
     description: str = Form(None),
     deadline: str = Form(None),
     project_type: str = Form("tech"),
-    objectives: str = Form(None),  # JSON string
-    deliverables: str = Form(None),  # JSON string
-    requirements: str = Form(None),  # JSON string
-    tech_stack: str = Form(None),  # JSON string
-    resources: str = Form(None),  # JSON string
+    objectives: str = Form(None),
+    deliverables: str = Form(None),
+    requirements: str = Form(None),
+    tech_stack: str = Form(None),
+    resources: str = Form(None),
     submission_channel: str = Form(None),
     submission_notes: str = Form(None),
-    mentee_ids: str = Form(None),  # JSON array of mentee IDs
+    mentee_ids: str = Form(None),
     files: List[UploadFile] = File(None),
     user=Depends(get_current_user)
 ):
     creator_id = str(user.id)
     mentor_name = user.full_name or "Mentor"
 
-    # Parse JSON strings back to lists
-    import json as json_module
-    
-    mentee_list = []
-    if mentee_ids:
+    def parse_json_list(raw: Optional[str]) -> list:
+        if not raw:
+            return []
         try:
-            mentee_list = json_module.loads(mentee_ids)
-        except:
-            pass
-    
-    objectives_list = []
-    if objectives:
-        try:
-            objectives_list = json_module.loads(objectives)
-        except:
-            pass
-    
-    deliverables_list = []
-    if deliverables:
-        try:
-            deliverables_list = json_module.loads(deliverables)
-        except:
-            pass
-    
-    requirements_list = []
-    if requirements:
-        try:
-            requirements_list = json_module.loads(requirements)
-        except:
-            pass
-    
-    tech_stack_list = []
-    if tech_stack:
-        try:
-            tech_stack_list = json_module.loads(tech_stack)
-        except:
-            pass
-    
-    resources_list = []
-    if resources:
-        try:
-            resources_list = json_module.loads(resources)
-        except:
-            pass
+            return json.loads(raw)
+        except Exception:
+            return []
+
+    mentee_list = parse_json_list(mentee_ids)
+    objectives_list = parse_json_list(objectives)
+    deliverables_list = parse_json_list(deliverables)
+    requirements_list = parse_json_list(requirements)
+    tech_stack_list = parse_json_list(tech_stack)
+    resources_list = parse_json_list(resources)
 
     # Verify all mentees belong to this mentor
-    if mentee_list:
-        for mentee_id in mentee_list:
-            rel = supabase.table("mentor_relationships") \
-                .select("id").eq("mentor_id", creator_id) \
-                .eq("mentee_id", mentee_id).eq("status", "active").execute()
-            if not rel.data:
-                raise HTTPException(403, f"Mentee {mentee_id} is not your active mentee")
+    for mentee_id in mentee_list:
+        rel = supabase.table("mentor_relationships") \
+            .select("id").eq("mentor_id", creator_id) \
+            .eq("mentee_id", mentee_id).eq("status", "active").execute()
+        if not rel.data:
+            raise HTTPException(403, f"Mentee {mentee_id} is not your active mentee")
 
     # Restructure description with AI if provided
     structured_description = description or ""
@@ -138,19 +121,17 @@ async def create_project(
             try:
                 content = await file.read()
                 file_path = f"project-files/{creator_id}/{datetime.utcnow().timestamp()}_{file.filename}"
-                
-                # Upload to Supabase Storage
-                storage_result = supabase.storage \
+
+                supabase.storage \
                     .from_("project-assets") \
                     .upload(file_path, content, {
                         "content-type": file.content_type or "application/octet-stream"
                     })
-                
-                # Get public URL
+
                 file_url = supabase.storage \
                     .from_("project-assets") \
                     .get_public_url(file_path)
-                
+
                 uploaded_files.append({
                     "name": file.filename,
                     "url": file_url,
@@ -159,7 +140,6 @@ async def create_project(
                 })
             except Exception as e:
                 print(f"[FILE UPLOAD ERROR] {file.filename}: {e}")
-                # Continue with other files even if one fails
 
     project_data = {
         "creator_id": creator_id,
@@ -184,7 +164,7 @@ async def create_project(
     project = result.data[0]
     project_id = project["id"]
 
-    # Assign mentees and send notifications
+    # Assign mentees
     if mentee_list:
         assignments = [
             {"project_id": project_id, "mentee_id": mid, "assigned_by": creator_id}
@@ -192,32 +172,23 @@ async def create_project(
         ]
         supabase.table("project_assignments").insert(assignments).execute()
 
-        # Get mentee emails and send notifications
-        try:
-            all_users = supabase.auth.admin.list_users()
-            
-            for mentee_id in mentee_list:
-                # Create in-app notification
+        # Notifications + emails per mentee
+        for mentee_id in mentee_list:
+            try:
                 await create_notification(
                     mentee_id, "project_assigned",
                     "📋 New Project Assigned",
                     f"You've been assigned to: \"{title}\"",
                     {"project_id": project_id}
                 )
-                
-                # Send email notification
-                mentee_email = None
-                for u in all_users:
-                    if str(u.id) == mentee_id:
-                        mentee_email = u.email
-                        break
-                
+
+                mentee_email = await get_user_email(mentee_id)
                 if mentee_email:
-                    # Get mentee name
                     mentee_profile = supabase.table("profiles") \
                         .select("full_name").eq("id", mentee_id).execute()
-                    mentee_name = mentee_profile.data[0]["full_name"] if mentee_profile.data else "there"
-                    
+                    mentee_name = mentee_profile.data[0]["full_name"] \
+                        if mentee_profile.data else "there"
+
                     await send_project_assigned_email(
                         mentee_email=mentee_email,
                         mentee_name=mentee_name,
@@ -225,9 +196,8 @@ async def create_project(
                         project_title=title,
                         project_id=project_id,
                     )
-        except Exception as e:
-            print(f"[PROJECT NOTIFICATIONS] Error: {e}")
-            # Don't fail the whole request if notifications fail
+            except Exception as e:
+                print(f"[PROJECT NOTIFICATIONS] Failed for {mentee_id}: {e}")
 
     return {
         "success": True,
@@ -239,15 +209,14 @@ async def create_project(
 
 @router.get("/available-mentees")
 async def get_available_mentees(user=Depends(get_current_user)):
-    """Get list of active mentees that can be assigned to projects"""
     mentor_id = str(user.id)
-    
+
     relationships = supabase.table("mentor_relationships") \
         .select("mentee_id, profiles!mentor_relationships_mentee_id_fkey(id, full_name, username, field_of_study, avatar_url)") \
         .eq("mentor_id", mentor_id) \
         .eq("status", "active") \
         .execute()
-    
+
     mentees = []
     for rel in (relationships.data or []):
         profile = rel.get("profiles", {})
@@ -259,7 +228,7 @@ async def get_available_mentees(user=Depends(get_current_user)):
                 "field_of_study": profile.get("field_of_study"),
                 "avatar_url": profile.get("avatar_url"),
             })
-    
+
     return {"mentees": mentees}
 
 
@@ -292,53 +261,35 @@ async def get_my_mentees(user=Depends(get_current_user)):
     return {"mentees": relationships.data or []}
 
 
-# NOTE: /end/{project_id} is intentionally structured this way to avoid
-# collision with /{project_id}/completion — FastAPI matches top to bottom
 @router.patch("/end/{project_id}")
-async def end_project(
-    project_id: str,
-    user=Depends(get_current_user)
-):
+async def end_project(project_id: str, user=Depends(get_current_user)):
     project_res = supabase.table("projects") \
-        .select("id, creator_id") \
-        .eq("id", project_id) \
-        .execute()
+        .select("id, creator_id").eq("id", project_id).execute()
 
     if not project_res.data:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(404, "Project not found")
 
     if project_res.data[0]["creator_id"] != str(user.id):
-        raise HTTPException(status_code=403, detail="Only the project creator can end this project")
+        raise HTTPException(403, "Only the project creator can end this project")
 
     result = supabase.table("projects") \
-        .update({"status": "completed"}) \
-        .eq("id", project_id) \
-        .execute()
+        .update({"status": "completed"}).eq("id", project_id).execute()
 
     return {"success": True, "project": result.data[0] if result.data else {}}
 
 
 @router.get("/{project_id}/completion")
-async def get_project_completion(
-    project_id: str,
-    user=Depends(get_current_user)
-):
-    project = supabase.table("projects") \
-        .select("*") \
-        .eq("id", project_id) \
-        .execute()
+async def get_project_completion(project_id: str, user=Depends(get_current_user)):
+    project = supabase.table("projects").select("*").eq("id", project_id).execute()
 
     if not project.data:
         raise HTTPException(404, "Project not found")
 
     p = project.data[0]
-
     is_creator = p["creator_id"] == str(user.id)
     is_member = supabase.table("project_assignments") \
-        .select("id") \
-        .eq("project_id", project_id) \
-        .eq("mentee_id", str(user.id)) \
-        .execute()
+        .select("id").eq("project_id", project_id) \
+        .eq("mentee_id", str(user.id)).execute()
 
     if not is_creator and not is_member.data:
         raise HTTPException(403, "Not authorised")
@@ -346,8 +297,7 @@ async def get_project_completion(
     logs = supabase.table("daily_logs") \
         .select("structured_title, structured_topics, structured_content, log_date") \
         .eq("project_id", project_id) \
-        .order("log_date", desc=False) \
-        .execute()
+        .order("log_date", desc=False).execute()
 
     result = await estimate_project_completion(
         project_title=p["title"],
@@ -364,7 +314,7 @@ async def get_project_completion(
 
 
 # ============================================================
-# WEEKLY FOCUS — all specific paths before /{focus_id}/...
+# WEEKLY FOCUS
 # ============================================================
 
 @router.post("/weekly-focus/create")
@@ -433,9 +383,8 @@ async def create_weekly_focus(
 
     focus_id = focus_result.data[0]["id"]
 
-    tasks_to_insert = []
-    for task in ai_result.get("tasks", []):
-        tasks_to_insert.append({
+    tasks_to_insert = [
+        {
             "focus_id": focus_id,
             "mentee_id": body.mentee_id,
             "title": task.get("title", ""),
@@ -445,12 +394,13 @@ async def create_weekly_focus(
             "priority": task.get("priority", 3),
             "carried_over": task.get("carried_over", False),
             "completed": False,
-        })
+        }
+        for task in ai_result.get("tasks", [])
+    ]
 
     if tasks_to_insert:
         supabase.table("weekly_tasks").insert(tasks_to_insert).execute()
 
-    # Create in-app notification
     await create_notification(
         body.mentee_id,
         "project_assigned",
@@ -459,16 +409,8 @@ async def create_weekly_focus(
         {"focus_id": focus_id}
     )
 
-    # Send email notification to mentee
     try:
-        all_users = supabase.auth.admin.list_users()
-        mentee_email = None
-        
-        for u in all_users:
-            if str(u.id) == body.mentee_id:
-                mentee_email = u.email
-                break
-        
+        mentee_email = await get_user_email(body.mentee_id)
         if mentee_email:
             await send_weekly_focus_set_email(
                 mentee_email=mentee_email,
@@ -480,7 +422,6 @@ async def create_weekly_focus(
                 week_end=week_end.strftime("%b %d, %Y"),
                 carried_over_count=sum(1 for t in tasks_to_insert if t.get("carried_over")),
             )
-            
     except Exception as e:
         print(f"[WEEKLY FOCUS EMAIL] Failed to send: {e}")
 
@@ -498,17 +439,14 @@ async def create_weekly_focus(
 @router.get("/weekly-focus/history")
 async def get_focus_history(user=Depends(get_current_user)):
     focus_list = supabase.table("weekly_focus") \
-        .select("*") \
-        .eq("mentee_id", str(user.id)) \
-        .order("week_start", desc=True) \
-        .execute()
+        .select("*").eq("mentee_id", str(user.id)) \
+        .order("week_start", desc=True).execute()
 
     result = []
     for focus in (focus_list.data or []):
         tasks = supabase.table("weekly_tasks") \
             .select("id, title, completed, carried_over, category, priority") \
-            .eq("focus_id", focus["id"]) \
-            .execute()
+            .eq("focus_id", focus["id"]).execute()
 
         task_list = tasks.data or []
         total = len(task_list)
@@ -530,21 +468,17 @@ async def get_my_weekly_tasks(user=Depends(get_current_user)):
     week_start = today - timedelta(days=today.weekday())
 
     focus = supabase.table("weekly_focus") \
-        .select("*") \
-        .eq("mentee_id", str(user.id)) \
-        .eq("week_start", str(week_start)) \
-        .execute()
+        .select("*").eq("mentee_id", str(user.id)) \
+        .eq("week_start", str(week_start)).execute()
 
     if not focus.data:
         return {"focus": None, "tasks": [], "stats": None}
 
     focus_data = focus.data[0]
     tasks = supabase.table("weekly_tasks") \
-        .select("*") \
-        .eq("focus_id", focus_data["id"]) \
+        .select("*").eq("focus_id", focus_data["id"]) \
         .order("carried_over", desc=True) \
-        .order("priority") \
-        .execute()
+        .order("priority").execute()
 
     task_list = tasks.data or []
     total = len(task_list)
@@ -563,27 +497,21 @@ async def get_my_weekly_tasks(user=Depends(get_current_user)):
 
 
 @router.get("/weekly-focus/mentee/{mentee_id}")
-async def get_mentee_weekly_focus(
-    mentee_id: str,
-    user=Depends(get_current_user)
-):
+async def get_mentee_weekly_focus(mentee_id: str, user=Depends(get_current_user)):
     today = date.today()
     week_start = today - timedelta(days=today.weekday())
 
     focus = supabase.table("weekly_focus") \
-        .select("*") \
-        .eq("mentor_id", str(user.id)) \
+        .select("*").eq("mentor_id", str(user.id)) \
         .eq("mentee_id", mentee_id) \
-        .eq("week_start", str(week_start)) \
-        .execute()
+        .eq("week_start", str(week_start)).execute()
 
     if not focus.data:
         return {"focus": None, "tasks": []}
 
     focus_data = focus.data[0]
     tasks = supabase.table("weekly_tasks") \
-        .select("*") \
-        .eq("focus_id", focus_data["id"]) \
+        .select("*").eq("focus_id", focus_data["id"]) \
         .order("priority").execute()
 
     return {"focus": focus_data, "tasks": tasks.data or []}
@@ -596,16 +524,11 @@ async def update_task(
     user=Depends(get_current_user)
 ):
     update_data = {"completed": body.completed}
-    if body.completed:
-        update_data["completed_at"] = datetime.utcnow().isoformat()
-    else:
-        update_data["completed_at"] = None
+    update_data["completed_at"] = datetime.utcnow().isoformat() if body.completed else None
 
     result = supabase.table("weekly_tasks") \
-        .update(update_data) \
-        .eq("id", task_id) \
-        .eq("mentee_id", str(user.id)) \
-        .execute()
+        .update(update_data).eq("id", task_id) \
+        .eq("mentee_id", str(user.id)).execute()
 
     if not result.data:
         raise HTTPException(404, "Task not found or not yours")
@@ -619,28 +542,22 @@ async def update_task_content(
     body: UpdateTaskContentRequest,
     user=Depends(get_current_user)
 ):
-    # Step 1: get the task and its focus_id
     task_res = supabase.table("weekly_tasks") \
-        .select("id, focus_id") \
-        .eq("id", task_id) \
-        .execute()
+        .select("id, focus_id").eq("id", task_id).execute()
 
     if not task_res.data:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(404, "Task not found")
 
     focus_id = task_res.data[0]["focus_id"]
 
-    # Step 2: get the focus and verify this user is the mentor
     focus_res = supabase.table("weekly_focus") \
-        .select("id, mentor_id") \
-        .eq("id", focus_id) \
-        .execute()
+        .select("id, mentor_id").eq("id", focus_id).execute()
 
     if not focus_res.data:
-        raise HTTPException(status_code=404, detail="Focus week not found")
+        raise HTTPException(404, "Focus week not found")
 
     if focus_res.data[0]["mentor_id"] != str(user.id):
-        raise HTTPException(status_code=403, detail="Only the assigned mentor can edit this task")
+        raise HTTPException(403, "Only the assigned mentor can edit this task")
 
     update_data = {}
     if body.title is not None:
@@ -651,49 +568,41 @@ async def update_task_content(
         update_data["category"] = body.category
 
     if not update_data:
-        raise HTTPException(status_code=400, detail="No valid fields to update")
+        raise HTTPException(400, "No valid fields to update")
 
     result = supabase.table("weekly_tasks") \
-        .update(update_data) \
-        .eq("id", task_id) \
-        .execute()
+        .update(update_data).eq("id", task_id).execute()
 
     return {"success": True, "task": result.data[0] if result.data else {}}
 
 
 @router.get("/weekly-focus/{focus_id}/review-preview")
-async def get_review_preview(
-    focus_id: str,
-    user=Depends(get_current_user)
-):
+async def get_review_preview(focus_id: str, user=Depends(get_current_user)):
     focus_res = supabase.table("weekly_focus") \
-        .select("*") \
-        .eq("id", focus_id) \
-        .execute()
+        .select("*").eq("id", focus_id).execute()
 
     if not focus_res.data:
-        raise HTTPException(status_code=404, detail="Focus week not found")
+        raise HTTPException(404, "Focus week not found")
 
     focus = focus_res.data[0]
 
     if focus["mentor_id"] != str(user.id):
-        raise HTTPException(status_code=403, detail="Only the mentor can preview this review")
+        raise HTTPException(403, "Only the mentor can preview this review")
 
     tasks_res = supabase.table("weekly_tasks") \
-        .select("*") \
-        .eq("focus_id", focus_id) \
-        .execute()
-    tasks = tasks_res.data or []
+        .select("*").eq("focus_id", focus_id).execute()
 
     logs_res = supabase.table("daily_logs") \
         .select("structured_title, structured_topics, structured_content, log_date") \
         .eq("user_id", focus["mentee_id"]) \
         .gte("log_date", focus["week_start"]) \
-        .lte("log_date", focus["week_end"]) \
-        .execute()
-    logs = logs_res.data or []
+        .lte("log_date", focus["week_end"]).execute()
 
-    result = await generate_review_preview(focus=focus, tasks=tasks, logs=logs)
+    result = await generate_review_preview(
+        focus=focus,
+        tasks=tasks_res.data or [],
+        logs=logs_res.data or []
+    )
     return result
 
 
@@ -703,13 +612,10 @@ class SendReviewRequest(BaseModel):
     recommendations: Optional[str] = None
     next_week_focus: Optional[str] = None
     week_label: Optional[str] = None
-    
+
 
 @router.post("/weekly-focus/{focus_id}/send-review")
-async def send_weekly_review(
-    focus_id: str,
-    user=Depends(get_current_user)
-):
+async def send_weekly_review(focus_id: str, user=Depends(get_current_user)):
     focus = supabase.table("weekly_focus") \
         .select("*").eq("id", focus_id).execute()
 
@@ -809,18 +715,11 @@ async def send_weekly_review(
 </body>
 </html>"""
 
-    # Send the review email
     try:
         from services.brevo_service import send_email
-        
-        all_users = supabase.auth.admin.list_users()
-        mentee_email = None
-        mentor_email = None
-        for u in all_users:
-            if str(u.id) == focus_data["mentee_id"]:
-                mentee_email = u.email
-            if str(u.id) == focus_data["mentor_id"]:
-                mentor_email = u.email
+
+        mentee_email = await get_user_email(focus_data["mentee_id"])
+        mentor_email = await get_user_email(focus_data["mentor_id"])
 
         subject = f"📊 Weekly Review: {mentee_name} completed {completion_rate}% this week"
 
