@@ -478,53 +478,119 @@ async def generate_weekly_tasks(
 ) -> dict:
     log_context = ""
     if mentee_logs:
-        log_context = "Recent activity from mentee's logs:\n" + "\n".join([
+        log_context = "Recent logs from mentee:\n" + "\n".join([
             f"- [{l.get('log_date')}] {l.get('structured_title', 'Untitled')} "
-            f"— Topics: {', '.join(l.get('structured_topics', []))}"
+            f"— {', '.join(l.get('structured_topics', []))}"
             for l in mentee_logs[:5]
         ])
 
     carry_context = ""
     if previous_incomplete:
         carry_context = (
-            "\nIncomplete tasks from last week (carry over as high priority):\n"
-            + "\n".join([
-                f"- {t.get('title')} [{t.get('category', '')}]"
-                for t in previous_incomplete
-            ])
+            "\nCarry these over from last week (mark carried_over: true):\n"
+            + "\n".join([f"- {t.get('title')}" for t in previous_incomplete])
         )
 
-    prompt = f"""You are an experienced technical mentor creating a weekly learning plan.
+    prompt = f"""You are a technical mentor. Your mentee is {mentee_name}.
+You have written a note about what you want them to focus on this week.
+Your job is to turn that note into a clean weekly focus — a summary and a list of focus areas.
 
-Mentor's weekly focus for {mentee_name}:
+This is NOT a to-do list. Each item is a meaningful area of work or learning the mentee 
+should make real progress on by end of week. Let the mentor's words guide how many items 
+there are — don't pad, don't invent.
+
+---
+EXAMPLE 1
+
+Mentor input:
+"This week I want Tunde to get comfortable with how FastAPI handles authentication. 
+He should understand JWT, how middleware works, and be able to protect routes properly."
+
+Output:
+{{
+  "summary": "Get solid on FastAPI authentication — JWT, middleware, and protected routes",
+  "tasks": [
+    {{
+      "title": "Understand JWT authentication flow",
+      "description": "Learn how JWTs are issued, signed, and verified. Understand the difference between access and refresh tokens and when each is used.",
+      "carried_over": false
+    }},
+    {{
+      "title": "Implement FastAPI middleware for auth",
+      "description": "Build and test middleware that intercepts requests and validates Bearer tokens before they hit protected endpoints.",
+      "carried_over": false
+    }},
+    {{
+      "title": "Protect routes and handle auth errors cleanly",
+      "description": "Apply authentication dependencies to routes. Handle 401 and 403 responses properly with meaningful error messages.",
+      "carried_over": false
+    }}
+  ]
+}}
+
+---
+EXAMPLE 2
+
+Mentor input:
+"Amara should finish the dashboard UI she started. Also wants her to look into how 
+websockets work since we'll need it next sprint."
+
+Output:
+{{
+  "summary": "Finish dashboard UI and get a working understanding of WebSockets",
+  "tasks": [
+    {{
+      "title": "Complete the dashboard UI",
+      "description": "Finish all incomplete components from last week — charts, filters, and the data table. Make sure it's connected to real API responses.",
+      "carried_over": false
+    }},
+    {{
+      "title": "Learn how WebSockets work",
+      "description": "Understand the WebSocket protocol, how it differs from HTTP, and when to use it. Build a basic working example — even a simple chat or live counter.",
+      "carried_over": false
+    }}
+  ]
+}}
+
+---
+EXAMPLE 3
+
+Mentor input:
+"Keep pushing on the GNN implementation. Still needs to finish training loop and evaluation."
+
+Output:
+{{
+  "summary": "Push the GNN implementation forward — training loop and evaluation",
+  "tasks": [
+    {{
+      "title": "Complete the GNN training loop",
+      "description": "Implement the full training cycle — forward pass, loss computation, backprop, and optimizer step. Run it on the dataset and confirm loss is decreasing.",
+      "carried_over": true
+    }},
+    {{
+      "title": "Build the model evaluation pipeline",
+      "description": "Add evaluation logic — accuracy, F1, or AUC depending on the task. Run on a validation split and log the results clearly.",
+      "carried_over": true
+    }}
+  ]
+}}
+
+---
+Now do the same for this mentor's input.
+
+Mentor's note:
 {raw_input}
 
 {log_context}
 {carry_context}
 
-Your job:
-1. Write a one-line summary of this week's focus (max 100 chars)
-2. Break the focus into 5-8 specific, actionable tasks
-3. Assign each task a category (Backend, Frontend, Database, AI/ML, DevOps, Reading, Writing, Other)
-4. Suggest a time block for each task (e.g. "Monday morning", "Tuesday 2-4PM")
-5. Set priority (1=highest, 5=lowest)
-6. Mark carried_over=true for any task from last week's incomplete items
-
-Rules:
-- Tasks must be concrete and completable in 1-3 hours
-- Carried-over items go at priority 1
-- Be realistic — don't overload the week
-
-Respond with ONLY valid JSON, no markdown:
+Return ONLY valid JSON. No markdown. No extra keys. Match the structure exactly:
 {{
   "summary": "...",
   "tasks": [
     {{
       "title": "...",
       "description": "...",
-      "category": "...",
-      "suggested_time": "...",
-      "priority": 1,
       "carried_over": false
     }}
   ]
@@ -534,14 +600,13 @@ Respond with ONLY valid JSON, no markdown:
         return client.chat.completions.create(
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=1500,
+            temperature=0.3,
+            max_tokens=1000,
         )
 
     response = await asyncio.to_thread(_call)
     text = _clean_json(response.choices[0].message.content.strip())
-    return _safe_json(text, {"summary": "Weekly focus plan", "tasks": []})
-
+    return _safe_json(text, {"summary": "Weekly focus set by mentor", "tasks": []})
 
 # ─────────────────────────────────────────────────────────────────────────────
 # WEEKLY REVIEW EMAIL PARAGRAPH

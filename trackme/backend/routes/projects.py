@@ -74,6 +74,7 @@ class UpdateTaskContentRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     category: Optional[str] = None
+    mentor_note: Optional[str] = None
 
 
 class SendReviewRequest(BaseModel):
@@ -564,6 +565,7 @@ async def update_task_content(
     task_id: str,
     body: UpdateTaskContentRequest,
     user=Depends(get_current_user)
+    
 ):
     task_res = supabase.table("weekly_tasks") \
         .select("id, focus_id").eq("id", task_id).execute()
@@ -589,6 +591,8 @@ async def update_task_content(
         update_data["description"] = body.description
     if body.category is not None:
         update_data["category"] = body.category
+    if body.mentor_note is not None:
+        update_data["mentor_note"] = body.mentor_note
 
     if not update_data:
         raise HTTPException(400, "No valid fields to update")
@@ -751,7 +755,29 @@ async def send_weekly_review(focus_id: str, user=Depends(get_current_user)):
 
     return {"success": True, "completion_rate": completion_rate}
 
+class UpdateFocusSummaryRequest(BaseModel):
+    summary: str
 
+@router.patch("/weekly-focus/{focus_id}/summary")
+async def update_focus_summary(
+    focus_id: str,
+    body: UpdateFocusSummaryRequest,
+    user=Depends(get_current_user)
+):
+    focus_res = supabase.table("weekly_focus") \
+        .select("id, mentor_id").eq("id", focus_id).execute()
+
+    if not focus_res.data:
+        raise HTTPException(404, "Focus not found")
+
+    if focus_res.data[0]["mentor_id"] != str(user.id):
+        raise HTTPException(403, "Only the mentor can edit this focus")
+
+    result = supabase.table("weekly_focus") \
+        .update({"edited_summary": body.summary}) \
+        .eq("id", focus_id).execute()
+
+    return {"success": True, "focus": result.data[0] if result.data else {}}
 # import json
 # from datetime import date, timedelta, datetime
 # from fastapi import APIRouter, Depends, HTTPException

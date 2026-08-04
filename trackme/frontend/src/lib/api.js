@@ -129,6 +129,8 @@ export const weeklyFocusApi = {
   history: () => request('GET', '/projects/weekly-focus/history'),
   sendReview: (focusId, previewData) => request('POST', `/projects/weekly-focus/${focusId}/send-review`, previewData || {}),
   getReviewPreview: (focusId) => request('GET', `/projects/weekly-focus/${focusId}/review-preview`),
+  updateFocusSummary: (focusId, summary) => request('PATCH', `/projects/weekly-focus/${focusId}/summary`, { summary }),
+  addMentorNote: (taskId, mentor_note) => request('PATCH', `/projects/weekly-tasks/${taskId}/content`, { mentor_note }),
 }
 
 // ============================================================
@@ -157,6 +159,8 @@ export const mentorApi = {
   myMentor: () => request('GET', '/mentor/my-mentor'),
   myMentees: () => request('GET', '/mentor/my-mentees'),
 }
+
+
 
 
 // import { supabase } from './supabase'
