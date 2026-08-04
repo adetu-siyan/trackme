@@ -36,6 +36,26 @@ async def get_user_email(user_id: str) -> Optional[str]:
         return None
 
 
+def get_profile_name(user_id: str, fallback: str = "User") -> str:
+    """Fetch full_name from profiles table for a given user_id."""
+    try:
+        res = supabase.table("profiles") \
+            .select("full_name").eq("id", user_id).execute()
+        return res.data[0]["full_name"] if res.data else fallback
+    except Exception as e:
+        print(f"[GET_PROFILE_NAME] Failed for {user_id}: {e}")
+        return fallback
+
+
+def parse_json_list(raw: Optional[str]) -> list:
+    if not raw:
+        return []
+    try:
+        return json.loads(raw)
+    except Exception:
+        return []
+
+
 # ============================================================
 # PYDANTIC MODELS
 # ============================================================
@@ -54,6 +74,14 @@ class UpdateTaskContentRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     category: Optional[str] = None
+
+
+class SendReviewRequest(BaseModel):
+    summary: Optional[str] = None
+    progress: Optional[str] = None
+    recommendations: Optional[str] = None
+    next_week_focus: Optional[str] = None
+    week_label: Optional[str] = None
 
 
 # ============================================================
@@ -78,15 +106,7 @@ async def create_project(
     user=Depends(get_current_user)
 ):
     creator_id = str(user.id)
-    mentor_name = user.full_name or "Mentor"
-
-    def parse_json_list(raw: Optional[str]) -> list:
-        if not raw:
-            return []
-        try:
-            return json.loads(raw)
-        except Exception:
-            return []
+    mentor_name = get_profile_name(creator_id, fallback="Mentor")
 
     mentee_list = parse_json_list(mentee_ids)
     objectives_list = parse_json_list(objectives)
@@ -164,7 +184,7 @@ async def create_project(
     project = result.data[0]
     project_id = project["id"]
 
-    # Assign mentees
+    # Assign mentees + send notifications
     if mentee_list:
         assignments = [
             {"project_id": project_id, "mentee_id": mid, "assigned_by": creator_id}
@@ -172,7 +192,6 @@ async def create_project(
         ]
         supabase.table("project_assignments").insert(assignments).execute()
 
-        # Notifications + emails per mentee
         for mentee_id in mentee_list:
             try:
                 await create_notification(
@@ -184,11 +203,7 @@ async def create_project(
 
                 mentee_email = await get_user_email(mentee_id)
                 if mentee_email:
-                    mentee_profile = supabase.table("profiles") \
-                        .select("full_name").eq("id", mentee_id).execute()
-                    mentee_name = mentee_profile.data[0]["full_name"] \
-                        if mentee_profile.data else "there"
-
+                    mentee_name = get_profile_name(mentee_id, fallback="there")
                     await send_project_assigned_email(
                         mentee_email=mentee_email,
                         mentee_name=mentee_name,
@@ -323,7 +338,7 @@ async def create_weekly_focus(
     user=Depends(get_current_user)
 ):
     mentor_id = str(user.id)
-    mentor_name = user.full_name or "Your Mentor"
+    mentor_name = get_profile_name(mentor_id, fallback="Your Mentor")
 
     rel = supabase.table("mentor_relationships") \
         .select("id").eq("mentor_id", mentor_id) \
@@ -339,9 +354,7 @@ async def create_weekly_focus(
         week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
 
-    profile = supabase.table("profiles") \
-        .select("full_name").eq("id", body.mentee_id).execute()
-    mentee_name = profile.data[0]["full_name"] if profile.data else "Mentee"
+    mentee_name = get_profile_name(body.mentee_id, fallback="Mentee")
 
     logs = supabase.table("daily_logs") \
         .select("structured_title, structured_topics, log_date") \
@@ -523,8 +536,10 @@ async def update_task(
     body: UpdateTaskRequest,
     user=Depends(get_current_user)
 ):
-    update_data = {"completed": body.completed}
-    update_data["completed_at"] = datetime.utcnow().isoformat() if body.completed else None
+    update_data = {
+        "completed": body.completed,
+        "completed_at": datetime.utcnow().isoformat() if body.completed else None,
+    }
 
     result = supabase.table("weekly_tasks") \
         .update(update_data).eq("id", task_id) \
@@ -606,14 +621,6 @@ async def get_review_preview(focus_id: str, user=Depends(get_current_user)):
     return result
 
 
-class SendReviewRequest(BaseModel):
-    summary: Optional[str] = None
-    progress: Optional[str] = None
-    recommendations: Optional[str] = None
-    next_week_focus: Optional[str] = None
-    week_label: Optional[str] = None
-
-
 @router.post("/weekly-focus/{focus_id}/send-review")
 async def send_weekly_review(focus_id: str, user=Depends(get_current_user)):
     focus = supabase.table("weekly_focus") \
@@ -631,13 +638,8 @@ async def send_weekly_review(focus_id: str, user=Depends(get_current_user)):
         .select("*").eq("focus_id", focus_id).execute()
     task_list = tasks.data or []
 
-    mentee_profile = supabase.table("profiles") \
-        .select("full_name").eq("id", focus_data["mentee_id"]).execute()
-    mentee_name = mentee_profile.data[0]["full_name"] if mentee_profile.data else "Mentee"
-
-    mentor_profile = supabase.table("profiles") \
-        .select("full_name").eq("id", focus_data["mentor_id"]).execute()
-    mentor_name = mentor_profile.data[0]["full_name"] if mentor_profile.data else "Mentor"
+    mentee_name = get_profile_name(focus_data["mentee_id"], fallback="Mentee")
+    mentor_name = get_profile_name(focus_data["mentor_id"], fallback="Mentor")
 
     review_text = await generate_weekly_review(
         mentee_name=mentee_name,
@@ -651,7 +653,11 @@ async def send_weekly_review(focus_id: str, user=Depends(get_current_user)):
     completion_rate = round((completed / total * 100) if total > 0 else 0)
     incomplete = [t for t in task_list if not t.get("completed")]
 
-    bar_color = "#059669" if completion_rate >= 80 else "#D97706" if completion_rate >= 50 else "#DC2626"
+    bar_color = (
+        "#059669" if completion_rate >= 80
+        else "#D97706" if completion_rate >= 50
+        else "#DC2626"
+    )
 
     completed_html = "".join([
         f'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F0EEF8;">'
