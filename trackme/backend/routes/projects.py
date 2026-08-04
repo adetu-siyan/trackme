@@ -174,7 +174,6 @@ async def create_project(
         "resources": resources_list,
         "submission_channel": submission_channel,
         "submission_notes": submission_notes,
-        "files": uploaded_files if uploaded_files else None,
     }
 
     result = supabase.table("projects").insert(project_data).execute()
