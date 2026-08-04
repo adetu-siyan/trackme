@@ -26,10 +26,10 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 # HELPERS
 # ============================================================
 
-async def get_user_email(user_id: str) -> Optional[str]:
-    """Fetch a single user's email via get_user_by_id — no pagination issues."""
+def get_user_email(user_id: str) -> Optional[str]:
+    """Fetch a single user's email via sync admin client."""
     try:
-        res = await supabase.auth.admin.get_user_by_id(user_id)
+        res = supabase.auth.admin.get_user_by_id(user_id)
         return res.user.email if res and res.user else None
     except Exception as e:
         print(f"[GET_USER_EMAIL] Failed for {user_id}: {e}")
@@ -174,6 +174,7 @@ async def create_project(
         "resources": resources_list,
         "submission_channel": submission_channel,
         "submission_notes": submission_notes,
+        "files": uploaded_files if uploaded_files else None,
     }
 
     result = supabase.table("projects").insert(project_data).execute()
@@ -200,7 +201,9 @@ async def create_project(
                     {"project_id": project_id}
                 )
 
-                mentee_email = await get_user_email(mentee_id)
+                mentee_email = get_user_email(mentee_id)
+                print(f"[PROJECT CREATE] mentee_id={mentee_id} email={mentee_email}")
+
                 if mentee_email:
                     mentee_name = get_profile_name(mentee_id, fallback="there")
                     await send_project_assigned_email(
@@ -210,6 +213,8 @@ async def create_project(
                         project_title=title,
                         project_id=project_id,
                     )
+                    print(f"[PROJECT CREATE] ✅ Email sent to {mentee_email}")
+
             except Exception as e:
                 print(f"[PROJECT NOTIFICATIONS] Failed for {mentee_id}: {e}")
 
@@ -422,7 +427,9 @@ async def create_weekly_focus(
     )
 
     try:
-        mentee_email = await get_user_email(body.mentee_id)
+        mentee_email = get_user_email(body.mentee_id)
+        print(f"[WEEKLY FOCUS] mentee_id={body.mentee_id} email={mentee_email}")
+
         if mentee_email:
             await send_weekly_focus_set_email(
                 mentee_email=mentee_email,
@@ -434,8 +441,10 @@ async def create_weekly_focus(
                 week_end=week_end.strftime("%b %d, %Y"),
                 carried_over_count=sum(1 for t in tasks_to_insert if t.get("carried_over")),
             )
+            print(f"[WEEKLY FOCUS] ✅ Email sent to {mentee_email}")
+
     except Exception as e:
-        print(f"[WEEKLY FOCUS EMAIL] Failed to send: {e}")
+        print(f"[WEEKLY FOCUS EMAIL] Failed: {e}")
 
     return {
         "success": True,
@@ -723,15 +732,19 @@ async def send_weekly_review(focus_id: str, user=Depends(get_current_user)):
     try:
         from services.brevo_service import send_email
 
-        mentee_email = await get_user_email(focus_data["mentee_id"])
-        mentor_email = await get_user_email(focus_data["mentor_id"])
+        mentee_email = get_user_email(focus_data["mentee_id"])
+        mentor_email = get_user_email(focus_data["mentor_id"])
+
+        print(f"[SEND REVIEW] mentee_email={mentee_email} mentor_email={mentor_email}")
 
         subject = f"📊 Weekly Review: {mentee_name} completed {completion_rate}% this week"
 
         if mentee_email:
             await send_email(mentee_email, subject, html)
+            print(f"[SEND REVIEW] ✅ Sent to mentee {mentee_email}")
         if mentor_email and mentor_email != mentee_email:
             await send_email(mentor_email, subject, html)
+            print(f"[SEND REVIEW] ✅ Sent to mentor {mentor_email}")
 
     except Exception as e:
         raise HTTPException(500, f"Failed to send review emails: {str(e)}")
