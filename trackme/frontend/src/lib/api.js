@@ -160,6 +160,21 @@ export const mentorApi = {
   myMentees: () => request('GET', '/mentor/my-mentees'),
 }
 
+// ============================================================
+// GROUPS
+// ============================================================
+export const groupsApi = {
+  create: (body) => request('POST', '/groups/create', body),
+  myGroups: () => request('GET', '/groups/my-groups'),
+  addMember: (groupId, body) => request('POST', `/groups/${groupId}/add-member`, body),
+  removeMember: (groupId, menteeId) => request('DELETE', `/groups/${groupId}/remove-member/${menteeId}`),
+  dashboard: (groupId) => request('GET', `/groups/${groupId}/dashboard`),
+  analytics: (groupId) => request('GET', `/groups/${groupId}/analytics`),
+  setWeeklyFocus: (groupId, body) => request('POST', `/groups/${groupId}/weekly-focus`, body),
+  getMenteeReview: (groupId, menteeId) => request('GET', `/groups/${groupId}/mentee/${menteeId}/review`),
+  delete: (groupId) => request('DELETE', `/groups/${groupId}`),
+}
+
 
 
 

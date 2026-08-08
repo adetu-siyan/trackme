@@ -23,6 +23,7 @@ from routes.notifications import router as notifications_router
 from routes.myflow import router as myflow_router
 from routes.health import router as health_router
 from routes.auth import router as auth_router
+from routes.groups import router as groups_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Dôti")
@@ -122,7 +123,7 @@ app.include_router(projects_router, prefix="/api")
 app.include_router(notifications_router, prefix="/api")
 app.include_router(myflow_router)
 app.include_router(auth_router, prefix="/api")
-
+app.include_router(groups_router, prefix="/api")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # REMINDER SCHEDULER
