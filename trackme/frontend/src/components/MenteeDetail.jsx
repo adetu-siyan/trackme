@@ -2312,7 +2312,7 @@
 import { useEffect, useState } from 'react'
 import {
   ArrowLeft, Calendar, BarChart2, CheckCircle2, Circle, Pin, Pencil,
-  AlertTriangle, Bot, RefreshCw, TrendingUp, ClipboardList, Check,
+  AlertTriangle, Bot, RefreshCw, TrendingUp,TrendingDown, ClipboardList, Check,
   FileText, PenLine, Flame, Trophy, Clock, MailOpen, Mail, X,
   ChevronDown, ChevronUp, Sparkles, Eye,
 } from 'lucide-react'
