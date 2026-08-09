@@ -48,7 +48,7 @@ class DifficultyRequest(BaseModel):
 class VerifyAnswerRequest(BaseModel):
     log_id: str
     answer: str
-
+    question_type: str = "scenario"  # default keeps old behavior
 
 class EditLogRequest(BaseModel):
     log_id: str

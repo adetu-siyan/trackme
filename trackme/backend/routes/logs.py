@@ -411,6 +411,37 @@ async def create_log(request: Request, body: CreateLogRequest, user=Depends(get_
     }
 
 
+# @router.post("/generate-question")
+# @limiter.limit("20/minute")
+# async def generate_question(request: Request, body: DifficultyRequest, user=Depends(get_current_user)):
+#     log = supabase.table("daily_logs") \
+#         .select("*").eq("id", body.log_id).eq("user_id", str(user.id)).execute()
+
+#     if not log.data:
+#         raise HTTPException(404, "Log not found")
+
+#     log_data = log.data[0]
+
+#     if not body.difficulty or body.difficulty == 'auto':
+#         difficulty = await detect_difficulty(log_data["structured_content"])
+#     else:
+#         difficulty = body.difficulty
+
+#     qa = await generate_verification_question(log_data["structured_content"], difficulty)
+
+#     supabase.table("daily_logs").update({
+#         "difficulty_level": difficulty,
+#         "verification_question": qa["question"],
+#         "correct_answer": qa["correct_answer"],
+#         "test_attempted": True,
+#     }).eq("id", body.log_id).execute()
+
+#     return {
+#         "success": True,
+#         "question": qa["question"],
+#         "difficulty": difficulty,
+#     }
+
 @router.post("/generate-question")
 @limiter.limit("20/minute")
 async def generate_question(request: Request, body: DifficultyRequest, user=Depends(get_current_user)):
@@ -429,19 +460,62 @@ async def generate_question(request: Request, body: DifficultyRequest, user=Depe
 
     qa = await generate_verification_question(log_data["structured_content"], difficulty)
 
+    scenario_question = qa.get("scenario_question", "")
+    reflection_question = qa.get("reflection_question", "")
+    correct_answer = qa.get("correct_answer", "")
+    bloom_level = qa.get("bloom_level", "")
+    frame = qa.get("frame", "")
+
     supabase.table("daily_logs").update({
         "difficulty_level": difficulty,
-        "verification_question": qa["question"],
-        "correct_answer": qa["correct_answer"],
+        "verification_question": scenario_question,
+        "correct_answer": correct_answer,
         "test_attempted": True,
     }).eq("id", body.log_id).execute()
 
     return {
         "success": True,
-        "question": qa["question"],
+        "scenario_question": scenario_question,
+        "reflection_question": reflection_question,
+        "correct_answer": correct_answer,
+        "bloom_level": bloom_level,
+        "frame": frame,
         "difficulty": difficulty,
     }
 
+
+# @router.post("/verify-answer")
+# async def verify_answer(body: VerifyAnswerRequest, user=Depends(get_current_user)):
+#     log = supabase.table("daily_logs") \
+#         .select("*").eq("id", body.log_id).eq("user_id", str(user.id)).execute()
+
+#     if not log.data:
+#         raise HTTPException(404, "Log not found")
+
+#     log_data = log.data[0]
+
+#     if not log_data.get("verification_question"):
+#         raise HTTPException(400, "No question generated yet")
+
+#     result = await evaluate_answer(
+#         question=log_data["verification_question"],
+#         correct_answer=log_data["correct_answer"],
+#         user_answer=body.answer,
+#         difficulty=log_data["difficulty_level"]
+#     )
+
+#     supabase.table("daily_logs").update({
+#         "test_passed": result["passed"]
+#     }).eq("id", body.log_id).execute()
+
+#     if result["passed"]:
+#         await create_notification(
+#             str(user.id), "test_passed",
+#             "✅ Test Passed!",
+#             f"You passed the {log_data['difficulty_level']} verification for today's log."
+#         )
+
+#     return result
 
 @router.post("/verify-answer")
 async def verify_answer(body: VerifyAnswerRequest, user=Depends(get_current_user)):
@@ -456,21 +530,26 @@ async def verify_answer(body: VerifyAnswerRequest, user=Depends(get_current_user
     if not log_data.get("verification_question"):
         raise HTTPException(400, "No question generated yet")
 
+    question_type = getattr(body, "question_type", "scenario")
+
     result = await evaluate_answer(
         question=log_data["verification_question"],
         correct_answer=log_data["correct_answer"],
         user_answer=body.answer,
-        difficulty=log_data["difficulty_level"]
+        difficulty=log_data["difficulty_level"],
+        question_type=question_type,
     )
 
-    supabase.table("daily_logs").update({
-        "test_passed": result["passed"]
-    }).eq("id", body.log_id).execute()
+    # Only update test_passed on scenario — reflection doesn't override the main result
+    if question_type == "scenario":
+        supabase.table("daily_logs").update({
+            "test_passed": result["passed"]
+        }).eq("id", body.log_id).execute()
 
-    if result["passed"]:
+    if result["passed"] and question_type == "scenario":
         await create_notification(
             str(user.id), "test_passed",
-            "✅ Test Passed!",
+            "Test Passed",
             f"You passed the {log_data['difficulty_level']} verification for today's log."
         )
 
