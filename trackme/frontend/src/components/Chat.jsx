@@ -826,13 +826,11 @@
 // }
 
 
-
 import { useState, useEffect } from 'react'
 import {
   Edit3, Send, RotateCcw, CheckCircle, Mail, Tag,
   Link2, Loader2, ChevronRight, FileText, Inbox,
-  AlertCircle, Dumbbell, Sparkles, Clock, Brain,
-  MessageSquare, TrendingUp
+  AlertCircle, Dumbbell, Sparkles, Clock
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { logsApi, projectsApi, weeklyFocusApi } from '../lib/api'
@@ -847,24 +845,10 @@ export default function Chat() {
   const [logData, setLogData] = useState(null)
   const [editedContent, setEditedContent] = useState('')
   const [editMode, setEditMode] = useState(false)
-
-  // Question state — now two questions
-  const [scenarioQuestion, setScenarioQuestion] = useState('')
-  const [reflectionQuestion, setReflectionQuestion] = useState('')
-  const [bloomLevel, setBloomLevel] = useState('')
-  const [frameLabel, setFrameLabel] = useState('')
+  const [question, setQuestion] = useState('')
   const [detectedDifficulty, setDetectedDifficulty] = useState('')
-
-  // Answer state — one per question type
-  const [scenarioAnswer, setScenarioAnswer] = useState('')
-  const [reflectionAnswer, setReflectionAnswer] = useState('')
-  const [activeQuestion, setActiveQuestion] = useState('scenario') // 'scenario' | 'reflection'
-
-  // Evaluation state — one per question type
-  const [scenarioEval, setScenarioEval] = useState(null)
-  const [reflectionEval, setReflectionEval] = useState(null)
-  const [evaluatingType, setEvaluatingType] = useState(null) // which one is loading
-
+  const [userAnswer, setUserAnswer] = useState('')
+  const [evaluation, setEvaluation] = useState(null)
   const [mentorEmail, setMentorEmail] = useState('')
   const [sentMentorEmail, setSentMentorEmail] = useState('')
   const [recentEmails, setRecentEmails] = useState(() => {
@@ -882,12 +866,11 @@ export default function Chat() {
 
   const firstName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
 
-  // Derived — both evaluated
-  const bothAnswered = scenarioEval !== null && reflectionEval !== null
-  const overallPassed = bothAnswered && scenarioEval.passed && reflectionEval.passed
-  const overallScore = bothAnswered
-    ? Math.round((scenarioEval.score + reflectionEval.score) / 2)
-    : scenarioEval?.score ?? null
+  function scoreStyle(score) {
+    if (score >= 70) return { bg: 'linear-gradient(135deg, #064E3B 0%, #059669 100%)', label: 'Passed' }
+    if (score >= 45) return { bg: 'linear-gradient(135deg, #78350F 0%, #D97706 100%)', label: 'Fair' }
+    return { bg: 'linear-gradient(135deg, #450A0A 0%, #DC2626 100%)', label: 'Needs work' }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -973,13 +956,8 @@ export default function Chat() {
     setLoading(true)
     try {
       const res = await logsApi.generateQuestion({ log_id: logData.log_id, difficulty: 'auto' })
-      // New response shape
-      setScenarioQuestion(res.scenario_question || res.question || '')
-      setReflectionQuestion(res.reflection_question || '')
-      setBloomLevel(res.bloom_level || '')
-      setFrameLabel(res.frame || '')
+      setQuestion(res.scenario_question || res.question || '')
       setDetectedDifficulty(res.difficulty || '')
-      setActiveQuestion('scenario')
       setStage('question')
     } catch (e) {
       toast.error(e.message)
@@ -988,44 +966,21 @@ export default function Chat() {
     }
   }
 
-  async function handleVerifyScenario() {
-    if (!scenarioAnswer.trim()) { toast.error('Write your answer first'); return }
-    setEvaluatingType('scenario')
+  async function handleVerifyAnswer() {
+    if (!userAnswer.trim()) { toast.error('Write your answer first'); return }
+    setLoading(true)
     try {
       const res = await logsApi.verifyAnswer({
         log_id: logData.log_id,
-        answer: scenarioAnswer,
+        answer: userAnswer,
         question_type: 'scenario',
       })
-      setScenarioEval(res)
-      // Auto-advance to reflection question after scenario eval
-      if (reflectionQuestion) {
-        setActiveQuestion('reflection')
-      } else {
-        setStage('answered')
-      }
-    } catch (e) {
-      toast.error(e.message)
-    } finally {
-      setEvaluatingType(null)
-    }
-  }
-
-  async function handleVerifyReflection() {
-    if (!reflectionAnswer.trim()) { toast.error('Write your reflection first'); return }
-    setEvaluatingType('reflection')
-    try {
-      const res = await logsApi.verifyAnswer({
-        log_id: logData.log_id,
-        answer: reflectionAnswer,
-        question_type: 'reflection',
-      })
-      setReflectionEval(res)
+      setEvaluation(res)
       setStage('answered')
     } catch (e) {
       toast.error(e.message)
     } finally {
-      setEvaluatingType(null)
+      setLoading(false)
     }
   }
 
@@ -1065,9 +1020,7 @@ export default function Chat() {
         setLoading(false)
         return
       }
-      if (alreadySent || networkDrop) {
-        toast.info(alreadySent ? "Already sent to mentor!" : "Sent! (connection dropped but it went through)")
-      }
+      toast.info(alreadySent ? "Already sent to mentor!" : "Sent! (connection dropped but it went through)")
     }
 
     if (confirmedTasks.length > 0) {
@@ -1101,17 +1054,10 @@ export default function Chat() {
     setLogData(null)
     setEditedContent('')
     setEditMode(false)
-    setScenarioQuestion('')
-    setReflectionQuestion('')
-    setBloomLevel('')
-    setFrameLabel('')
+    setQuestion('')
     setDetectedDifficulty('')
-    setScenarioAnswer('')
-    setReflectionAnswer('')
-    setActiveQuestion('scenario')
-    setScenarioEval(null)
-    setReflectionEval(null)
-    setEvaluatingType(null)
+    setUserAnswer('')
+    setEvaluation(null)
     setMentorEmail('')
     setSentMentorEmail('')
     setSelectedProject('')
@@ -1122,13 +1068,6 @@ export default function Chat() {
 
   const stageIndex = { input: 0, structured: 1, question: 2, answered: 2, done: 3 }
   const steps = ['Write', 'Review', 'Test', 'Send']
-
-  // Difficulty badge color
-  const difficultyColor = {
-    beginner: { bg: 'var(--success-soft)', color: 'var(--success)' },
-    intermediate: { bg: 'var(--accent-soft)', color: 'var(--accent)' },
-    advanced: { bg: 'var(--danger-soft)', color: 'var(--danger)' },
-  }[detectedDifficulty] || { bg: 'var(--accent-soft)', color: 'var(--accent)' }
 
   return (
     <div className="page" style={{
@@ -1147,10 +1086,6 @@ export default function Chat() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
       `}</style>
 
       <ToastContainer toasts={toasts} />
@@ -1163,9 +1098,8 @@ export default function Chat() {
         <p className="text-muted" style={{ fontSize: 14 }}>
           {stage === 'input'      && "What did you learn today? Write freely — AI handles the formatting."}
           {stage === 'structured' && "Here's your professional log. Review it, then take a quick AI test."}
-          {stage === 'question'   && activeQuestion === 'scenario' && "Answer this question based on what you studied."}
-          {stage === 'question'   && activeQuestion === 'reflection' && "One more — this one is about your learning process."}
-          {stage === 'answered'   && (overallPassed ? "Well done! Ready to send to your mentor?" : "Keep going — you can retry or send anyway.")}
+          {stage === 'question'   && "Answer this question based on what you studied."}
+          {stage === 'answered'   && (evaluation?.passed ? "Nice work! Ready to send to your mentor?" : "Keep going — you can retry or send anyway.")}
           {stage === 'done'       && "Log sent. Your mentor will review and sign it."}
         </p>
       </div>
@@ -1190,7 +1124,9 @@ export default function Chat() {
                   color: isDone ? 'var(--success)' : isActive ? 'var(--accent)' : 'var(--text-muted)',
                 }}
               >
-                {isDone ? <CheckCircle size={12} strokeWidth={2.5} /> : <span>{i + 1}</span>}
+                {isDone
+                  ? <CheckCircle size={12} strokeWidth={2.5} />
+                  : <span>{i + 1}</span>}
                 <span style={{ marginLeft: 2 }}>{step}</span>
               </div>
               {i < steps.length - 1 && (
@@ -1222,8 +1158,7 @@ export default function Chat() {
             }}>
               {rawText.length < 50
                 ? <><AlertCircle size={12} /> {rawText.length} chars (need {50 - rawText.length} more)</>
-                : <><CheckCircle size={12} /> {rawText.length} chars</>
-              }
+                : <><CheckCircle size={12} /> {rawText.length} chars</>}
             </div>
           </div>
 
@@ -1235,8 +1170,7 @@ export default function Chat() {
           >
             {loading
               ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> AI is restructuring...</>
-              : <>Submit &amp; Restructure <ChevronRight size={16} /></>
-            }
+              : <>Submit &amp; Restructure <ChevronRight size={16} /></>}
           </button>
         </div>
       )}
@@ -1327,8 +1261,7 @@ export default function Chat() {
             >
               {loading
                 ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Generating test...</>
-                : <>Take AI Test <ChevronRight size={16} /></>
-              }
+                : <>Take AI Test <ChevronRight size={16} /></>}
             </button>
           </div>
         </div>
@@ -1337,251 +1270,54 @@ export default function Chat() {
       {/* ── STAGE: QUESTION ── */}
       {stage === 'question' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {detectedDifficulty && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '6px 14px', borderRadius: 20,
+              background: 'var(--accent-soft)', color: 'var(--accent)',
+              fontSize: 13, fontWeight: 600, alignSelf: 'flex-start',
+            }}>
+              <Dumbbell size={13} />
+              {detectedDifficulty.charAt(0).toUpperCase() + detectedDifficulty.slice(1)}
+            </div>
+          )}
 
-          {/* Metadata row */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            {detectedDifficulty && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 20,
-                background: difficultyColor.bg, color: difficultyColor.color,
-                fontSize: 12, fontWeight: 700,
-              }}>
-                <Dumbbell size={12} />
-                {detectedDifficulty.charAt(0).toUpperCase() + detectedDifficulty.slice(1)}
-              </div>
-            )}
-            {bloomLevel && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 20,
-                background: 'var(--surface-2)', color: 'var(--text-muted)',
-                fontSize: 12, fontWeight: 600, border: '1px solid var(--border)',
-              }}>
-                <TrendingUp size={12} />
-                {bloomLevel}
-              </div>
-            )}
-            {frameLabel && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 20,
-                background: 'var(--surface-2)', color: 'var(--text-muted)',
-                fontSize: 12, fontWeight: 600, border: '1px solid var(--border)',
-              }}>
-                <FileText size={12} />
-                {frameLabel.charAt(0) + frameLabel.slice(1).toLowerCase().replace(/_/g, ' ')}
-              </div>
-            )}
+          <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
+            <p style={{
+              fontSize: 15, fontWeight: 500,
+              lineHeight: 1.8, color: 'var(--text-primary)',
+              whiteSpace: 'pre-line', margin: 0,
+            }}>
+              {question}
+            </p>
           </div>
 
-          {/* Question tabs — scenario vs reflection */}
-          {reflectionQuestion && (
-            <div style={{
-              display: 'flex', gap: 0,
-              background: 'var(--surface-2)', borderRadius: 10,
-              padding: 4, border: '1px solid var(--border)',
-              alignSelf: 'flex-start',
+          <div>
+            <label style={{
+              fontSize: 13, fontWeight: 600,
+              color: 'var(--text-secondary)', display: 'block', marginBottom: 8,
             }}>
-              {[
-                { key: 'scenario', label: 'Scenario', icon: <Brain size={13} />, done: scenarioEval !== null },
-                { key: 'reflection', label: 'Reflection', icon: <MessageSquare size={13} />, done: reflectionEval !== null },
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveQuestion(tab.key)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '6px 14px', borderRadius: 8,
-                    border: 'none', cursor: 'pointer',
-                    fontFamily: 'Urbanist, sans-serif', fontSize: 13, fontWeight: 600,
-                    background: activeQuestion === tab.key ? 'var(--surface)' : 'transparent',
-                    color: activeQuestion === tab.key ? 'var(--accent)' : 'var(--text-muted)',
-                    boxShadow: activeQuestion === tab.key ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {tab.done
-                    ? <CheckCircle size={13} color="var(--success)" />
-                    : tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
+              Your Answer
+            </label>
+            <textarea
+              className="input"
+              style={{ minHeight: 140, lineHeight: 1.7 }}
+              placeholder="Write your answer here. Be as thorough as you can..."
+              value={userAnswer}
+              onChange={e => setUserAnswer(e.target.value)}
+            />
+          </div>
 
-          {/* Scenario question */}
-          {activeQuestion === 'scenario' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeInUp 0.2s ease' }}>
-              <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
-                <div style={{
-                  fontSize: 11, letterSpacing: '2px', fontWeight: 600,
-                  color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  <Brain size={12} /> Scenario Question
-                </div>
-                <p style={{
-                  fontSize: 15, fontWeight: 500,
-                  lineHeight: 1.8, color: 'var(--text-primary)',
-                  whiteSpace: 'pre-line',
-                }}>
-                  {scenarioQuestion}
-                </p>
-              </div>
-
-              {/* Show result if already evaluated */}
-              {scenarioEval && (
-                <div style={{
-                  padding: '14px 18px', borderRadius: 12,
-                  background: scenarioEval.passed ? 'var(--success-soft)' : 'var(--danger-soft)',
-                  border: `1px solid ${scenarioEval.passed ? 'rgba(5,150,105,0.2)' : 'rgba(220,38,38,0.2)'}`,
-                  animation: 'fadeInUp 0.2s ease',
-                }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
-                  }}>
-                    {scenarioEval.passed
-                      ? <CheckCircle size={16} color="var(--success)" />
-                      : <Dumbbell size={16} color="var(--danger)" />}
-                    <span style={{
-                      fontWeight: 700, fontSize: 14,
-                      color: scenarioEval.passed ? 'var(--success)' : 'var(--danger)',
-                    }}>
-                      {scenarioEval.score}/100
-                    </span>
-                  </div>
-                  <p style={{
-                    fontSize: 13, lineHeight: 1.7,
-                    color: 'var(--text-secondary)', margin: 0,
-                    whiteSpace: 'pre-line',
-                  }}>
-                    {scenarioEval.feedback}
-                  </p>
-                </div>
-              )}
-
-              {!scenarioEval && (
-                <>
-                  <div>
-                    <label style={{
-                      fontSize: 13, fontWeight: 600,
-                      color: 'var(--text-secondary)', display: 'block', marginBottom: 8,
-                    }}>
-                      Your Answer
-                    </label>
-                    <textarea
-                      className="input"
-                      style={{ minHeight: 140, lineHeight: 1.7 }}
-                      placeholder="Write your answer here. Be specific — the AI checks depth, not length..."
-                      value={scenarioAnswer}
-                      onChange={e => setScenarioAnswer(e.target.value)}
-                    />
-                  </div>
-
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleVerifyScenario}
-                    disabled={!scenarioAnswer.trim() || evaluatingType === 'scenario'}
-                    style={{ alignSelf: 'flex-end', minWidth: 160, display: 'flex', alignItems: 'center', gap: 8 }}
-                  >
-                    {evaluatingType === 'scenario'
-                      ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Evaluating...</>
-                      : <>Submit Answer <ChevronRight size={16} /></>
-                    }
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Reflection question */}
-          {activeQuestion === 'reflection' && reflectionQuestion && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeInUp 0.2s ease' }}>
-              <div className="card" style={{ borderLeft: '4px solid var(--warning, #D97706)' }}>
-                <div style={{
-                  fontSize: 11, letterSpacing: '2px', fontWeight: 600,
-                  color: 'var(--warning, #D97706)', marginBottom: 10, textTransform: 'uppercase',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  <MessageSquare size={12} /> Reflection Question
-                </div>
-                <p style={{
-                  fontSize: 15, fontWeight: 500,
-                  lineHeight: 1.8, color: 'var(--text-primary)',
-                }}>
-                  {reflectionQuestion}
-                </p>
-              </div>
-
-              {/* Show result if already evaluated */}
-              {reflectionEval && (
-                <div style={{
-                  padding: '14px 18px', borderRadius: 12,
-                  background: reflectionEval.passed ? 'var(--success-soft)' : 'var(--surface-2)',
-                  border: `1px solid ${reflectionEval.passed ? 'rgba(5,150,105,0.2)' : 'var(--border)'}`,
-                  animation: 'fadeInUp 0.2s ease',
-                }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
-                  }}>
-                    <MessageSquare size={16} color="var(--warning, #D97706)" />
-                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
-                      Reflection — {reflectionEval.score}/100
-                    </span>
-                  </div>
-                  <p style={{
-                    fontSize: 13, lineHeight: 1.7,
-                    color: 'var(--text-secondary)', margin: 0,
-                    whiteSpace: 'pre-line',
-                  }}>
-                    {reflectionEval.feedback}
-                  </p>
-                </div>
-              )}
-
-              {!reflectionEval && (
-                <>
-                  <div>
-                    <label style={{
-                      fontSize: 13, fontWeight: 600,
-                      color: 'var(--text-secondary)', display: 'block', marginBottom: 8,
-                    }}>
-                      Your Reflection
-                    </label>
-                    <textarea
-                      className="input"
-                      style={{ minHeight: 140, lineHeight: 1.7 }}
-                      placeholder="Be honest — there's no wrong answer here. The AI rewards genuine reflection over polished responses..."
-                      value={reflectionAnswer}
-                      onChange={e => setReflectionAnswer(e.target.value)}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => setStage('answered')}
-                      style={{ color: 'var(--text-muted)', fontSize: 13 }}
-                    >
-                      Skip reflection
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleVerifyReflection}
-                      disabled={!reflectionAnswer.trim() || evaluatingType === 'reflection'}
-                      style={{ minWidth: 160, display: 'flex', alignItems: 'center', gap: 8 }}
-                    >
-                      {evaluatingType === 'reflection'
-                        ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Evaluating...</>
-                        : <>Submit Reflection <ChevronRight size={16} /></>
-                      }
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          <button
+            className="btn btn-primary"
+            onClick={handleVerifyAnswer}
+            disabled={!userAnswer.trim() || loading}
+            style={{ alignSelf: 'flex-end', minWidth: 160, display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            {loading
+              ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Evaluating...</>
+              : <>Submit Answer <ChevronRight size={16} /></>}
+          </button>
         </div>
       )}
 
@@ -1589,90 +1325,30 @@ export default function Chat() {
       {stage === 'answered' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Combined result card */}
-          {(scenarioEval || reflectionEval) ? (
-            <div className="card" style={{
-              padding: '32px 24px', textAlign: 'center',
-              background: overallPassed
-                ? 'linear-gradient(135deg, #064E3B 0%, #059669 100%)'
-                : bothAnswered
-                ? 'linear-gradient(135deg, #1E1B4B 0%, #4C1D95 100%)'
-                : 'linear-gradient(135deg, #450A0A 0%, #DC2626 100%)',
-              border: 'none', color: '#fff',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                {overallPassed
-                  ? <CheckCircle size={48} strokeWidth={1.5} />
-                  : <Dumbbell size={48} strokeWidth={1.5} />}
-              </div>
-              <h2 style={{ marginBottom: 6 }}>
-                {overallPassed ? 'Solid understanding.' : bothAnswered ? 'Keep sharpening.' : 'Partially done.'}
-              </h2>
-
-              {/* Score breakdown */}
-              <div style={{
-                display: 'flex', justifyContent: 'center', gap: 24,
-                margin: '16px 0',
+          {evaluation ? (() => {
+            const s = scoreStyle(evaluation.score)
+            return (
+              <div className="card" style={{
+                textAlign: 'center', padding: '32px 24px',
+                background: s.bg, border: 'none', color: '#fff',
               }}>
-                {scenarioEval && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, fontWeight: 900 }}>
-                      {scenarioEval.score}
-                      <span style={{ fontSize: 14, opacity: 0.7 }}>/100</span>
-                    </div>
-                    <div style={{
-                      fontSize: 11, opacity: 0.8, fontWeight: 600,
-                      textTransform: 'uppercase', letterSpacing: '1px', marginTop: 4,
-                      display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center',
-                    }}>
-                      <Brain size={10} /> Scenario
-                    </div>
-                  </div>
-                )}
-                {reflectionEval && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, fontWeight: 900 }}>
-                      {reflectionEval.score}
-                      <span style={{ fontSize: 14, opacity: 0.7 }}>/100</span>
-                    </div>
-                    <div style={{
-                      fontSize: 11, opacity: 0.8, fontWeight: 600,
-                      textTransform: 'uppercase', letterSpacing: '1px', marginTop: 4,
-                      display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center',
-                    }}>
-                      <MessageSquare size={10} /> Reflection
-                    </div>
-                  </div>
-                )}
-                {bothAnswered && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, fontWeight: 900 }}>
-                      {overallScore}
-                      <span style={{ fontSize: 14, opacity: 0.7 }}>/100</span>
-                    </div>
-                    <div style={{
-                      fontSize: 11, opacity: 0.8, fontWeight: 600,
-                      textTransform: 'uppercase', letterSpacing: '1px', marginTop: 4,
-                      display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center',
-                    }}>
-                      <TrendingUp size={10} /> Average
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Feed-forward from scenario */}
-              {scenarioEval?.feedback && (
+                <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.85, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  {s.label}
+                </div>
+                <div style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, marginBottom: 4 }}>
+                  {evaluation.score}
+                  <span style={{ fontSize: 20, fontWeight: 600, opacity: 0.7 }}>/100</span>
+                </div>
                 <p style={{
-                  opacity: 0.88, lineHeight: 1.6,
-                  maxWidth: 440, margin: '0 auto',
-                  fontSize: 13, whiteSpace: 'pre-line',
+                  opacity: 0.92, lineHeight: 1.7,
+                  maxWidth: 420, margin: '16px auto 0',
+                  fontSize: 14, whiteSpace: 'pre-line',
                 }}>
-                  {scenarioEval.feedback}
+                  {evaluation.feedback}
                 </p>
-              )}
-            </div>
-          ) : (
+              </div>
+            )
+          })() : (
             <div className="card" style={{
               textAlign: 'center', padding: '24px',
               background: 'var(--surface-2)', border: '1px solid var(--border)',
@@ -1709,8 +1385,7 @@ export default function Chat() {
                   ? completingTasks
                     ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Completing...</>
                     : <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Sending...</>
-                  : <><Send size={14} /> Send</>
-                }
+                  : <><Send size={14} /> Send</>}
               </button>
             </div>
 
@@ -1924,25 +1599,10 @@ export default function Chat() {
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '8px 16px', borderRadius: 10,
               background: 'var(--surface-2)', border: '1px solid var(--border)',
-              fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16,
+              fontSize: 13, color: 'var(--text-secondary)', marginBottom: 28,
             }}>
               <Mail size={14} />
               <span>Sent to <strong style={{ color: 'var(--text-primary)' }}>{sentMentorEmail}</strong></span>
-            </div>
-          )}
-
-          {(bothAnswered || scenarioEval) && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '8px 16px', borderRadius: 10,
-              background: overallPassed ? 'var(--success-soft)' : 'var(--surface-2)',
-              border: `1px solid ${overallPassed ? 'var(--success)' : 'var(--border)'}`,
-              fontSize: 13,
-              color: overallPassed ? 'var(--success)' : 'var(--text-secondary)',
-              fontWeight: 600, marginBottom: 16, display: 'flex',
-            }}>
-              <TrendingUp size={14} />
-              Test score: {overallScore}/100
             </div>
           )}
 
