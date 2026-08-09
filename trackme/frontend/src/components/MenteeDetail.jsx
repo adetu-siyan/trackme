@@ -3153,16 +3153,26 @@ export default function MenteeDetail({ mentee, onBack }) {
                   <RefreshCw size={11} /> {ai.consistency_signal}
                 </div>
               )}
-              {ai.learning_depth_pattern && (
-                <div style={{
-                  padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                  background: 'var(--surface-2)', color: 'var(--text-secondary)',
-                  border: '1px solid var(--border)',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}>
-                  <TrendingUp size={11} /> {ai.learning_depth_pattern}
-                </div>
-              )}
+             {ai.learning_depth_pattern && (() => {
+                  const depthStyles = {
+                    'Deepening':     { bg: 'var(--success-soft)', color: 'var(--success)',      icon: <TrendingUp size={11} /> },
+                    'Broadening':    { bg: 'var(--accent-soft)',  color: 'var(--accent)',        icon: <TrendingUp size={11} /> },
+                    'Mixed':         { bg: 'var(--surface-2)',    color: 'var(--text-secondary)', icon: <TrendingUp size={11} /> },
+                    'Surface-level': { bg: 'var(--warning-soft)', color: 'var(--warning)',       icon: <TrendingUp size={11} /> },
+                    'Declining':     { bg: 'var(--danger-soft)',  color: 'var(--danger)',        icon: <TrendingDown size={11} /> },
+                  }
+                  const s = depthStyles[ai.learning_depth_pattern] || depthStyles['Mixed']
+                  return (
+                    <div style={{
+                      padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                      background: s.bg, color: s.color,
+                      border: '1px solid transparent',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                    }}>
+                      {s.icon} {ai.learning_depth_pattern}
+                    </div>
+                  )
+                })()} 
             </div>
 
             {ai.focus_areas?.length > 0 && (

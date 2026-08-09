@@ -1,9 +1,14 @@
+
+
 // import { useState, useEffect } from 'react'
+// import {
+//   Edit3, Send, RotateCcw, CheckCircle, Mail, Tag,
+//   Link2, Loader2, ChevronRight, FileText, Inbox,
+//   AlertCircle, Dumbbell, Sparkles, Clock
+// } from 'lucide-react'
 // import { useAuth } from '../context/AuthContext'
 // import { logsApi, projectsApi, weeklyFocusApi } from '../lib/api'
 // import { useToast, ToastContainer } from '../hooks/useToast'
-
-// // Stages: 'input' → 'structured' → 'question' → 'answered' → 'send' → 'done'
 
 // export default function Chat() {
 //   const { user, profile } = useAuth()
@@ -25,18 +30,16 @@
 //   })
 //   const [loading, setLoading] = useState(false)
 
-//   // Project + task linking
 //   const [projects, setProjects] = useState([])
 //   const [selectedProject, setSelectedProject] = useState('')
 //   const [weeklyTasks, setWeeklyTasks] = useState([])
-//   const [suggestedTasks, setSuggestedTasks] = useState([]) // AI suggested matches
-//   const [confirmedTasks, setConfirmedTasks] = useState([]) // mentee confirmed
+//   const [suggestedTasks, setSuggestedTasks] = useState([])
+//   const [confirmedTasks, setConfirmedTasks] = useState([])
 //   const [matchingTasks, setMatchingTasks] = useState(false)
 //   const [completingTasks, setCompletingTasks] = useState(false)
 
 //   const firstName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
 
-//   // Load projects on mount — scoped to this user only
 //   useEffect(() => {
 //     let cancelled = false
 //     projectsApi.myProjects()
@@ -52,7 +55,6 @@
 //     return () => { cancelled = true }
 //   }, [user?.id])
 
-//   // When project is selected, load this week's tasks for that project context
 //   useEffect(() => {
 //     if (!selectedProject) {
 //       setWeeklyTasks([])
@@ -60,7 +62,6 @@
 //       setConfirmedTasks([])
 //       return
 //     }
-
 //     let cancelled = false
 //     weeklyFocusApi.myTasks()
 //       .then(res => {
@@ -71,18 +72,15 @@
 //     return () => { cancelled = true }
 //   }, [selectedProject])
 
-//   // When project is selected AND log is structured, AI matches log to tasks
 //   useEffect(() => {
 //     if (!selectedProject || !logData || weeklyTasks.length === 0) return
 //     if (stage !== 'answered') return
-
 //     matchLogToTasks()
 //   }, [selectedProject, stage])
 
 //   async function matchLogToTasks() {
 //     if (!logData || weeklyTasks.length === 0) return
 //     setMatchingTasks(true)
-
 //     try {
 //       const res = await logsApi.matchTasks({
 //         log_id: logData.log_id,
@@ -91,12 +89,9 @@
 //         log_title: logData.structured_title || '',
 //         log_content: logData.structured_content || '',
 //         task_titles: weeklyTasks.filter(t => !t.completed).map(t => ({
-//           id: t.id,
-//           title: t.title,
-//           category: t.category,
+//           id: t.id, title: t.title, category: t.category,
 //         })),
 //       })
-
 //       setSuggestedTasks(res.matched_task_ids || [])
 //       setConfirmedTasks(res.matched_task_ids || [])
 //     } catch (e) {
@@ -128,10 +123,7 @@
 //   async function handleGenerateQuestion() {
 //     setLoading(true)
 //     try {
-//       const res = await logsApi.generateQuestion({
-//         log_id: logData.log_id,
-//         difficulty: 'auto'
-//       })
+//       const res = await logsApi.generateQuestion({ log_id: logData.log_id, difficulty: 'auto' })
 //       setQuestion(res.question)
 //       setDetectedDifficulty(res.difficulty)
 //       setStage('question')
@@ -146,10 +138,7 @@
 //     if (!userAnswer.trim()) { toast.error('Write your answer first'); return }
 //     setLoading(true)
 //     try {
-//       const res = await logsApi.verifyAnswer({
-//         log_id: logData.log_id,
-//         answer: userAnswer
-//       })
+//       const res = await logsApi.verifyAnswer({ log_id: logData.log_id, answer: userAnswer })
 //       setEvaluation(res)
 //       setStage('answered')
 //     } catch (e) {
@@ -179,55 +168,49 @@
 //   }
 
 //   async function handleSendToMentor() {
-//   if (!mentorEmail.trim()) { toast.error("Enter your mentor's email"); return }
-//   setLoading(true)
-//   try {
-//     await logsApi.sendToMentor({
-//       log_id: logData.log_id,
-//       mentor_email: mentorEmail,
-//       project_id: selectedProject || null,
+//     if (!mentorEmail.trim()) { toast.error("Enter your mentor's email"); return }
+//     setLoading(true)
+//     try {
+//       await logsApi.sendToMentor({
+//         log_id: logData.log_id,
+//         mentor_email: mentorEmail,
+//         project_id: selectedProject || null,
+//       })
+//     } catch (e) {
+//       const alreadySent = e.message?.toLowerCase().includes("already sent")
+//       const networkDrop = e.message?.toLowerCase().includes("failed to fetch")
+//       if (!alreadySent && !networkDrop) {
+//         toast.error(e.message)
+//         setLoading(false)
+//         return
+//       }
+//       if (alreadySent || networkDrop) {
+//         toast.info(alreadySent ? "Already sent to mentor!" : "Sent! (connection dropped but it went through)")
+//       }
+//     }
+
+//     if (confirmedTasks.length > 0) {
+//       setCompletingTasks(true)
+//       await Promise.allSettled(
+//         confirmedTasks.map(taskId => weeklyFocusApi.updateTask(taskId, true))
+//       )
+//       setCompletingTasks(false)
+//     }
+
+//     setRecentEmails(prev => {
+//       const updated = [mentorEmail, ...prev.filter(e => e !== mentorEmail)].slice(0, 3)
+//       localStorage.setItem('Dôti-recent-emails', JSON.stringify(updated))
+//       return updated
 //     })
-//   } catch (e) {
-//     // If already sent, backend already processed it — treat as success
-//     const alreadySent = e.message?.toLowerCase().includes("already sent")
-//     const networkDrop = e.message?.toLowerCase().includes("failed to fetch")
 
-//     if (!alreadySent && !networkDrop) {
-//       toast.error(e.message)
-//       setLoading(false)
-//       return
-//     }
-
-//     if (alreadySent || networkDrop) {
-//       // Fall through to success flow below
-//       toast.info(alreadySent ? "Already sent to mentor!" : "Sent! (connection dropped but it went through)")
-//     }
+//     setSentMentorEmail(mentorEmail)
+//     setStage('done')
+//     setLoading(false)
 //   }
 
-//   // Success flow — runs whether request succeeded or was already sent
-//   if (confirmedTasks.length > 0) {
-//     setCompletingTasks(true)
-//     await Promise.allSettled(
-//       confirmedTasks.map(taskId => weeklyFocusApi.updateTask(taskId, true))
-//     )
-//     setCompletingTasks(false)
-//   }
-
-//   setRecentEmails(prev => {
-//     const updated = [mentorEmail, ...prev.filter(e => e !== mentorEmail)].slice(0, 3)
-//     localStorage.setItem('Dôti-recent-emails', JSON.stringify(updated))
-//     return updated
-//   })
-
-//   setSentMentorEmail(mentorEmail)
-//   setStage('done')
-//   setLoading(false)
-// }
 //   function toggleTaskConfirm(taskId) {
 //     setConfirmedTasks(prev =>
-//       prev.includes(taskId)
-//         ? prev.filter(id => id !== taskId)
-//         : [...prev, taskId]
+//       prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]
 //     )
 //   }
 
@@ -272,14 +255,14 @@
 //       {/* Header */}
 //       <div style={{ marginBottom: 20 }}>
 //         <h2 style={{ marginBottom: 4 }}>
-//           Hello, <span style={{ color: 'var(--accent)' }}>{firstName}</span> 👋
+//           Hello, <span style={{ color: 'var(--accent)' }}>{firstName}</span>
 //         </h2>
 //         <p className="text-muted" style={{ fontSize: 14 }}>
 //           {stage === 'input'      && "What did you learn today? Write freely — AI handles the formatting."}
 //           {stage === 'structured' && "Here's your professional log. Review it, then take a quick AI test."}
 //           {stage === 'question'   && "Answer this question based on what you studied."}
-//           {stage === 'answered'   && (evaluation?.passed ? "Well done! 🎉 Ready to send to your mentor?" : "Keep going — you can retry or send anyway.")}
-//           {stage === 'done'       && "Log sent! Your mentor will review and sign it."}
+//           {stage === 'answered'   && (evaluation?.passed ? "Well done! Ready to send to your mentor?" : "Keep going — you can retry or send anyway.")}
+//           {stage === 'done'       && "Log sent. Your mentor will review and sign it."}
 //         </p>
 //       </div>
 
@@ -303,7 +286,11 @@
 //                   color: isDone ? 'var(--success)' : isActive ? 'var(--accent)' : 'var(--text-muted)',
 //                 }}
 //               >
-//                 {isDone ? '✓' : `${i + 1}`} {step}
+//                 {isDone
+//                   ? <CheckCircle size={12} strokeWidth={2.5} />
+//                   : <span>{i + 1}</span>
+//                 }
+//                 <span style={{ marginLeft: 2 }}>{step}</span>
 //               </div>
 //               {i < steps.length - 1 && (
 //                 <div style={{ width: 16, height: 1, background: 'var(--border)' }} />
@@ -313,7 +300,7 @@
 //         })}
 //       </div>
 
-//       {/* ── STAGE: INPUT ────────────────────────────────────── */}
+//       {/* ── STAGE: INPUT ── */}
 //       {stage === 'input' && (
 //         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
 //           <div style={{ position: 'relative', flex: 1 }}>
@@ -330,8 +317,12 @@
 //             <div style={{
 //               position: 'absolute', bottom: 12, right: 14, fontSize: 12, fontWeight: 500,
 //               color: rawText.length < 50 ? 'var(--danger)' : 'var(--text-muted)',
+//               display: 'flex', alignItems: 'center', gap: 4,
 //             }}>
-//               {rawText.length} chars {rawText.length < 50 ? `(need ${50 - rawText.length} more)` : '✓'}
+//               {rawText.length < 50
+//                 ? <><AlertCircle size={12} /> {rawText.length} chars (need {50 - rawText.length} more)</>
+//                 : <><CheckCircle size={12} /> {rawText.length} chars</>
+//               }
 //             </div>
 //           </div>
 
@@ -339,16 +330,17 @@
 //             className="btn btn-primary btn-lg"
 //             onClick={handleSubmitLog}
 //             disabled={loading || rawText.trim().length < 50}
-//             style={{ alignSelf: 'flex-end', minWidth: 200 }}
+//             style={{ alignSelf: 'flex-end', minWidth: 200, display: 'flex', alignItems: 'center', gap: 8 }}
 //           >
 //             {loading
-//               ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> AI is restructuring...</>
-//               : ' Submit & Restructure →'}
+//               ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> AI is restructuring...</>
+//               : <>Submit &amp; Restructure <ChevronRight size={16} /></>
+//             }
 //           </button>
 //         </div>
 //       )}
 
-//       {/* ── STAGE: STRUCTURED ──────────────────────────────── */}
+//       {/* ── STAGE: STRUCTURED ── */}
 //       {stage === 'structured' && logData && (
 //         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 //           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -360,7 +352,9 @@
 //               <div style={{
 //                 fontSize: 11, letterSpacing: '2px', fontWeight: 600,
 //                 color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase',
+//                 display: 'flex', alignItems: 'center', gap: 6,
 //               }}>
+//                 <Sparkles size={12} />
 //                 AI Structured Log · {new Date().toLocaleDateString('en-US', {
 //                   month: 'long', day: 'numeric', year: 'numeric'
 //                 })}
@@ -406,8 +400,12 @@
 
 //           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
 //             {!editMode && (
-//               <button className="btn btn-secondary" onClick={() => setEditMode(true)}>
-//                 ✏️ Edit Log
+//               <button
+//                 className="btn btn-secondary"
+//                 onClick={() => setEditMode(true)}
+//                 style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+//               >
+//                 <Edit3 size={14} /> Edit Log
 //               </button>
 //             )}
 //             {!editMode && (
@@ -415,25 +413,27 @@
 //                 className="btn btn-ghost"
 //                 onClick={() => setStage('answered')}
 //                 disabled={loading}
-//                 style={{ color: 'var(--text-muted)', fontSize: 13 }}
+//                 style={{ color: 'var(--text-muted)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
 //               >
-//                 Skip test →
+//                 Skip test <ChevronRight size={14} />
 //               </button>
 //             )}
 //             <button
 //               className="btn btn-primary"
 //               onClick={handleGenerateQuestion}
 //               disabled={editMode || loading}
+//               style={{ display: 'flex', alignItems: 'center', gap: 6 }}
 //             >
 //               {loading
-//                 ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Generating test...</>
-//                 : 'Take AI Test →'}
+//                 ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Generating test...</>
+//                 : <>Take AI Test <ChevronRight size={16} /></>
+//               }
 //             </button>
 //           </div>
 //         </div>
 //       )}
 
-//       {/* ── STAGE: QUESTION ────────────────────────────────── */}
+//       {/* ── STAGE: QUESTION ── */}
 //       {stage === 'question' && (
 //         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 //           {detectedDifficulty && (
@@ -443,7 +443,8 @@
 //               background: 'var(--accent-soft)', color: 'var(--accent)',
 //               fontSize: 13, fontWeight: 600, alignSelf: 'flex-start',
 //             }}>
-//                AI detected: <strong>{detectedDifficulty}</strong> level
+//               <Dumbbell size={13} />
+//               AI detected: <strong>{detectedDifficulty}</strong> level
 //             </div>
 //           )}
 
@@ -451,8 +452,9 @@
 //             <div style={{
 //               fontSize: 11, letterSpacing: '2px', fontWeight: 600,
 //               color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase',
+//               display: 'flex', alignItems: 'center', gap: 6,
 //             }}>
-//               Verification Question
+//               <FileText size={12} /> Verification Question
 //             </div>
 //             <p style={{
 //               fontSize: 15, fontWeight: 600,
@@ -482,20 +484,20 @@
 //             className="btn btn-primary"
 //             onClick={handleVerifyAnswer}
 //             disabled={!userAnswer.trim() || loading}
-//             style={{ alignSelf: 'flex-end', minWidth: 160 }}
+//             style={{ alignSelf: 'flex-end', minWidth: 160, display: 'flex', alignItems: 'center', gap: 8 }}
 //           >
 //             {loading
-//               ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Evaluating...</>
-//               : 'Submit Answer →'}
+//               ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Evaluating...</>
+//               : <>Submit Answer <ChevronRight size={16} /></>
+//             }
 //           </button>
 //         </div>
 //       )}
 
-//       {/* ── STAGE: ANSWERED ────────────────────────────────── */}
+//       {/* ── STAGE: ANSWERED ── */}
 //       {stage === 'answered' && (
 //         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-//           {/* Score card — only if they took the test */}
 //           {evaluation && (
 //             <div className="card" style={{
 //               textAlign: 'center', padding: '32px 24px',
@@ -504,8 +506,11 @@
 //                 : 'linear-gradient(135deg, #450A0A 0%, #DC2626 100%)',
 //               border: 'none', color: '#fff',
 //             }}>
-//               <div style={{ fontSize: 48, marginBottom: 12 }}>
-//                 {evaluation.passed ? '🎉' : '💪'}
+//               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+//                 {evaluation.passed
+//                   ? <CheckCircle size={48} strokeWidth={1.5} />
+//                   : <Dumbbell size={48} strokeWidth={1.5} />
+//                 }
 //               </div>
 //               <h2 style={{ marginBottom: 8 }}>
 //                 {evaluation.passed ? 'Well done!' : 'Keep pushing!'}
@@ -520,13 +525,14 @@
 //             </div>
 //           )}
 
-//           {/* Skip notice — only if they skipped the test */}
 //           {!evaluation && (
 //             <div className="card" style={{
 //               textAlign: 'center', padding: '24px',
 //               background: 'var(--surface-2)', border: '1px solid var(--border)',
 //             }}>
-//               <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+//               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+//                 <FileText size={32} strokeWidth={1.5} color="var(--text-muted)" />
+//               </div>
 //               <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>
 //                 Test skipped. Your log is ready to send to your mentor.
 //               </p>
@@ -537,11 +543,7 @@
 //           <div className="card" style={{ padding: '24px' }}>
 //             <h3 style={{ marginBottom: 16 }}>Send to Mentor</h3>
 
-//             {/* Email input + send button */}
-//             <div
-//               className="chat-send-row"
-//               style={{ display: 'flex', gap: 10, marginBottom: 14 }}
-//             >
+//             <div className="chat-send-row" style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
 //               <input
 //                 className="input"
 //                 type="email"
@@ -554,19 +556,24 @@
 //                 className="btn btn-primary"
 //                 onClick={handleSendToMentor}
 //                 disabled={loading || !mentorEmail.trim()}
-//                 style={{ minWidth: 120, flexShrink: 0 }}
+//                 style={{ minWidth: 120, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}
 //               >
 //                 {loading
-//                   ? completingTasks ? 'Completing tasks...' : 'Sending...'
-//                   : 'Send →'}
+//                   ? completingTasks
+//                     ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Completing...</>
+//                     : <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Sending...</>
+//                   : <><Send size={14} /> Send</>
+//                 }
 //               </button>
 //             </div>
 
-//             {/* Recent mentor emails */}
 //             {recentEmails.length > 0 && (
 //               <div style={{ marginBottom: 14 }}>
-//                 <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6 }}>
-//                   Recent mentors
+//                 <div style={{
+//                   fontSize: 12, color: 'var(--text-muted)', fontWeight: 600,
+//                   marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5,
+//                 }}>
+//                   <Clock size={11} /> Recent mentors
 //                 </div>
 //                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 //                   {recentEmails.map(email => (
@@ -583,7 +590,7 @@
 //                         display: 'flex', alignItems: 'center', gap: 8,
 //                       }}
 //                     >
-//                       <span style={{ fontSize: 14 }}>📧</span>
+//                       <Mail size={13} />
 //                       {email}
 //                     </button>
 //                   ))}
@@ -591,14 +598,14 @@
 //               </div>
 //             )}
 
-//             {/* Project selector */}
 //             {projects.length > 0 && (
 //               <div style={{ marginBottom: 14 }}>
 //                 <label style={{
 //                   fontSize: 13, fontWeight: 600,
-//                   color: 'var(--text-secondary)', display: 'block', marginBottom: 6,
+//                   color: 'var(--text-secondary)', display: 'flex',
+//                   alignItems: 'center', gap: 6, marginBottom: 6,
 //                 }}>
-//                   Tag to Project (optional)
+//                   <Tag size={13} /> Tag to Project (optional)
 //                 </label>
 //                 <select
 //                   className="input"
@@ -614,7 +621,6 @@
 //               </div>
 //             )}
 
-//             {/* Task matching panel */}
 //             {selectedProject && weeklyTasks.length > 0 && (
 //               <div style={{
 //                 background: 'var(--surface-2)',
@@ -625,13 +631,16 @@
 //                   display: 'flex', alignItems: 'center',
 //                   gap: 8, marginBottom: 12,
 //                 }}>
-//                   <span style={{ fontSize: 16 }}>🔗</span>
+//                   <Link2 size={15} color="var(--text-secondary)" />
 //                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
 //                     Link to Weekly Tasks
 //                   </div>
 //                   {matchingTasks && (
-//                     <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, marginLeft: 4 }}>
-//                       AI matching...
+//                     <span style={{
+//                       fontSize: 11, color: 'var(--accent)', fontWeight: 600,
+//                       marginLeft: 4, display: 'flex', alignItems: 'center', gap: 4,
+//                     }}>
+//                       <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> AI matching...
 //                     </span>
 //                   )}
 //                   {suggestedTasks.length > 0 && !matchingTasks && (
@@ -676,7 +685,7 @@
 //                           transition: 'all 0.18s',
 //                         }}>
 //                           {isConfirmed && (
-//                             <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>✓</span>
+//                             <CheckCircle size={13} color="#fff" strokeWidth={3} />
 //                           )}
 //                         </div>
 
@@ -699,9 +708,9 @@
 //                               <span style={{
 //                                 fontSize: 10, fontWeight: 700, padding: '2px 6px',
 //                                 borderRadius: 20, background: 'var(--accent-soft)',
-//                                 color: 'var(--accent)',
+//                                 color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 3,
 //                               }}>
-//                                  AI match
+//                                 <Sparkles size={9} /> AI match
 //                               </span>
 //                             )}
 //                           </div>
@@ -711,8 +720,11 @@
 //                   })}
 
 //                   {weeklyTasks.filter(t => !t.completed).length === 0 && (
-//                     <p style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
-//                       ✅ All tasks for this week are already complete!
+//                     <p style={{
+//                       fontSize: 13, color: 'var(--success)', fontWeight: 600,
+//                       display: 'flex', alignItems: 'center', gap: 6,
+//                     }}>
+//                       <CheckCircle size={14} /> All tasks for this week are already complete!
 //                     </p>
 //                   )}
 //                 </div>
@@ -722,34 +734,42 @@
 //                     marginTop: 12, padding: '8px 12px', borderRadius: 8,
 //                     background: 'var(--success-soft)',
 //                     fontSize: 12, color: 'var(--success)', fontWeight: 600,
+//                     display: 'flex', alignItems: 'center', gap: 6,
 //                   }}>
-//                     ✅ {confirmedTasks.length} task{confirmedTasks.length > 1 ? 's' : ''} will be marked complete when you send
+//                     <CheckCircle size={13} />
+//                     {confirmedTasks.length} task{confirmedTasks.length > 1 ? 's' : ''} will be marked complete when you send
 //                   </div>
 //                 )}
 //               </div>
 //             )}
 
-//             {/* Secondary actions */}
 //             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
 //               <button
 //                 className="btn btn-secondary btn-sm"
 //                 onClick={() => { setEditMode(true); setStage('structured') }}
+//                 style={{ display: 'flex', alignItems: 'center', gap: 6 }}
 //               >
-//                 ✏️ Edit Log First
+//                 <Edit3 size={13} /> Edit Log First
 //               </button>
-//               <button className="btn btn-ghost btn-sm" onClick={reset}>
-//                 Start Over
+//               <button
+//                 className="btn btn-ghost btn-sm"
+//                 onClick={reset}
+//                 style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+//               >
+//                 <RotateCcw size={13} /> Start Over
 //               </button>
 //             </div>
 //           </div>
 //         </div>
 //       )}
 
-//       {/* ── STAGE: DONE ────────────────────────────────────── */}
+//       {/* ── STAGE: DONE ── */}
 //       {stage === 'done' && (
 //         <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-//           <div style={{ fontSize: 64, marginBottom: 20 }}>📬</div>
-//           <h2 style={{ marginBottom: 12 }}>Log sent to your mentor!</h2>
+//           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+//             <Inbox size={56} strokeWidth={1.2} color="var(--accent)" />
+//           </div>
+//           <h2 style={{ marginBottom: 12 }}>Log sent to your mentor</h2>
 //           <p className="text-muted" style={{
 //             fontSize: 15, lineHeight: 1.7,
 //             maxWidth: 400, margin: '0 auto 16px',
@@ -765,7 +785,7 @@
 //               background: 'var(--surface-2)', border: '1px solid var(--border)',
 //               fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16,
 //             }}>
-//               <span>📧</span>
+//               <Mail size={14} />
 //               <span>Sent to <strong style={{ color: 'var(--text-primary)' }}>{sentMentorEmail}</strong></span>
 //             </div>
 //           )}
@@ -778,26 +798,41 @@
 //               fontSize: 13, color: 'var(--success)', fontWeight: 600,
 //               marginBottom: 28,
 //             }}>
-//               ✅ {confirmedTasks.length} weekly task{confirmedTasks.length > 1 ? 's' : ''} marked complete
+//               <CheckCircle size={14} />
+//               {confirmedTasks.length} weekly task{confirmedTasks.length > 1 ? 's' : ''} marked complete
 //             </div>
 //           )}
 
 //           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-//             <button className="btn btn-primary btn-lg" onClick={reset}>
+//             <button
+//               className="btn btn-primary btn-lg"
+//               onClick={reset}
+//               style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+//             >
 //               Log Another Day
 //             </button>
 //           </div>
 //         </div>
 //       )}
+
+//       <style>{`
+//         @keyframes spin {
+//           from { transform: rotate(0deg); }
+//           to { transform: rotate(360deg); }
+//         }
+//       `}</style>
 //     </div>
 //   )
 // }
+
+
 
 import { useState, useEffect } from 'react'
 import {
   Edit3, Send, RotateCcw, CheckCircle, Mail, Tag,
   Link2, Loader2, ChevronRight, FileText, Inbox,
-  AlertCircle, Dumbbell, Sparkles, Clock
+  AlertCircle, Dumbbell, Sparkles, Clock, Brain,
+  MessageSquare, TrendingUp
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { logsApi, projectsApi, weeklyFocusApi } from '../lib/api'
@@ -812,10 +847,24 @@ export default function Chat() {
   const [logData, setLogData] = useState(null)
   const [editedContent, setEditedContent] = useState('')
   const [editMode, setEditMode] = useState(false)
-  const [question, setQuestion] = useState('')
+
+  // Question state — now two questions
+  const [scenarioQuestion, setScenarioQuestion] = useState('')
+  const [reflectionQuestion, setReflectionQuestion] = useState('')
+  const [bloomLevel, setBloomLevel] = useState('')
+  const [frameLabel, setFrameLabel] = useState('')
   const [detectedDifficulty, setDetectedDifficulty] = useState('')
-  const [userAnswer, setUserAnswer] = useState('')
-  const [evaluation, setEvaluation] = useState(null)
+
+  // Answer state — one per question type
+  const [scenarioAnswer, setScenarioAnswer] = useState('')
+  const [reflectionAnswer, setReflectionAnswer] = useState('')
+  const [activeQuestion, setActiveQuestion] = useState('scenario') // 'scenario' | 'reflection'
+
+  // Evaluation state — one per question type
+  const [scenarioEval, setScenarioEval] = useState(null)
+  const [reflectionEval, setReflectionEval] = useState(null)
+  const [evaluatingType, setEvaluatingType] = useState(null) // which one is loading
+
   const [mentorEmail, setMentorEmail] = useState('')
   const [sentMentorEmail, setSentMentorEmail] = useState('')
   const [recentEmails, setRecentEmails] = useState(() => {
@@ -832,6 +881,13 @@ export default function Chat() {
   const [completingTasks, setCompletingTasks] = useState(false)
 
   const firstName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
+
+  // Derived — both evaluated
+  const bothAnswered = scenarioEval !== null && reflectionEval !== null
+  const overallPassed = bothAnswered && scenarioEval.passed && reflectionEval.passed
+  const overallScore = bothAnswered
+    ? Math.round((scenarioEval.score + reflectionEval.score) / 2)
+    : scenarioEval?.score ?? null
 
   useEffect(() => {
     let cancelled = false
@@ -917,8 +973,13 @@ export default function Chat() {
     setLoading(true)
     try {
       const res = await logsApi.generateQuestion({ log_id: logData.log_id, difficulty: 'auto' })
-      setQuestion(res.question)
-      setDetectedDifficulty(res.difficulty)
+      // New response shape
+      setScenarioQuestion(res.scenario_question || res.question || '')
+      setReflectionQuestion(res.reflection_question || '')
+      setBloomLevel(res.bloom_level || '')
+      setFrameLabel(res.frame || '')
+      setDetectedDifficulty(res.difficulty || '')
+      setActiveQuestion('scenario')
       setStage('question')
     } catch (e) {
       toast.error(e.message)
@@ -927,17 +988,44 @@ export default function Chat() {
     }
   }
 
-  async function handleVerifyAnswer() {
-    if (!userAnswer.trim()) { toast.error('Write your answer first'); return }
-    setLoading(true)
+  async function handleVerifyScenario() {
+    if (!scenarioAnswer.trim()) { toast.error('Write your answer first'); return }
+    setEvaluatingType('scenario')
     try {
-      const res = await logsApi.verifyAnswer({ log_id: logData.log_id, answer: userAnswer })
-      setEvaluation(res)
+      const res = await logsApi.verifyAnswer({
+        log_id: logData.log_id,
+        answer: scenarioAnswer,
+        question_type: 'scenario',
+      })
+      setScenarioEval(res)
+      // Auto-advance to reflection question after scenario eval
+      if (reflectionQuestion) {
+        setActiveQuestion('reflection')
+      } else {
+        setStage('answered')
+      }
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setEvaluatingType(null)
+    }
+  }
+
+  async function handleVerifyReflection() {
+    if (!reflectionAnswer.trim()) { toast.error('Write your reflection first'); return }
+    setEvaluatingType('reflection')
+    try {
+      const res = await logsApi.verifyAnswer({
+        log_id: logData.log_id,
+        answer: reflectionAnswer,
+        question_type: 'reflection',
+      })
+      setReflectionEval(res)
       setStage('answered')
     } catch (e) {
       toast.error(e.message)
     } finally {
-      setLoading(false)
+      setEvaluatingType(null)
     }
   }
 
@@ -1013,10 +1101,17 @@ export default function Chat() {
     setLogData(null)
     setEditedContent('')
     setEditMode(false)
-    setQuestion('')
+    setScenarioQuestion('')
+    setReflectionQuestion('')
+    setBloomLevel('')
+    setFrameLabel('')
     setDetectedDifficulty('')
-    setUserAnswer('')
-    setEvaluation(null)
+    setScenarioAnswer('')
+    setReflectionAnswer('')
+    setActiveQuestion('scenario')
+    setScenarioEval(null)
+    setReflectionEval(null)
+    setEvaluatingType(null)
     setMentorEmail('')
     setSentMentorEmail('')
     setSelectedProject('')
@@ -1027,6 +1122,13 @@ export default function Chat() {
 
   const stageIndex = { input: 0, structured: 1, question: 2, answered: 2, done: 3 }
   const steps = ['Write', 'Review', 'Test', 'Send']
+
+  // Difficulty badge color
+  const difficultyColor = {
+    beginner: { bg: 'var(--success-soft)', color: 'var(--success)' },
+    intermediate: { bg: 'var(--accent-soft)', color: 'var(--accent)' },
+    advanced: { bg: 'var(--danger-soft)', color: 'var(--danger)' },
+  }[detectedDifficulty] || { bg: 'var(--accent-soft)', color: 'var(--accent)' }
 
   return (
     <div className="page" style={{
@@ -1041,6 +1143,14 @@ export default function Chat() {
           .chat-progress { gap: 4px !important; }
           .chat-progress-step { padding: 4px 8px !important; font-size: 11px !important; }
         }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
       <ToastContainer toasts={toasts} />
@@ -1053,8 +1163,9 @@ export default function Chat() {
         <p className="text-muted" style={{ fontSize: 14 }}>
           {stage === 'input'      && "What did you learn today? Write freely — AI handles the formatting."}
           {stage === 'structured' && "Here's your professional log. Review it, then take a quick AI test."}
-          {stage === 'question'   && "Answer this question based on what you studied."}
-          {stage === 'answered'   && (evaluation?.passed ? "Well done! Ready to send to your mentor?" : "Keep going — you can retry or send anyway.")}
+          {stage === 'question'   && activeQuestion === 'scenario' && "Answer this question based on what you studied."}
+          {stage === 'question'   && activeQuestion === 'reflection' && "One more — this one is about your learning process."}
+          {stage === 'answered'   && (overallPassed ? "Well done! Ready to send to your mentor?" : "Keep going — you can retry or send anyway.")}
           {stage === 'done'       && "Log sent. Your mentor will review and sign it."}
         </p>
       </div>
@@ -1079,10 +1190,7 @@ export default function Chat() {
                   color: isDone ? 'var(--success)' : isActive ? 'var(--accent)' : 'var(--text-muted)',
                 }}
               >
-                {isDone
-                  ? <CheckCircle size={12} strokeWidth={2.5} />
-                  : <span>{i + 1}</span>
-                }
+                {isDone ? <CheckCircle size={12} strokeWidth={2.5} /> : <span>{i + 1}</span>}
                 <span style={{ marginLeft: 2 }}>{step}</span>
               </div>
               {i < steps.length - 1 && (
@@ -1229,61 +1337,251 @@ export default function Chat() {
       {/* ── STAGE: QUESTION ── */}
       {stage === 'question' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {detectedDifficulty && (
+
+          {/* Metadata row */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            {detectedDifficulty && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 20,
+                background: difficultyColor.bg, color: difficultyColor.color,
+                fontSize: 12, fontWeight: 700,
+              }}>
+                <Dumbbell size={12} />
+                {detectedDifficulty.charAt(0).toUpperCase() + detectedDifficulty.slice(1)}
+              </div>
+            )}
+            {bloomLevel && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 20,
+                background: 'var(--surface-2)', color: 'var(--text-muted)',
+                fontSize: 12, fontWeight: 600, border: '1px solid var(--border)',
+              }}>
+                <TrendingUp size={12} />
+                {bloomLevel}
+              </div>
+            )}
+            {frameLabel && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 20,
+                background: 'var(--surface-2)', color: 'var(--text-muted)',
+                fontSize: 12, fontWeight: 600, border: '1px solid var(--border)',
+              }}>
+                <FileText size={12} />
+                {frameLabel.charAt(0) + frameLabel.slice(1).toLowerCase().replace(/_/g, ' ')}
+              </div>
+            )}
+          </div>
+
+          {/* Question tabs — scenario vs reflection */}
+          {reflectionQuestion && (
             <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '6px 14px', borderRadius: 20,
-              background: 'var(--accent-soft)', color: 'var(--accent)',
-              fontSize: 13, fontWeight: 600, alignSelf: 'flex-start',
+              display: 'flex', gap: 0,
+              background: 'var(--surface-2)', borderRadius: 10,
+              padding: 4, border: '1px solid var(--border)',
+              alignSelf: 'flex-start',
             }}>
-              <Dumbbell size={13} />
-              AI detected: <strong>{detectedDifficulty}</strong> level
+              {[
+                { key: 'scenario', label: 'Scenario', icon: <Brain size={13} />, done: scenarioEval !== null },
+                { key: 'reflection', label: 'Reflection', icon: <MessageSquare size={13} />, done: reflectionEval !== null },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveQuestion(tab.key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 14px', borderRadius: 8,
+                    border: 'none', cursor: 'pointer',
+                    fontFamily: 'Urbanist, sans-serif', fontSize: 13, fontWeight: 600,
+                    background: activeQuestion === tab.key ? 'var(--surface)' : 'transparent',
+                    color: activeQuestion === tab.key ? 'var(--accent)' : 'var(--text-muted)',
+                    boxShadow: activeQuestion === tab.key ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {tab.done
+                    ? <CheckCircle size={13} color="var(--success)" />
+                    : tab.icon}
+                  {tab.label}
+                </button>
+              ))}
             </div>
           )}
 
-          <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
-            <div style={{
-              fontSize: 11, letterSpacing: '2px', fontWeight: 600,
-              color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              <FileText size={12} /> Verification Question
+          {/* Scenario question */}
+          {activeQuestion === 'scenario' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeInUp 0.2s ease' }}>
+              <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
+                <div style={{
+                  fontSize: 11, letterSpacing: '2px', fontWeight: 600,
+                  color: 'var(--accent)', marginBottom: 10, textTransform: 'uppercase',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <Brain size={12} /> Scenario Question
+                </div>
+                <p style={{
+                  fontSize: 15, fontWeight: 500,
+                  lineHeight: 1.8, color: 'var(--text-primary)',
+                  whiteSpace: 'pre-line',
+                }}>
+                  {scenarioQuestion}
+                </p>
+              </div>
+
+              {/* Show result if already evaluated */}
+              {scenarioEval && (
+                <div style={{
+                  padding: '14px 18px', borderRadius: 12,
+                  background: scenarioEval.passed ? 'var(--success-soft)' : 'var(--danger-soft)',
+                  border: `1px solid ${scenarioEval.passed ? 'rgba(5,150,105,0.2)' : 'rgba(220,38,38,0.2)'}`,
+                  animation: 'fadeInUp 0.2s ease',
+                }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
+                  }}>
+                    {scenarioEval.passed
+                      ? <CheckCircle size={16} color="var(--success)" />
+                      : <Dumbbell size={16} color="var(--danger)" />}
+                    <span style={{
+                      fontWeight: 700, fontSize: 14,
+                      color: scenarioEval.passed ? 'var(--success)' : 'var(--danger)',
+                    }}>
+                      {scenarioEval.score}/100
+                    </span>
+                  </div>
+                  <p style={{
+                    fontSize: 13, lineHeight: 1.7,
+                    color: 'var(--text-secondary)', margin: 0,
+                    whiteSpace: 'pre-line',
+                  }}>
+                    {scenarioEval.feedback}
+                  </p>
+                </div>
+              )}
+
+              {!scenarioEval && (
+                <>
+                  <div>
+                    <label style={{
+                      fontSize: 13, fontWeight: 600,
+                      color: 'var(--text-secondary)', display: 'block', marginBottom: 8,
+                    }}>
+                      Your Answer
+                    </label>
+                    <textarea
+                      className="input"
+                      style={{ minHeight: 140, lineHeight: 1.7 }}
+                      placeholder="Write your answer here. Be specific — the AI checks depth, not length..."
+                      value={scenarioAnswer}
+                      onChange={e => setScenarioAnswer(e.target.value)}
+                    />
+                  </div>
+
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleVerifyScenario}
+                    disabled={!scenarioAnswer.trim() || evaluatingType === 'scenario'}
+                    style={{ alignSelf: 'flex-end', minWidth: 160, display: 'flex', alignItems: 'center', gap: 8 }}
+                  >
+                    {evaluatingType === 'scenario'
+                      ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Evaluating...</>
+                      : <>Submit Answer <ChevronRight size={16} /></>
+                    }
+                  </button>
+                </>
+              )}
             </div>
-            <p style={{
-              fontSize: 15, fontWeight: 600,
-              lineHeight: 1.7, color: 'var(--text-primary)',
-            }}>
-              {question}
-            </p>
-          </div>
+          )}
 
-          <div>
-            <label style={{
-              fontSize: 13, fontWeight: 600,
-              color: 'var(--text-secondary)', display: 'block', marginBottom: 8,
-            }}>
-              Your Answer
-            </label>
-            <textarea
-              className="input"
-              style={{ minHeight: 140, lineHeight: 1.7 }}
-              placeholder="Write your answer here. Be as thorough as you can..."
-              value={userAnswer}
-              onChange={e => setUserAnswer(e.target.value)}
-            />
-          </div>
+          {/* Reflection question */}
+          {activeQuestion === 'reflection' && reflectionQuestion && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeInUp 0.2s ease' }}>
+              <div className="card" style={{ borderLeft: '4px solid var(--warning, #D97706)' }}>
+                <div style={{
+                  fontSize: 11, letterSpacing: '2px', fontWeight: 600,
+                  color: 'var(--warning, #D97706)', marginBottom: 10, textTransform: 'uppercase',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <MessageSquare size={12} /> Reflection Question
+                </div>
+                <p style={{
+                  fontSize: 15, fontWeight: 500,
+                  lineHeight: 1.8, color: 'var(--text-primary)',
+                }}>
+                  {reflectionQuestion}
+                </p>
+              </div>
 
-          <button
-            className="btn btn-primary"
-            onClick={handleVerifyAnswer}
-            disabled={!userAnswer.trim() || loading}
-            style={{ alignSelf: 'flex-end', minWidth: 160, display: 'flex', alignItems: 'center', gap: 8 }}
-          >
-            {loading
-              ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Evaluating...</>
-              : <>Submit Answer <ChevronRight size={16} /></>
-            }
-          </button>
+              {/* Show result if already evaluated */}
+              {reflectionEval && (
+                <div style={{
+                  padding: '14px 18px', borderRadius: 12,
+                  background: reflectionEval.passed ? 'var(--success-soft)' : 'var(--surface-2)',
+                  border: `1px solid ${reflectionEval.passed ? 'rgba(5,150,105,0.2)' : 'var(--border)'}`,
+                  animation: 'fadeInUp 0.2s ease',
+                }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
+                  }}>
+                    <MessageSquare size={16} color="var(--warning, #D97706)" />
+                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
+                      Reflection — {reflectionEval.score}/100
+                    </span>
+                  </div>
+                  <p style={{
+                    fontSize: 13, lineHeight: 1.7,
+                    color: 'var(--text-secondary)', margin: 0,
+                    whiteSpace: 'pre-line',
+                  }}>
+                    {reflectionEval.feedback}
+                  </p>
+                </div>
+              )}
+
+              {!reflectionEval && (
+                <>
+                  <div>
+                    <label style={{
+                      fontSize: 13, fontWeight: 600,
+                      color: 'var(--text-secondary)', display: 'block', marginBottom: 8,
+                    }}>
+                      Your Reflection
+                    </label>
+                    <textarea
+                      className="input"
+                      style={{ minHeight: 140, lineHeight: 1.7 }}
+                      placeholder="Be honest — there's no wrong answer here. The AI rewards genuine reflection over polished responses..."
+                      value={reflectionAnswer}
+                      onChange={e => setReflectionAnswer(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setStage('answered')}
+                      style={{ color: 'var(--text-muted)', fontSize: 13 }}
+                    >
+                      Skip reflection
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleVerifyReflection}
+                      disabled={!reflectionAnswer.trim() || evaluatingType === 'reflection'}
+                      style={{ minWidth: 160, display: 'flex', alignItems: 'center', gap: 8 }}
+                    >
+                      {evaluatingType === 'reflection'
+                        ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Evaluating...</>
+                        : <>Submit Reflection <ChevronRight size={16} /></>
+                      }
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1291,34 +1589,90 @@ export default function Chat() {
       {stage === 'answered' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {evaluation && (
+          {/* Combined result card */}
+          {(scenarioEval || reflectionEval) ? (
             <div className="card" style={{
-              textAlign: 'center', padding: '32px 24px',
-              background: evaluation.passed
+              padding: '32px 24px', textAlign: 'center',
+              background: overallPassed
                 ? 'linear-gradient(135deg, #064E3B 0%, #059669 100%)'
+                : bothAnswered
+                ? 'linear-gradient(135deg, #1E1B4B 0%, #4C1D95 100%)'
                 : 'linear-gradient(135deg, #450A0A 0%, #DC2626 100%)',
               border: 'none', color: '#fff',
             }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                {evaluation.passed
+                {overallPassed
                   ? <CheckCircle size={48} strokeWidth={1.5} />
-                  : <Dumbbell size={48} strokeWidth={1.5} />
-                }
+                  : <Dumbbell size={48} strokeWidth={1.5} />}
               </div>
-              <h2 style={{ marginBottom: 8 }}>
-                {evaluation.passed ? 'Well done!' : 'Keep pushing!'}
+              <h2 style={{ marginBottom: 6 }}>
+                {overallPassed ? 'Solid understanding.' : bothAnswered ? 'Keep sharpening.' : 'Partially done.'}
               </h2>
-              <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 12 }}>
-                {evaluation.score}
-                <span style={{ fontSize: 18, fontWeight: 600, opacity: 0.8 }}>/100</span>
-              </div>
-              <p style={{ opacity: 0.9, lineHeight: 1.6, maxWidth: 400, margin: '0 auto' }}>
-                {evaluation.feedback}
-              </p>
-            </div>
-          )}
 
-          {!evaluation && (
+              {/* Score breakdown */}
+              <div style={{
+                display: 'flex', justifyContent: 'center', gap: 24,
+                margin: '16px 0',
+              }}>
+                {scenarioEval && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 900 }}>
+                      {scenarioEval.score}
+                      <span style={{ fontSize: 14, opacity: 0.7 }}>/100</span>
+                    </div>
+                    <div style={{
+                      fontSize: 11, opacity: 0.8, fontWeight: 600,
+                      textTransform: 'uppercase', letterSpacing: '1px', marginTop: 4,
+                      display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center',
+                    }}>
+                      <Brain size={10} /> Scenario
+                    </div>
+                  </div>
+                )}
+                {reflectionEval && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 900 }}>
+                      {reflectionEval.score}
+                      <span style={{ fontSize: 14, opacity: 0.7 }}>/100</span>
+                    </div>
+                    <div style={{
+                      fontSize: 11, opacity: 0.8, fontWeight: 600,
+                      textTransform: 'uppercase', letterSpacing: '1px', marginTop: 4,
+                      display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center',
+                    }}>
+                      <MessageSquare size={10} /> Reflection
+                    </div>
+                  </div>
+                )}
+                {bothAnswered && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 900 }}>
+                      {overallScore}
+                      <span style={{ fontSize: 14, opacity: 0.7 }}>/100</span>
+                    </div>
+                    <div style={{
+                      fontSize: 11, opacity: 0.8, fontWeight: 600,
+                      textTransform: 'uppercase', letterSpacing: '1px', marginTop: 4,
+                      display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center',
+                    }}>
+                      <TrendingUp size={10} /> Average
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Feed-forward from scenario */}
+              {scenarioEval?.feedback && (
+                <p style={{
+                  opacity: 0.88, lineHeight: 1.6,
+                  maxWidth: 440, margin: '0 auto',
+                  fontSize: 13, whiteSpace: 'pre-line',
+                }}>
+                  {scenarioEval.feedback}
+                </p>
+              )}
+            </div>
+          ) : (
             <div className="card" style={{
               textAlign: 'center', padding: '24px',
               background: 'var(--surface-2)', border: '1px solid var(--border)',
@@ -1383,8 +1737,7 @@ export default function Chat() {
                         display: 'flex', alignItems: 'center', gap: 8,
                       }}
                     >
-                      <Mail size={13} />
-                      {email}
+                      <Mail size={13} /> {email}
                     </button>
                   ))}
                 </div>
@@ -1421,8 +1774,7 @@ export default function Chat() {
                 marginBottom: 14, border: '1px solid var(--border)',
               }}>
                 <div style={{
-                  display: 'flex', alignItems: 'center',
-                  gap: 8, marginBottom: 12,
+                  display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
                 }}>
                   <Link2 size={15} color="var(--text-secondary)" />
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -1457,7 +1809,6 @@ export default function Chat() {
                   {weeklyTasks.filter(t => !t.completed).map(task => {
                     const isSuggested = suggestedTasks.includes(task.id)
                     const isConfirmed = confirmedTasks.includes(task.id)
-
                     return (
                       <div
                         key={task.id}
@@ -1477,11 +1828,8 @@ export default function Chat() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all 0.18s',
                         }}>
-                          {isConfirmed && (
-                            <CheckCircle size={13} color="#fff" strokeWidth={3} />
-                          )}
+                          {isConfirmed && <CheckCircle size={13} color="#fff" strokeWidth={3} />}
                         </div>
-
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
                             fontSize: 13, fontWeight: 600, marginBottom: 2,
@@ -1583,6 +1931,21 @@ export default function Chat() {
             </div>
           )}
 
+          {(bothAnswered || scenarioEval) && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '8px 16px', borderRadius: 10,
+              background: overallPassed ? 'var(--success-soft)' : 'var(--surface-2)',
+              border: `1px solid ${overallPassed ? 'var(--success)' : 'var(--border)'}`,
+              fontSize: 13,
+              color: overallPassed ? 'var(--success)' : 'var(--text-secondary)',
+              fontWeight: 600, marginBottom: 16, display: 'flex',
+            }}>
+              <TrendingUp size={14} />
+              Test score: {overallScore}/100
+            </div>
+          )}
+
           {confirmedTasks.length > 0 && (
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -1607,13 +1970,6 @@ export default function Chat() {
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   )
 }
