@@ -1231,66 +1231,56 @@ _COMPANY_CONTEXTS = [
     "a data engineering team at a pan-African bank",
 ]
 
-
 async def generate_verification_question(
     structured_content: str,
     difficulty: str
 ) -> dict:
-    # True randomness — no hash determinism
     frame = random.choice(_SCENARIO_FRAMES)
     bloom = _BLOOM_GUIDE.get(difficulty, _BLOOM_GUIDE["intermediate"])
-    company = random.choice(_COMPANY_CONTEXTS)
     reflection = random.choice(_REFLECTION_QUESTIONS)
 
-    prompt = f"""You are a sharp, direct senior mentor. You just read your mentee's daily log.
-Now you want to test whether they actually understood it — not whether they can copy it back.
+    prompt = f"""You are a sharp, experienced mentor who just read your mentee's daily log.
+Your job is to write ONE question that tests whether they actually understood what they studied.
 
 What they studied today:
 ---
 {structured_content}
 ---
 
-Generate ONE scenario question and return it along with the reflection question already provided.
+Read the log carefully. Before writing anything:
+- What field or domain is this mentee working in? (tech, design, business, healthcare, writing, finance — infer it from the log)
+- What's the most interesting thing they studied that could trip someone up in real life?
+- What context would make this feel real — a company, a team, a client situation, a deadline?
 
-YOUR SCENARIO QUESTION must follow this exact structure, with blank lines between each part:
+Now write a question. It must:
+- Feel like a message from a real person who actually read the log — not a teacher setting an exam
+- Drop the mentee into a realistic situation that fits THEIR domain (not always tech)
+- Ask ONE clear question that requires them to actually think, not just recall
+- Be under 100 words total
+- Vary in how it opens — sometimes start with the scenario, sometimes with a short observation, sometimes just the question itself
 
-Part 1 — Genuine reaction (1 sentence):
-Reference something SPECIFIC from the log. Sound like you read it, not like you skimmed it.
-Good: "Oh nice, you got into connection pooling today — that's exactly where most apps quietly bleed performance."
-Bad: "Great work today!" (too generic)
-Bad: "I see you learned about X" (robotic)
+Do NOT follow a fixed template. Do NOT always open with praise. Do NOT use "Oh nice" or "I've got one for you" as fixed phrases. Let the content drive the opening.
 
-[blank line]
+Bad example (too robotic and templated):
+"Oh nice, you got into X today. Anyway, I've got one for you — you're a backend engineer at a Lagos fintech startup..."
 
-Part 2 — Casual bridge (1 sentence):
-Signal you're about to test them. Keep it conversational.
-Examples: "Anyway, I've got one for you —" / "Let me throw something at you —" / "Before you close the laptop —"
+Good example (natural, domain-appropriate, varied):
+"Quick one — you're three days into onboarding at a mid-size design agency and the creative director asks you to walk the team through [concept from log]. The junior designer in the room has zero context. How do you frame it without losing them?"
 
-[blank line]
+Good example (direct, no preamble):
+"Your client just rejected the [concept from log] approach because 'it feels complicated.' They want something simpler but the simpler option has a real tradeoff. What do you tell them?"
 
-Part 3 — Grounded scenario + question (2-3 sentences):
-Set the scene at: {company}
-Put the mentee in a specific role.
-Ground the problem directly in what they studied today.
-Ask ONE sharp question that requires real understanding — not recall.
+Good example (observation-led):
+"The tricky part about [concept from log] is that most people get it wrong in exactly the same way. What's the mistake, and what does getting it right actually look like in practice?"
 
-Cognitive target: {bloom["level"]}
+Difficulty: {difficulty.upper()}
 What to test: {bloom["instruction"]}
 Question frame: {frame["label"]}
 Frame instruction: {frame["instruction"]}
-Frame opening: {frame["opening"]}
-
-Hard rules:
-- Never open with "What is", "Define", or "Explain what X is"
-- Never include hints or partial answers
-- The reaction MUST name something specific from the log — no generic praise
-- The scenario MUST be at {company} — name it explicitly
-- Total length: under 120 words
-- Sound like a mentor texting their mentee, not writing an exam
 
 Return ONLY valid JSON, no markdown:
 {{
-  "scenario_question": "reaction\\n\\nbridge\\n\\nscenario + question",
+  "scenario_question": "<the full question, under 100 words>",
   "reflection_question": "{reflection}",
   "correct_answer": "<accurate concise answer drawn from the log content>",
   "bloom_level": "{bloom["level"]}",
@@ -1312,17 +1302,105 @@ Return ONLY valid JSON, no markdown:
     fallback_reflection = random.choice(_REFLECTION_QUESTIONS)
     return _safe_json(text, {
         "scenario_question": (
-            "Interesting log today.\n\n"
-            "Let me throw one at you —\n\n"
-            f"You're a backend engineer at {company}. A junior dev on the team asks you "
-            "to walk them through the most important concept from your study session using "
-            "a real example from your stack. How would you explain it?"
+            "Quick one — walk me through the most important concept from today's session "
+            "using a real example from your field. What does getting it wrong actually look like?"
         ),
         "reflection_question": fallback_reflection,
         "correct_answer": "Open-ended explanation based on log content.",
         "bloom_level": bloom["level"],
         "frame": frame["label"],
     })
+# async def generate_verification_question(
+#     structured_content: str,
+#     difficulty: str
+# ) -> dict:
+#     # True randomness — no hash determinism
+#     frame = random.choice(_SCENARIO_FRAMES)
+#     bloom = _BLOOM_GUIDE.get(difficulty, _BLOOM_GUIDE["intermediate"])
+#     company = random.choice(_COMPANY_CONTEXTS)
+#     reflection = random.choice(_REFLECTION_QUESTIONS)
+
+#     prompt = f"""You are a sharp, direct senior mentor. You just read your mentee's daily log.
+# Now you want to test whether they actually understood it — not whether they can copy it back.
+
+# What they studied today:
+# ---
+# {structured_content}
+# ---
+
+# Generate ONE scenario question and return it along with the reflection question already provided.
+
+# YOUR SCENARIO QUESTION must follow this exact structure, with blank lines between each part:
+
+# Part 1 — Genuine reaction (1 sentence):
+# Reference something SPECIFIC from the log. Sound like you read it, not like you skimmed it.
+# Good: "Oh nice, you got into connection pooling today — that's exactly where most apps quietly bleed performance."
+# Bad: "Great work today!" (too generic)
+# Bad: "I see you learned about X" (robotic)
+
+# [blank line]
+
+# Part 2 — Casual bridge (1 sentence):
+# Signal you're about to test them. Keep it conversational.
+# Examples: "Anyway, I've got one for you —" / "Let me throw something at you —" / "Before you close the laptop —"
+
+# [blank line]
+
+# Part 3 — Grounded scenario + question (2-3 sentences):
+# Set the scene at: {company}
+# Put the mentee in a specific role.
+# Ground the problem directly in what they studied today.
+# Ask ONE sharp question that requires real understanding — not recall.
+
+# Cognitive target: {bloom["level"]}
+# What to test: {bloom["instruction"]}
+# Question frame: {frame["label"]}
+# Frame instruction: {frame["instruction"]}
+# Frame opening: {frame["opening"]}
+
+# Hard rules:
+# - Never open with "What is", "Define", or "Explain what X is"
+# - Never include hints or partial answers
+# - The reaction MUST name something specific from the log — no generic praise
+# - The scenario MUST be at {company} — name it explicitly
+# - Total length: under 120 words
+# - Sound like a mentor texting their mentee, not writing an exam
+
+# Return ONLY valid JSON, no markdown:
+# {{
+#   "scenario_question": "reaction\\n\\nbridge\\n\\nscenario + question",
+#   "reflection_question": "{reflection}",
+#   "correct_answer": "<accurate concise answer drawn from the log content>",
+#   "bloom_level": "{bloom["level"]}",
+#   "frame": "{frame["label"]}"
+# }}"""
+
+#     def _call():
+#         return client.chat.completions.create(
+#             model=MODEL,
+#             messages=[{"role": "user", "content": prompt}],
+#             temperature=0.92,
+#             top_p=0.95,
+#             max_tokens=500,
+#         )
+
+#     response = await asyncio.to_thread(_call)
+#     text = _clean_json(response.choices[0].message.content.strip())
+
+#     fallback_reflection = random.choice(_REFLECTION_QUESTIONS)
+#     return _safe_json(text, {
+#         "scenario_question": (
+#             "Interesting log today.\n\n"
+#             "Let me throw one at you —\n\n"
+#             f"You're a backend engineer at {company}. A junior dev on the team asks you "
+#             "to walk them through the most important concept from your study session using "
+#             "a real example from your stack. How would you explain it?"
+#         ),
+#         "reflection_question": fallback_reflection,
+#         "correct_answer": "Open-ended explanation based on log content.",
+#         "bloom_level": bloom["level"],
+#         "frame": frame["label"],
+#     })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1991,72 +2069,72 @@ Respond with ONLY valid JSON, no markdown:
     return result.get("matched_task_ids", [])
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# REMINDER EMAIL GENERATION
-# ─────────────────────────────────────────────────────────────────────────────
+# # ─────────────────────────────────────────────────────────────────────────────
+# # REMINDER EMAIL GENERATION
+# # ─────────────────────────────────────────────────────────────────────────────
 
-async def generate_reminder_message(
-    name: str,
-    slot: str,
-    day_of_week: str,
-) -> dict:
-    slot_context = {
-        "morning": (
-            f"Write a warm, energetic good morning message for {name}. "
-            f"Today is {day_of_week}. Tell them good morning by name, mention the day, "
-            f"hype them up to accomplish great things today. Add a smiling emoji naturally. "
-            f"End with a line: 'Dôti cares about your mental health 💜' "
-            f"Keep it under 3 sentences. Sound human and warm, not corporate."
-        ),
-        "evening": (
-            f"Write a casual evening nudge for {name}. "
-            f"The day is almost over. Remind them to log today's activity before they sleep. "
-            f"Start with 'Hey hey' — keep it breezy and friendly. "
-            f"Under 2 sentences. No emojis except one at the end."
-        ),
-        "mentor": (
-            f"Write a friendly reminder for a mentor named {name}. "
-            f"Remind them their mentees need them — specifically to check and sign pending logs. "
-            f"Tell them to stay alert and available. Start with 'Hi there'. "
-            f"Under 2 sentences. Keep it warm but professional."
-        ),
-    }
+# async def generate_reminder_message(
+#     name: str,
+#     slot: str,
+#     day_of_week: str,
+# ) -> dict:
+#     slot_context = {
+#         "morning": (
+#             f"Write a warm, energetic good morning message for {name}. "
+#             f"Today is {day_of_week}. Tell them good morning by name, mention the day, "
+#             f"hype them up to accomplish great things today. Add a smiling emoji naturally. "
+#             f"End with a line: 'Dôti cares about your mental health 💜' "
+#             f"Keep it under 3 sentences. Sound human and warm, not corporate."
+#         ),
+#         "evening": (
+#             f"Write a casual evening nudge for {name}. "
+#             f"The day is almost over. Remind them to log today's activity before they sleep. "
+#             f"Start with 'Hey hey' — keep it breezy and friendly. "
+#             f"Under 2 sentences. No emojis except one at the end."
+#         ),
+#         "mentor": (
+#             f"Write a friendly reminder for a mentor named {name}. "
+#             f"Remind them their mentees need them — specifically to check and sign pending logs. "
+#             f"Tell them to stay alert and available. Start with 'Hi there'. "
+#             f"Under 2 sentences. Keep it warm but professional."
+#         ),
+#     }
 
-    context = slot_context.get(slot, slot_context["morning"])
+#     context = slot_context.get(slot, slot_context["morning"])
 
-    def _call():
-        return Groq(api_key=settings.groq_api_key).chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{
-                "role": "user",
-                "content": f"""{context}
+#     def _call():
+#         return Groq(api_key=settings.groq_api_key).chat.completions.create(
+#             model="llama-3.1-8b-instant",
+#             messages=[{
+#                 "role": "user",
+#                 "content": f"""{context}
 
-Return ONLY valid JSON, no markdown:
-{{
-  "subject": "<short email subject line>",
-  "body": "<the message body>"
-}}"""
-            }],
-            temperature=0.85,
-            max_tokens=200,
-        )
+# Return ONLY valid JSON, no markdown:
+# {{
+#   "subject": "<short email subject line>",
+#   "body": "<the message body>"
+# }}"""
+#             }],
+#             temperature=0.85,
+#             max_tokens=200,
+#         )
 
-    response = await asyncio.to_thread(_call)
-    text = _clean_json(response.choices[0].message.content.strip())
+#     response = await asyncio.to_thread(_call)
+#     text = _clean_json(response.choices[0].message.content.strip())
 
-    slot_defaults = {
-        "morning": {
-            "subject": f"Good morning {name} 😊 — {day_of_week} starts now",
-            "body": f"Good morning {name}! Today is {day_of_week} — let's make it count. Dôti cares about your mental health 💜"
-        },
-        "evening": {
-            "subject": f"Hey hey {name} — don't forget to log today",
-            "body": f"Hey hey {name}, the day is almost over — don't forget to log your activity before you sleep! 🌙"
-        },
-        "mentor": {
-            "subject": f"Hi {name} — your mentees need you",
-            "body": f"Hi there {name}, your mentees are counting on you — check for any unsigned logs and stay on high alert 📋"
-        },
-    }
+#     slot_defaults = {
+#         "morning": {
+#             "subject": f"Good morning {name} 😊 — {day_of_week} starts now",
+#             "body": f"Good morning {name}! Today is {day_of_week} — let's make it count. Dôti cares about your mental health 💜"
+#         },
+#         "evening": {
+#             "subject": f"Hey hey {name} — don't forget to log today",
+#             "body": f"Hey hey {name}, the day is almost over — don't forget to log your activity before you sleep! 🌙"
+#         },
+#         "mentor": {
+#             "subject": f"Hi {name} — your mentees need you",
+#             "body": f"Hi there {name}, your mentees are counting on you — check for any unsigned logs and stay on high alert 📋"
+#         },
+#     }
 
-    return _safe_json(text, slot_defaults.get(slot, slot_defaults["morning"]))
+#     return _safe_json(text, slot_defaults.get(slot, slot_defaults["morning"]))

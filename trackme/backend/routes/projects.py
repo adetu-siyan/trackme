@@ -355,6 +355,7 @@ async def create_weekly_focus(
     today = date.today()
     if body.week_start:
         week_start = date.fromisoformat(body.week_start)
+        week_start = week_start - timedelta(days=week_start.weekday())  # snap to Monday
     else:
         week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
@@ -487,11 +488,14 @@ async def get_focus_history(user=Depends(get_current_user)):
 @router.get("/weekly-focus/my-tasks")
 async def get_my_weekly_tasks(user=Depends(get_current_user)):
     today = date.today()
-    week_start = today - timedelta(days=today.weekday())
+    today_str = str(today)
 
     focus = supabase.table("weekly_focus") \
         .select("*").eq("mentee_id", str(user.id)) \
-        .eq("week_start", str(week_start)).execute()
+        .lte("week_start", today_str) \
+        .gte("week_end", today_str) \
+        .order("week_start", desc=True) \
+        .limit(1).execute()
 
     if not focus.data:
         return {"focus": None, "tasks": [], "stats": None}
@@ -521,12 +525,15 @@ async def get_my_weekly_tasks(user=Depends(get_current_user)):
 @router.get("/weekly-focus/mentee/{mentee_id}")
 async def get_mentee_weekly_focus(mentee_id: str, user=Depends(get_current_user)):
     today = date.today()
-    week_start = today - timedelta(days=today.weekday())
+    today_str = str(today)
 
     focus = supabase.table("weekly_focus") \
         .select("*").eq("mentor_id", str(user.id)) \
         .eq("mentee_id", mentee_id) \
-        .eq("week_start", str(week_start)).execute()
+        .lte("week_start", today_str) \
+        .gte("week_end", today_str) \
+        .order("week_start", desc=True) \
+        .limit(1).execute()
 
     if not focus.data:
         return {"focus": None, "tasks": []}
@@ -537,7 +544,6 @@ async def get_mentee_weekly_focus(mentee_id: str, user=Depends(get_current_user)
         .order("priority").execute()
 
     return {"focus": focus_data, "tasks": tasks.data or []}
-
 
 @router.patch("/weekly-tasks/{task_id}")
 async def update_task(
