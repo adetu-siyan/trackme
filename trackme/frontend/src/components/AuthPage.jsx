@@ -430,7 +430,6 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { supabase } from '../lib/supabaseClient' // adjust path if needed
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const PROD_URL = 'https://doti-alpha.vercel.app'
@@ -450,7 +449,6 @@ function incrementResetCount(email) {
   } catch { return 1 }
 }
 
-// ── Violet wave background ─────────────────────────────────────────────────
 function WaveBackground() {
   return (
     <div style={{
@@ -460,26 +458,10 @@ function WaveBackground() {
     }}>
       <svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMax slice"
         style={{ width: '100%', height: '100%', display: 'block' }}>
-        {/* back layer — deep violet */}
-        <path
-          d="M-60,500 L-60,280 Q80,180 200,240 Q340,310 440,210 Q560,100 680,200 Q780,280 860,220 L860,500 Z"
-          fill="#3C2A7A" opacity="0.55"
-        />
-        {/* mid layer */}
-        <path
-          d="M-60,500 L-60,330 Q60,260 180,310 Q320,370 440,280 Q580,180 700,270 Q800,330 860,290 L860,500 Z"
-          fill="#6040C0" opacity="0.5"
-        />
-        {/* front layer — lightest violet/periwinkle */}
-        <path
-          d="M-60,500 L-60,390 Q80,320 200,370 Q340,430 460,350 Q600,260 720,330 Q810,380 860,360 L860,500 Z"
-          fill="#8A68E0" opacity="0.45"
-        />
-        {/* top shimmer layer */}
-        <path
-          d="M-60,500 L-60,440 Q100,380 240,420 Q380,460 500,400 Q640,330 760,390 Q830,420 860,410 L860,500 Z"
-          fill="#B89FF5" opacity="0.35"
-        />
+        <path d="M-60,500 L-60,280 Q80,180 200,240 Q340,310 440,210 Q560,100 680,200 Q780,280 860,220 L860,500 Z" fill="#3C2A7A" opacity="0.55" />
+        <path d="M-60,500 L-60,330 Q60,260 180,310 Q320,370 440,280 Q580,180 700,270 Q800,330 860,290 L860,500 Z" fill="#6040C0" opacity="0.5" />
+        <path d="M-60,500 L-60,390 Q80,320 200,370 Q340,430 460,350 Q600,260 720,330 Q810,380 860,360 L860,500 Z" fill="#8A68E0" opacity="0.45" />
+        <path d="M-60,500 L-60,440 Q100,380 240,420 Q380,460 500,400 Q640,330 760,390 Q830,420 860,410 L860,500 Z" fill="#B89FF5" opacity="0.35" />
       </svg>
     </div>
   )
@@ -495,7 +477,6 @@ export default function AuthPage() {
   const [confirmationSent, setConfirmationSent] = useState(false)
   const [pendingEmail, setPendingEmail] = useState('')
 
-  // Access request state
   const [signupOpen, setSignupOpen] = useState(true)
   const [checkingLimit, setCheckingLimit] = useState(true)
   const [showAccessForm, setShowAccessForm] = useState(false)
@@ -503,7 +484,6 @@ export default function AuthPage() {
   const [accessSent, setAccessSent] = useState(false)
   const [sendingAccess, setSendingAccess] = useState(false)
 
-  // Forgot password state
   const [showForgot, setShowForgot] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -533,7 +513,6 @@ export default function AuthPage() {
     if (mode === 'signup' && !signupOpen) return
     setLoading(true)
     setError('')
-
     try {
       if (mode === 'login') {
         await signIn(form.email, form.password)
@@ -599,25 +578,15 @@ export default function AuthPage() {
 
     setResettingPassword(true)
     try {
-      // Sign in as the user first, then update password
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: forgotEmail,
-        password: forgotEmail, // This will fail — see note below
-      })
-
-      // Since beta users may not remember password, we use admin update
-      // For now: use supabase admin or RPC — fall back to a direct update call
       const res = await fetch(`${BASE}/api/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail, new_password: newPassword }),
       })
-
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.detail || 'Reset failed')
       }
-
       incrementResetCount(forgotEmail)
       setForgotSuccess(true)
     } catch (err) {
@@ -627,7 +596,6 @@ export default function AuthPage() {
     }
   }
 
-  // ── Styles shared ──────────────────────────────────────────────────────────
   const pageStyle = {
     minHeight: '100vh', background: 'var(--bg)',
     display: 'flex', flexDirection: 'column',
@@ -689,7 +657,11 @@ export default function AuthPage() {
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.6 }}>
             Didn't get it? Check your spam folder. The link expires in 24 hours.
           </p>
-          <button className="btn btn-ghost btn-sm" onClick={() => { setConfirmationSent(false); setForm({ email: '', password: '', fullName: '' }); setMode('login') }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => {
+            setConfirmationSent(false)
+            setForm({ email: '', password: '', fullName: '' })
+            setMode('login')
+          }}>
             ← Back to Sign In
           </button>
         </div>
@@ -718,7 +690,13 @@ export default function AuthPage() {
               <button
                 className="btn btn-primary"
                 style={{ justifyContent: 'center', width: '100%' }}
-                onClick={() => { setShowForgot(false); setForgotSuccess(false); setNewPassword(''); setConfirmPassword(''); setForgotEmail('') }}
+                onClick={() => {
+                  setShowForgot(false)
+                  setForgotSuccess(false)
+                  setNewPassword('')
+                  setConfirmPassword('')
+                  setForgotEmail('')
+                }}
               >
                 Sign In →
               </button>
@@ -731,7 +709,6 @@ export default function AuthPage() {
                   Beta reset — no email needed. Up to {MAX_RESETS} resets per account.
                 </p>
               </div>
-
               <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
                   <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
@@ -745,7 +722,6 @@ export default function AuthPage() {
                     required
                   />
                 </div>
-
                 <div>
                   <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                     New Password
@@ -758,7 +734,6 @@ export default function AuthPage() {
                     required minLength={8}
                   />
                 </div>
-
                 <div>
                   <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                     Confirm New Password
@@ -771,16 +746,11 @@ export default function AuthPage() {
                     required
                   />
                 </div>
-
                 {forgotError && (
-                  <div style={{
-                    background: 'var(--danger-soft)', color: 'var(--danger)',
-                    padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                  }}>
+                  <div style={{ background: 'var(--danger-soft)', color: 'var(--danger)', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500 }}>
                     {forgotError}
                   </div>
                 )}
-
                 <button
                   className="btn btn-primary btn-lg"
                   type="submit"
@@ -794,8 +764,10 @@ export default function AuthPage() {
                     </span>
                   ) : 'Update Password →'}
                 </button>
-
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setShowForgot(false); setForgotError(''); setNewPassword(''); setConfirmPassword('') }}>
+                <button
+                  type="button" className="btn btn-ghost btn-sm"
+                  onClick={() => { setShowForgot(false); setForgotError(''); setNewPassword(''); setConfirmPassword('') }}
+                >
                   ← Back to Sign In
                 </button>
               </form>
@@ -813,6 +785,7 @@ export default function AuthPage() {
   if (showAccessForm) {
     return (
       <div style={pageStyle}>
+        <style>{globalStyles}</style>
         <WaveBackground />
         {logoBlock}
         <div style={cardStyle}>
@@ -849,7 +822,9 @@ export default function AuthPage() {
                 <button className="btn btn-primary" type="submit" disabled={sendingAccess} style={{ justifyContent: 'center' }}>
                   {sendingAccess ? 'Sending...' : 'Send Request →'}
                 </button>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAccessForm(false)}>← Back to Login</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAccessForm(false)}>
+                  ← Back to Login
+                </button>
               </form>
             </>
           )}
@@ -863,11 +838,9 @@ export default function AuthPage() {
     <div style={pageStyle}>
       <style>{globalStyles}</style>
       <WaveBackground />
-
       {logoBlock}
 
       <div style={cardStyle}>
-        {/* Tab switcher */}
         <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 10, padding: 3, marginBottom: 28, gap: 3 }}>
           {['login', 'signup'].map(m => (
             <button
@@ -887,7 +860,6 @@ export default function AuthPage() {
           ))}
         </div>
 
-        {/* Signup closed banner */}
         {mode === 'signup' && !checkingLimit && !signupOpen && (
           <div style={{
             background: 'var(--warning-soft)', border: '1px solid var(--warning)',
@@ -978,12 +950,17 @@ export default function AuthPage() {
           </button>
         </form>
 
-        {/* Forgot password link — shown only on login tab */}
         {mode === 'login' && (
           <div style={{ marginTop: 20, textAlign: 'center' }}>
             <button
               type="button"
-              onClick={() => { setShowForgot(true); setForgotError(''); setNewPassword(''); setConfirmPassword(''); setForgotEmail(form.email) }}
+              onClick={() => {
+                setShowForgot(true)
+                setForgotError('')
+                setNewPassword('')
+                setConfirmPassword('')
+                setForgotEmail(form.email)
+              }}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 fontSize: 13, color: 'var(--text-muted)',
