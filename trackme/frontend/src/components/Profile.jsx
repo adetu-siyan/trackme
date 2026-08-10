@@ -624,6 +624,7 @@
 //   )
 // }
 
+
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { profileApi, mentorApi } from '../lib/api'
@@ -631,9 +632,9 @@ import { useToast, ToastContainer } from '../hooks/useToast'
 import MenteeDashboard from './MenteeDashboard'
 import MenteeDetail from './MenteeDetail'
 import {
-  Pencil, X, Flame, Target, BookOpen, Star,
+  Pencil, X, Zap, Target, BookOpen, Star,
   Users, KeyRound, CheckCircle, ClipboardList,
-  ArrowRight, ArrowLeft, ChevronDown,
+  ArrowRight, ArrowLeft, ChevronDown, LogOut,
 } from 'lucide-react'
 
 const PREMIUM_EMAIL = 'adetumosgad@gmail.com'
@@ -913,7 +914,6 @@ export default function Profile() {
     ? form.full_name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
     : 'Your Name'
 
-  // ── Sub-pages ──────────────────────────────────────────────
   if (subPage === 'mentee-detail' && selectedMentee) {
     return (
       <MenteeDetail
@@ -957,7 +957,6 @@ export default function Profile() {
     )
   }
 
-  // ── Loading ────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="page">
@@ -970,11 +969,9 @@ export default function Profile() {
     )
   }
 
-  // ── Main ───────────────────────────────────────────────────
   return (
     <div className="page">
       <style>{`
-        /* ── Hero ── */
         .ph-hero {
           position: relative;
           border-radius: 18px;
@@ -1010,8 +1007,6 @@ export default function Profile() {
           z-index: 2;
         }
         .ph-hero-btn:hover { background: rgba(255,255,255,0.22); }
-
-        /* ── Avatar block ── */
         .ph-identity {
           display: flex;
           align-items: flex-end;
@@ -1033,40 +1028,25 @@ export default function Profile() {
           flex-shrink: 0; letter-spacing: -0.5px;
           box-shadow: 0 2px 16px rgba(109,40,217,0.4);
         }
-        .ph-name-block {
-          padding-bottom: 6px;
-          flex: 1; min-width: 150px;
-        }
+        .ph-name-block { padding-bottom: 6px; flex: 1; min-width: 150px; }
         .ph-name {
           font-size: 20px; font-weight: 900;
           letter-spacing: -0.4px;
           color: var(--text-primary);
-          margin-bottom: 2px;
-          line-height: 1.2;
+          margin-bottom: 2px; line-height: 1.2;
         }
-        .ph-email {
-          font-size: 12px; color: var(--text-muted); margin-bottom: 8px;
-        }
-        .ph-chips {
-          display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
-        }
+        .ph-email { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+        .ph-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
         .ph-chip {
           padding: 3px 10px; border-radius: 20px;
           font-size: 11px; font-weight: 700;
           display: inline-flex; align-items: center; gap: 4px;
         }
-        .ph-chip-role {
-          background: var(--accent-soft);
-          color: var(--accent);
-          border: 1px solid var(--border);
-        }
+        .ph-chip-role { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--border); }
         .ph-chip-premium {
           background: linear-gradient(90deg, #F59E0B18, #C026D318);
-          color: #C026D3;
-          border: 1px solid #C026D330;
+          color: #C026D3; border: 1px solid #C026D330;
         }
-
-        /* ── Stat strip ── */
         .ph-stats {
           display: flex;
           border-radius: 13px;
@@ -1084,30 +1064,23 @@ export default function Profile() {
           font-size: 18px; font-weight: 900;
           color: var(--text-primary); margin-bottom: 3px;
           display: flex; align-items: center;
-          justify-content: center; gap: 4px;
-          line-height: 1;
+          justify-content: center; gap: 4px; line-height: 1;
         }
         .ph-stat-lbl {
           font-size: 9px; font-weight: 700;
           color: var(--text-muted);
           text-transform: uppercase; letter-spacing: 0.9px;
         }
-
-        /* ── About card ── */
         .ph-about {
-          border-radius: 14px;
-          border: 1px solid var(--border);
-          overflow: hidden;
-          margin-bottom: 18px;
+          border-radius: 14px; border: 1px solid var(--border);
+          overflow: hidden; margin-bottom: 18px;
         }
         .ph-about-head {
-          padding: 12px 16px;
-          border-bottom: 1px solid var(--border);
+          padding: 12px 16px; border-bottom: 1px solid var(--border);
           display: flex; align-items: center; justify-content: space-between;
         }
         .ph-about-label {
-          font-size: 11px; font-weight: 700;
-          color: var(--text-muted);
+          font-size: 11px; font-weight: 700; color: var(--text-muted);
           text-transform: uppercase; letter-spacing: 0.8px;
         }
         .ph-about-edit {
@@ -1117,36 +1090,21 @@ export default function Profile() {
           display: inline-flex; align-items: center; gap: 3px;
         }
         .ph-about-body { padding: 14px 16px; }
-        .ph-bio-text {
-          font-size: 13px; color: var(--text-secondary);
-          line-height: 1.7; margin: 0;
-        }
-        .ph-bio-empty {
-          font-size: 13px; color: var(--text-muted); font-style: italic;
-        }
-
-        /* ── Edit form ── */
+        .ph-bio-text { font-size: 13px; color: var(--text-secondary); line-height: 1.7; margin: 0; }
+        .ph-bio-empty { font-size: 13px; color: var(--text-muted); font-style: italic; }
         .ph-edit {
-          border-radius: 14px;
-          border: 1px solid var(--accent);
-          overflow: hidden;
-          margin-bottom: 18px;
+          border-radius: 14px; border: 1px solid var(--accent);
+          overflow: hidden; margin-bottom: 18px;
           box-shadow: 0 0 0 3px var(--accent-soft);
         }
         .ph-edit-head {
-          padding: 12px 16px;
-          background: var(--accent-soft);
+          padding: 12px 16px; background: var(--accent-soft);
           border-bottom: 1px solid var(--border);
           font-size: 13px; font-weight: 700; color: var(--accent);
           display: flex; align-items: center; gap: 7px;
         }
-        .ph-edit-body {
-          padding: 16px;
-          display: flex; flex-direction: column; gap: 13px;
-        }
-        .ph-edit-row {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 11px;
-        }
+        .ph-edit-body { padding: 16px; display: flex; flex-direction: column; gap: 13px; }
+        .ph-edit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
         .ph-field-lbl {
           font-size: 11px; font-weight: 700; color: var(--text-muted);
           text-transform: uppercase; letter-spacing: 0.7px;
@@ -1154,15 +1112,10 @@ export default function Profile() {
         }
         .ph-edit-foot {
           display: flex; gap: 8px; justify-content: flex-end;
-          padding: 11px 16px;
-          background: var(--surface-2);
+          padding: 11px 16px; background: var(--surface-2);
           border-top: 1px solid var(--border);
         }
-
-        /* ── Mentorship cards ── */
-        .ph-mship-grid {
-          display: grid; gap: 11px; margin-bottom: 18px;
-        }
+        .ph-mship-grid { display: grid; gap: 11px; margin-bottom: 18px; }
         .ph-mship-card {
           border-radius: 14px; padding: 16px 18px;
           cursor: pointer;
@@ -1171,40 +1124,23 @@ export default function Profile() {
           background: var(--surface-2);
           transition: transform 0.13s, box-shadow 0.13s;
         }
-        .ph-mship-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 14px rgba(0,0,0,0.07);
-        }
+        .ph-mship-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.07); }
         .ph-mship-card.purple {
           background: linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%);
           border: none;
         }
         .ph-mship-icon {
           width: 40px; height: 40px; border-radius: 11px;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .ph-mship-icon.dark { background: rgba(255,255,255,0.14); }
         .ph-mship-icon.light { background: var(--accent-soft); }
-        .ph-mship-title {
-          font-size: 13px; font-weight: 800; margin-bottom: 1px;
-        }
-        .ph-mship-sub {
-          font-size: 12px; line-height: 1.4;
-        }
-
-        /* ── Settings ── */
-        .ph-settings {
-          display: flex; flex-direction: column; gap: 11px; margin-bottom: 16px;
-        }
-        .ph-section {
-          border-radius: 14px;
-          border: 1px solid var(--border);
-          overflow: hidden;
-        }
+        .ph-mship-title { font-size: 13px; font-weight: 800; margin-bottom: 1px; }
+        .ph-mship-sub { font-size: 12px; line-height: 1.4; }
+        .ph-settings { display: flex; flex-direction: column; gap: 11px; margin-bottom: 16px; }
+        .ph-section { border-radius: 14px; border: 1px solid var(--border); overflow: hidden; }
         .ph-section-head {
-          padding: 11px 16px;
-          background: var(--surface-2);
+          padding: 11px 16px; background: var(--surface-2);
           border-bottom: 1px solid var(--border);
           font-size: 11px; font-weight: 700; color: var(--text-muted);
           text-transform: uppercase; letter-spacing: 0.8px;
@@ -1221,28 +1157,22 @@ export default function Profile() {
         }
         .ph-account-val {
           font-size: 13px; font-weight: 500;
-          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-          max-width: 220px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px;
         }
         .ph-role-blurb {
-          border-radius: 14px;
-          padding: 14px 16px;
-          display: flex; gap: 12px; align-items: flex-start;
-          margin-bottom: 0;
+          border-radius: 14px; padding: 14px 16px;
+          display: flex; gap: 12px; align-items: flex-start; margin-bottom: 0;
         }
         .ph-role-icon-wrap {
           width: 34px; height: 34px; border-radius: 9px;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .ph-danger {
-          border-radius: 14px;
-          border: 1px solid var(--danger-soft);
+          border-radius: 14px; border: 1px solid var(--danger-soft);
           padding: 14px 16px;
           display: flex; align-items: center;
           justify-content: space-between; gap: 12px; flex-wrap: wrap;
         }
-
         @media (max-width: 520px) {
           .ph-edit-row { grid-template-columns: 1fr; }
           .ph-avatar { width: 72px; height: 72px; font-size: 22px; }
@@ -1254,18 +1184,15 @@ export default function Profile() {
 
       <ToastContainer toasts={toasts} />
 
-      {/* ── HERO ─────────────────────────────────────────────── */}
+      {/* HERO */}
       <div className="ph-hero">
         <div className="ph-hero-bg" />
         <button className="ph-hero-btn" onClick={() => setEditMode(e => !e)}>
-          {editMode
-            ? <><X size={13} /> Cancel</>
-            : <><Pencil size={13} /> Edit Profile</>
-          }
+          {editMode ? <><X size={13} /> Cancel</> : <><Pencil size={13} /> Edit Profile</>}
         </button>
       </div>
 
-      {/* ── IDENTITY ─────────────────────────────────────────── */}
+      {/* IDENTITY */}
       <div className="ph-identity">
         <div className="ph-avatar">{initials}</div>
         <div className="ph-name-block">
@@ -1284,7 +1211,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* ── STATS ────────────────────────────────────────────── */}
+      {/* STATS */}
       <div className="ph-stats">
         {[
           {
@@ -1307,12 +1234,10 @@ export default function Profile() {
         ))}
       </div>
 
-      {/* ── EDIT FORM ────────────────────────────────────────── */}
+      {/* EDIT FORM */}
       {editMode && (
         <div className="ph-edit">
-          <div className="ph-edit-head">
-            <Pencil size={13} /> Editing Profile
-          </div>
+          <div className="ph-edit-head"><Pencil size={13} /> Editing Profile</div>
           <div className="ph-edit-body">
             <div className="ph-edit-row">
               <div>
@@ -1334,17 +1259,13 @@ export default function Profile() {
             </div>
             <div>
               <label className="ph-field-lbl">Bio</label>
-              <textarea
-                className="input" value={form.bio} onChange={update('bio')}
+              <textarea className="input" value={form.bio} onChange={update('bio')}
                 placeholder="Tell your mentor or mentees about yourself..."
-                style={{ minHeight: 85 }}
-              />
+                style={{ minHeight: 85 }} />
             </div>
           </div>
           <div className="ph-edit-foot">
-            <button className="btn btn-secondary btn-sm" onClick={() => setEditMode(false)}>
-              Cancel
-            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => setEditMode(false)}>Cancel</button>
             <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -1352,7 +1273,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── ABOUT (view mode) ────────────────────────────────── */}
+      {/* ABOUT */}
       {!editMode && (
         <div className="ph-about">
           <div className="ph-about-head">
@@ -1372,7 +1293,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── MENTORSHIP CARDS ─────────────────────────────────── */}
+      {/* MENTORSHIP CARDS */}
       {(showMenteesCard || showMentorCard) && (
         <div
           className="ph-mship-grid"
@@ -1409,24 +1330,27 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── SETTINGS ─────────────────────────────────────────── */}
+      {/* SETTINGS */}
       <div className="ph-settings">
 
-        {/* Account */}
         <div className="ph-section">
           <div className="ph-section-head">Account</div>
           {[
             {
               lbl: 'Email', val: user?.email,
-              badge: <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <CheckCircle size={10} /> Verified
-              </span>,
+              badge: (
+                <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle size={10} /> Verified
+                </span>
+              ),
             },
             {
               lbl: 'Account Type', val: roleLabel,
-              badge: <span className="badge badge-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <RoleIcon size={10} /> {roleLabel}
-              </span>,
+              badge: (
+                <span className="badge badge-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <RoleIcon size={10} /> {roleLabel}
+                </span>
+              ),
             },
           ].map((item, i) => (
             <div key={i} className="ph-account-row">
@@ -1439,7 +1363,6 @@ export default function Profile() {
           ))}
         </div>
 
-        {/* Role blurb */}
         <div className="ph-role-blurb" style={{
           background: isMe ? 'linear-gradient(135deg,#F59E0B10,#C026D310)' : 'var(--accent-soft)',
           border: `1px solid ${isMe ? '#C026D328' : 'var(--border)'}`,
@@ -1472,10 +1395,8 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Change password */}
         <ChangePasswordSection />
 
-        {/* Sign out */}
         <div className="ph-danger">
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 2 }}>
