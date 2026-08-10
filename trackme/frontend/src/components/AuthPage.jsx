@@ -449,26 +449,6 @@ function incrementResetCount(email) {
   } catch { return 1 }
 }
 
-function WaveBackground() {
-  return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0,
-      height: '35vh', zIndex: 0, overflow: 'hidden',
-      pointerEvents: 'none',
-    }}>
-      <svg viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice"
-        style={{ width: '100%', height: '100%', display: 'block' }}>
-        {/* darkest layer matches page bg almost exactly — no visible edge */}
-        <path d="M-60,300 L-60,200 Q120,155 260,185 Q400,215 500,170 Q620,120 740,165 Q810,190 860,175 L860,300 Z" fill="#1a1625" />
-        <path d="M-60,300 L-60,220 Q100,178 240,205 Q390,235 500,195 Q630,150 750,188 Q820,210 860,198 L860,300 Z" fill="#2d1f5e" />
-        <path d="M-60,300 L-60,245 Q110,205 250,228 Q390,252 510,218 Q640,178 760,212 Q825,232 860,222 L860,300 Z" fill="#5535a8" />
-        <path d="M-60,300 L-60,265 Q120,235 260,252 Q400,270 520,245 Q650,215 770,240 Q830,254 860,248 L860,300 Z" fill="#8B5CF6" />
-      </svg>
-    </div>
-  )
-}
-
-
 export default function AuthPage() {
   const { signIn, signUp } = useAuth()
   const [mode, setMode] = useState('login')
@@ -558,26 +538,14 @@ export default function AuthPage() {
   async function handleResetPassword(e) {
     e.preventDefault()
     setForgotError('')
-
-    if (!forgotEmail.trim()) {
-      setForgotError('Enter your email address')
-      return
-    }
-    if (newPassword.length < 8) {
-      setForgotError('Password must be at least 8 characters')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setForgotError('Passwords do not match')
-      return
-    }
-
+    if (!forgotEmail.trim()) { setForgotError('Enter your email address'); return }
+    if (newPassword.length < 8) { setForgotError('Password must be at least 8 characters'); return }
+    if (newPassword !== confirmPassword) { setForgotError('Passwords do not match'); return }
     const resetCount = getResetCount(forgotEmail)
     if (resetCount >= MAX_RESETS) {
       setForgotError(`You've used both resets for this account. Contact admin to unlock.`)
       return
     }
-
     setResettingPassword(true)
     try {
       const res = await fetch(`${BASE}/api/reset-password`, {
@@ -598,8 +566,27 @@ export default function AuthPage() {
     }
   }
 
+  const globalStyles = `
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .auth-page {
+      background: linear-gradient(150deg, #f8f4ff 0%, #ede5ff 60%, #ddd0ff 100%);
+    }
+    @media (prefers-color-scheme: dark) {
+      .auth-page {
+        background: linear-gradient(150deg, #0d0a14 0%, #150f24 60%, #1e1535 100%);
+      }
+    }
+  `
+
   const pageStyle = {
-    minHeight: '100vh', background: 'var(--bg)',
+    minHeight: '100vh',
     display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center', padding: '20px',
     animation: 'fadeIn 0.4s ease', position: 'relative',
@@ -614,31 +601,19 @@ export default function AuthPage() {
   const logoBlock = (
     <div style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}>
       <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)' }}>
-        Dô<span style={{ color: 'var(--accent)' }}>t</span>i
+        Trackm<span style={{ color: 'var(--accent)' }}>e</span>
       </div>
-      <div style={{ fontSize: 11, letterSpacing: '5px', color: 'var(--text-muted)', fontWeight: 600, marginTop: 4 }}>
+      <div style={{ fontSize: 11, letterSpacing: '5px', color: '#ffffff', fontWeight: 600, marginTop: 4 }}>
         S / Y A N
       </div>
     </div>
   )
 
-  const globalStyles = `
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.08); }
-    }
-  `
-
   // ── Confirmation sent ──────────────────────────────────────────────────────
   if (confirmationSent) {
     return (
-      <div style={pageStyle}>
+      <div className="auth-page" style={pageStyle}>
         <style>{globalStyles}</style>
-        <WaveBackground />
         {logoBlock}
         <div style={{ ...cardStyle, textAlign: 'center' }}>
           <div style={{ fontSize: 56, marginBottom: 20, animation: 'pulse 2s ease-in-out infinite', display: 'inline-block' }}>📬</div>
@@ -651,7 +626,7 @@ export default function AuthPage() {
           </p>
           <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '16px 20px', marginBottom: 28, textAlign: 'left' }}>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.8, margin: 0 }}>
-              1. Open the email from <strong>Dôti</strong><br />
+              1. Open the email from <strong>Trackme</strong><br />
               2. Click <strong>"Confirm your email"</strong><br />
               3. You'll be redirected back and logged in automatically
             </p>
@@ -667,7 +642,7 @@ export default function AuthPage() {
             ← Back to Sign In
           </button>
         </div>
-        <div style={{ position: 'fixed', bottom: 28, fontSize: 11, letterSpacing: '4px', color: 'var(--text-muted)', fontWeight: 700, zIndex: 1 }}>
+        <div style={{ position: 'fixed', bottom: 28, fontSize: 11, letterSpacing: '4px', color: '#ffffff', fontWeight: 700, zIndex: 1 }}>
           S &nbsp;/&nbsp; Y &nbsp;A &nbsp;N
         </div>
       </div>
@@ -677,9 +652,8 @@ export default function AuthPage() {
   // ── Forgot password ────────────────────────────────────────────────────────
   if (showForgot) {
     return (
-      <div style={pageStyle}>
+      <div className="auth-page" style={pageStyle}>
         <style>{globalStyles}</style>
-        <WaveBackground />
         {logoBlock}
         <div style={cardStyle}>
           {forgotSuccess ? (
@@ -713,52 +687,23 @@ export default function AuthPage() {
               </div>
               <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                    Your Email
-                  </label>
-                  <input
-                    className="input" type="email"
-                    placeholder="youremail@gmail.com"
-                    value={forgotEmail}
-                    onChange={e => { setForgotEmail(e.target.value); setForgotError('') }}
-                    required
-                  />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Your Email</label>
+                  <input className="input" type="email" placeholder="youremail@gmail.com" value={forgotEmail} onChange={e => { setForgotEmail(e.target.value); setForgotError('') }} required />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                    New Password
-                  </label>
-                  <input
-                    className="input" type="password"
-                    placeholder="Min 8 characters"
-                    value={newPassword}
-                    onChange={e => { setNewPassword(e.target.value); setForgotError('') }}
-                    required minLength={8}
-                  />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>New Password</label>
+                  <input className="input" type="password" placeholder="Min 8 characters" value={newPassword} onChange={e => { setNewPassword(e.target.value); setForgotError('') }} required minLength={8} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                    Confirm New Password
-                  </label>
-                  <input
-                    className="input" type="password"
-                    placeholder="Repeat new password"
-                    value={confirmPassword}
-                    onChange={e => { setConfirmPassword(e.target.value); setForgotError('') }}
-                    required
-                  />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Confirm New Password</label>
+                  <input className="input" type="password" placeholder="Repeat new password" value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setForgotError('') }} required />
                 </div>
                 {forgotError && (
                   <div style={{ background: 'var(--danger-soft)', color: 'var(--danger)', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500 }}>
                     {forgotError}
                   </div>
                 )}
-                <button
-                  className="btn btn-primary btn-lg"
-                  type="submit"
-                  disabled={resettingPassword}
-                  style={{ marginTop: 4, justifyContent: 'center' }}
-                >
+                <button className="btn btn-primary btn-lg" type="submit" disabled={resettingPassword} style={{ marginTop: 4, justifyContent: 'center' }}>
                   {resettingPassword ? (
                     <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
@@ -766,17 +711,14 @@ export default function AuthPage() {
                     </span>
                   ) : 'Update Password →'}
                 </button>
-                <button
-                  type="button" className="btn btn-ghost btn-sm"
-                  onClick={() => { setShowForgot(false); setForgotError(''); setNewPassword(''); setConfirmPassword('') }}
-                >
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setShowForgot(false); setForgotError(''); setNewPassword(''); setConfirmPassword('') }}>
                   ← Back to Sign In
                 </button>
               </form>
             </>
           )}
         </div>
-        <div style={{ position: 'fixed', bottom: 28, fontSize: 11, letterSpacing: '4px', color: 'var(--text-muted)', fontWeight: 700, zIndex: 1 }}>
+        <div style={{ position: 'fixed', bottom: 28, fontSize: 11, letterSpacing: '4px', color: '#ffffff', fontWeight: 700, zIndex: 1 }}>
           S &nbsp;/&nbsp; Y &nbsp;A &nbsp;N
         </div>
       </div>
@@ -786,9 +728,8 @@ export default function AuthPage() {
   // ── Access request ─────────────────────────────────────────────────────────
   if (showAccessForm) {
     return (
-      <div style={pageStyle}>
+      <div className="auth-page" style={pageStyle}>
         <style>{globalStyles}</style>
-        <WaveBackground />
         {logoBlock}
         <div style={cardStyle}>
           {accessSent ? (
@@ -806,7 +747,7 @@ export default function AuthPage() {
             <>
               <h2 style={{ marginBottom: 6 }}>Request Access</h2>
               <p className="text-muted" style={{ fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
-                Dôti is currently in private beta. Tell us who you are and we'll get back to you.
+                Trackme is currently in private beta. Tell us who you are and we'll get back to you.
               </p>
               <form onSubmit={handleAccessRequest} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
@@ -837,9 +778,8 @@ export default function AuthPage() {
 
   // ── Main auth form ─────────────────────────────────────────────────────────
   return (
-    <div style={pageStyle}>
+    <div className="auth-page" style={pageStyle}>
       <style>{globalStyles}</style>
-      <WaveBackground />
       {logoBlock}
 
       <div style={cardStyle}>
@@ -868,7 +808,7 @@ export default function AuthPage() {
             borderRadius: 10, padding: '14px 16px', marginBottom: 20,
           }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--warning)', marginBottom: 4 }}>
-              🔒 Dôti is in private beta
+              🔒 Trackme is in private beta
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 12px' }}>
               We're not accepting new accounts right now. You can request access and the admin will review it.
@@ -976,7 +916,7 @@ export default function AuthPage() {
         )}
       </div>
 
-      <div style={{ position: 'fixed', bottom: 28, fontSize: 11, letterSpacing: '4px', color: 'var(--text-muted)', fontWeight: 700, zIndex: 1 }}>
+      <div style={{ position: 'fixed', bottom: 28, fontSize: 11, letterSpacing: '4px', color: '#ffffff', fontWeight: 700, zIndex: 1 }}>
         S &nbsp;/&nbsp; Y &nbsp;A &nbsp;N
       </div>
     </div>
