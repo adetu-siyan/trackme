@@ -16,7 +16,7 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(tags=["misc"])
 
 PREMIUM_EMAIL = "adetumosgad@gmail.com"
-MAX_USERS = 10
+MAX_USERS = 13
 
 
 # ============================================================
