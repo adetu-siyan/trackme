@@ -13,7 +13,7 @@ import os
 
 from config import settings
 from services.supabase_service import supabase
-from services.groq_service import generate_reminder_message
+# from services.groq_service import generate_reminder_message
 from services.brevo_service import send_reminder_email
 
 from routes.logs import router as logs_router
