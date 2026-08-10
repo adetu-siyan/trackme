@@ -820,9 +820,7 @@ function MentorView() {
             <div style={{
               fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
               textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5,
-            }}>
-              About
-            </div>
+            }}>About</div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
               {mp.bio}
             </p>
@@ -972,7 +970,6 @@ export default function Profile() {
   return (
     <div className="page">
       <style>{`
-        /* ── Hero card (contains banner + identity) ── */
         .ph-card {
           border-radius: 20px;
           border: 1px solid var(--border);
@@ -981,7 +978,7 @@ export default function Profile() {
           background: var(--surface);
         }
 
-        /* ── Banner ── */
+        /* Banner */
         .ph-banner {
           position: relative;
           height: 130px;
@@ -997,7 +994,7 @@ export default function Profile() {
           position: absolute;
           top: 12px; right: 12px;
           background: rgba(255,255,255,0.15);
-          border: 1px solid rgba(255,255,255,0.25);
+          border: 1px solid rgba(255,255,255,0.28);
           border-radius: 9px;
           padding: 6px 13px;
           color: #fff;
@@ -1012,30 +1009,28 @@ export default function Profile() {
         }
         .ph-banner-btn:hover { background: rgba(255,255,255,0.26); }
 
-        /* ── Identity row ── */
-        .ph-identity {
-          display: flex;
-          align-items: flex-end;
-          gap: 16px;
-          padding: 0 20px 18px 20px;
-          margin-top: -40px;
+        /* Avatar floats over banner bottom edge */
+        .ph-avatar-wrap {
+          padding: 0 20px;
+          margin-top: -36px;
+          margin-bottom: 0;
           position: relative;
           z-index: 3;
-          flex-wrap: wrap;
         }
         .ph-avatar {
-          width: 80px; height: 80px;
+          width: 76px; height: 76px;
           border-radius: 50%;
           background: linear-gradient(145deg, #6D28D9 0%, #9333EA 100%);
           border: 4px solid var(--surface);
           display: flex; align-items: center; justify-content: center;
           font-size: 24px; font-weight: 900; color: #fff;
-          flex-shrink: 0; letter-spacing: -0.5px;
+          letter-spacing: -0.5px;
           box-shadow: 0 4px 20px rgba(109,40,217,0.45);
         }
-        .ph-name-block {
-          padding-bottom: 4px;
-          flex: 1; min-width: 150px;
+
+        /* Name block sits fully below banner */
+        .ph-identity {
+          padding: 10px 20px 18px 20px;
         }
         .ph-name {
           font-size: 20px; font-weight: 900;
@@ -1043,7 +1038,7 @@ export default function Profile() {
           color: var(--text-primary);
           margin-bottom: 2px; line-height: 1.2;
         }
-        .ph-email { font-size: 12px; color: var(--text-muted); margin-bottom: 7px; }
+        .ph-email { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
         .ph-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
         .ph-chip {
           padding: 3px 10px; border-radius: 20px;
@@ -1059,7 +1054,7 @@ export default function Profile() {
           color: #C026D3; border: 1px solid #C026D330;
         }
 
-        /* ── Stats strip ── */
+        /* Stats strip */
         .ph-stats {
           display: flex;
           border-top: 1px solid var(--border);
@@ -1081,7 +1076,7 @@ export default function Profile() {
           text-transform: uppercase; letter-spacing: 0.9px;
         }
 
-        /* ── About card ── */
+        /* About */
         .ph-about {
           border-radius: 14px; border: 1px solid var(--border);
           overflow: hidden; margin-bottom: 16px;
@@ -1104,7 +1099,7 @@ export default function Profile() {
         .ph-bio-text { font-size: 13px; color: var(--text-secondary); line-height: 1.7; margin: 0; }
         .ph-bio-empty { font-size: 13px; color: var(--text-muted); font-style: italic; }
 
-        /* ── Edit form ── */
+        /* Edit form */
         .ph-edit {
           border-radius: 14px; border: 1px solid var(--accent);
           overflow: hidden; margin-bottom: 16px;
@@ -1129,7 +1124,7 @@ export default function Profile() {
           border-top: 1px solid var(--border);
         }
 
-        /* ── Mentorship cards ── */
+        /* Mentorship cards */
         .ph-mship-grid { display: grid; gap: 11px; margin-bottom: 16px; }
         .ph-mship-card {
           border-radius: 14px; padding: 16px 18px;
@@ -1153,7 +1148,7 @@ export default function Profile() {
         .ph-mship-title { font-size: 13px; font-weight: 800; margin-bottom: 1px; }
         .ph-mship-sub { font-size: 12px; line-height: 1.4; }
 
-        /* ── Settings ── */
+        /* Settings */
         .ph-settings { display: flex; flex-direction: column; gap: 11px; margin-bottom: 16px; }
         .ph-section { border-radius: 14px; border: 1px solid var(--border); overflow: hidden; }
         .ph-section-head {
@@ -1193,16 +1188,16 @@ export default function Profile() {
 
         @media (max-width: 520px) {
           .ph-edit-row { grid-template-columns: 1fr; }
-          .ph-avatar { width: 68px; height: 68px; font-size: 20px; }
+          .ph-avatar { width: 66px; height: 66px; font-size: 20px; }
           .ph-name { font-size: 17px; }
-          .ph-identity { margin-top: -34px; padding: 0 14px 16px 14px; }
           .ph-banner { height: 110px; }
+          .ph-avatar-wrap { margin-top: -33px; }
         }
       `}</style>
 
       <ToastContainer toasts={toasts} />
 
-      {/* ── HERO CARD (banner + identity + stats) ── */}
+      {/* ── HERO CARD ── */}
       <div className="ph-card">
 
         {/* Banner */}
@@ -1212,22 +1207,24 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Identity */}
-        <div className="ph-identity">
+        {/* Avatar — overlaps banner bottom */}
+        <div className="ph-avatar-wrap">
           <div className="ph-avatar">{initials}</div>
-          <div className="ph-name-block">
-            <div className="ph-name">{displayName}</div>
-            <div className="ph-email">{user?.email}</div>
-            <div className="ph-chips">
-              <span className="ph-chip ph-chip-role">
-                <RoleIcon size={10} strokeWidth={2.2} /> {roleLabel}
+        </div>
+
+        {/* Name / email / chips — fully below banner */}
+        <div className="ph-identity">
+          <div className="ph-name">{displayName}</div>
+          <div className="ph-email">{user?.email}</div>
+          <div className="ph-chips">
+            <span className="ph-chip ph-chip-role">
+              <RoleIcon size={10} strokeWidth={2.2} /> {roleLabel}
+            </span>
+            {isMe && (
+              <span className="ph-chip ph-chip-premium">
+                <Star size={10} strokeWidth={2.2} /> Premium
               </span>
-              {isMe && (
-                <span className="ph-chip ph-chip-premium">
-                  <Star size={10} strokeWidth={2.2} /> Premium
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
