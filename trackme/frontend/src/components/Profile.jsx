@@ -641,23 +641,6 @@ const PREMIUM_EMAIL = 'adetumosgad@gmail.com'
 // ============================================================
 // CHANGE PASSWORD
 // ============================================================
-import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { profileApi, mentorApi } from '../lib/api'
-import { useToast, ToastContainer } from '../hooks/useToast'
-import MenteeDashboard from './MenteeDashboard'
-import MenteeDetail from './MenteeDetail'
-import {
-  Pencil, X, Zap, Target, BookOpen, Star,
-  Users, KeyRound, CheckCircle, ClipboardList,
-  ArrowRight, ArrowLeft, ChevronDown, LogOut,
-} from 'lucide-react'
-
-const PREMIUM_EMAIL = 'adetumosgad@gmail.com'
-
-// ============================================================
-// CHANGE PASSWORD
-// ============================================================
 function ChangePasswordSection() {
   const [form, setForm] = useState({ newPassword: '', confirm: '' })
   const [saving, setSaving] = useState(false)
