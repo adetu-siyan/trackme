@@ -972,28 +972,32 @@ export default function Profile() {
   return (
     <div className="page">
       <style>{`
-        .ph-hero {
-          position: relative;
-          border-radius: 18px;
+        /* ── Hero card (contains banner + identity) ── */
+        .ph-card {
+          border-radius: 20px;
+          border: 1px solid var(--border);
           overflow: hidden;
-          margin-bottom: 0;
-          height: 140px;
+          margin-bottom: 16px;
+          background: var(--surface);
         }
-        .ph-hero-bg {
-          position: absolute;
-          inset: 0;
+
+        /* ── Banner ── */
+        .ph-banner {
+          position: relative;
+          height: 130px;
           background:
-            radial-gradient(ellipse 60% 80% at 15% 40%, #7C3AED 0%, transparent 60%),
-            radial-gradient(ellipse 50% 70% at 85% 10%, #A855F7 0%, transparent 55%),
-            radial-gradient(ellipse 45% 60% at 70% 85%, #D97706 0%, transparent 50%),
-            radial-gradient(ellipse 40% 50% at 40% 100%, #6D28D9 0%, transparent 55%),
-            #1e0a3c;
+            radial-gradient(ellipse 80% 120% at 0% 60%, #7C3AED 0%, transparent 55%),
+            radial-gradient(ellipse 60% 100% at 40% -10%, #A855F7 0%, transparent 50%),
+            radial-gradient(ellipse 60% 80% at 100% 40%, #06B6D4 0%, transparent 55%),
+            radial-gradient(ellipse 55% 70% at 65% 110%, #F59E0B 0%, transparent 50%),
+            radial-gradient(ellipse 40% 50% at 85% 90%, #EC4899 0%, transparent 45%),
+            #0f0720;
         }
-        .ph-hero-btn {
+        .ph-banner-btn {
           position: absolute;
-          top: 14px; right: 14px;
-          background: rgba(255,255,255,0.12);
-          border: 1px solid rgba(255,255,255,0.22);
+          top: 12px; right: 12px;
+          background: rgba(255,255,255,0.15);
+          border: 1px solid rgba(255,255,255,0.25);
           border-radius: 9px;
           padding: 6px 13px;
           color: #fff;
@@ -1001,59 +1005,64 @@ export default function Profile() {
           font-size: 12px; font-weight: 700;
           cursor: pointer;
           display: flex; align-items: center; gap: 6px;
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           transition: background 0.15s;
           z-index: 2;
         }
-        .ph-hero-btn:hover { background: rgba(255,255,255,0.22); }
+        .ph-banner-btn:hover { background: rgba(255,255,255,0.26); }
+
+        /* ── Identity row ── */
         .ph-identity {
           display: flex;
           align-items: flex-end;
           gap: 16px;
-          padding: 0 4px;
-          margin-top: -44px;
-          margin-bottom: 18px;
+          padding: 0 20px 18px 20px;
+          margin-top: -40px;
           position: relative;
           z-index: 3;
           flex-wrap: wrap;
         }
         .ph-avatar {
-          width: 84px; height: 84px;
+          width: 80px; height: 80px;
           border-radius: 50%;
           background: linear-gradient(145deg, #6D28D9 0%, #9333EA 100%);
           border: 4px solid var(--surface);
           display: flex; align-items: center; justify-content: center;
-          font-size: 26px; font-weight: 900; color: #fff;
+          font-size: 24px; font-weight: 900; color: #fff;
           flex-shrink: 0; letter-spacing: -0.5px;
-          box-shadow: 0 2px 16px rgba(109,40,217,0.4);
+          box-shadow: 0 4px 20px rgba(109,40,217,0.45);
         }
-        .ph-name-block { padding-bottom: 6px; flex: 1; min-width: 150px; }
+        .ph-name-block {
+          padding-bottom: 4px;
+          flex: 1; min-width: 150px;
+        }
         .ph-name {
           font-size: 20px; font-weight: 900;
           letter-spacing: -0.4px;
           color: var(--text-primary);
           margin-bottom: 2px; line-height: 1.2;
         }
-        .ph-email { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+        .ph-email { font-size: 12px; color: var(--text-muted); margin-bottom: 7px; }
         .ph-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
         .ph-chip {
           padding: 3px 10px; border-radius: 20px;
           font-size: 11px; font-weight: 700;
           display: inline-flex; align-items: center; gap: 4px;
         }
-        .ph-chip-role { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--border); }
+        .ph-chip-role {
+          background: var(--accent-soft); color: var(--accent);
+          border: 1px solid var(--border);
+        }
         .ph-chip-premium {
           background: linear-gradient(90deg, #F59E0B18, #C026D318);
           color: #C026D3; border: 1px solid #C026D330;
         }
+
+        /* ── Stats strip ── */
         .ph-stats {
           display: flex;
-          border-radius: 13px;
-          border: 1px solid var(--border);
-          overflow: hidden;
-          margin-bottom: 18px;
-          background: var(--surface-2);
+          border-top: 1px solid var(--border);
         }
         .ph-stat {
           flex: 1; padding: 13px 8px; text-align: center;
@@ -1061,7 +1070,7 @@ export default function Profile() {
         }
         .ph-stat:last-child { border-right: none; }
         .ph-stat-val {
-          font-size: 18px; font-weight: 900;
+          font-size: 17px; font-weight: 900;
           color: var(--text-primary); margin-bottom: 3px;
           display: flex; align-items: center;
           justify-content: center; gap: 4px; line-height: 1;
@@ -1071,9 +1080,11 @@ export default function Profile() {
           color: var(--text-muted);
           text-transform: uppercase; letter-spacing: 0.9px;
         }
+
+        /* ── About card ── */
         .ph-about {
           border-radius: 14px; border: 1px solid var(--border);
-          overflow: hidden; margin-bottom: 18px;
+          overflow: hidden; margin-bottom: 16px;
         }
         .ph-about-head {
           padding: 12px 16px; border-bottom: 1px solid var(--border);
@@ -1092,9 +1103,11 @@ export default function Profile() {
         .ph-about-body { padding: 14px 16px; }
         .ph-bio-text { font-size: 13px; color: var(--text-secondary); line-height: 1.7; margin: 0; }
         .ph-bio-empty { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+        /* ── Edit form ── */
         .ph-edit {
           border-radius: 14px; border: 1px solid var(--accent);
-          overflow: hidden; margin-bottom: 18px;
+          overflow: hidden; margin-bottom: 16px;
           box-shadow: 0 0 0 3px var(--accent-soft);
         }
         .ph-edit-head {
@@ -1115,7 +1128,9 @@ export default function Profile() {
           padding: 11px 16px; background: var(--surface-2);
           border-top: 1px solid var(--border);
         }
-        .ph-mship-grid { display: grid; gap: 11px; margin-bottom: 18px; }
+
+        /* ── Mentorship cards ── */
+        .ph-mship-grid { display: grid; gap: 11px; margin-bottom: 16px; }
         .ph-mship-card {
           border-radius: 14px; padding: 16px 18px;
           cursor: pointer;
@@ -1137,6 +1152,8 @@ export default function Profile() {
         .ph-mship-icon.light { background: var(--accent-soft); }
         .ph-mship-title { font-size: 13px; font-weight: 800; margin-bottom: 1px; }
         .ph-mship-sub { font-size: 12px; line-height: 1.4; }
+
+        /* ── Settings ── */
         .ph-settings { display: flex; flex-direction: column; gap: 11px; margin-bottom: 16px; }
         .ph-section { border-radius: 14px; border: 1px solid var(--border); overflow: hidden; }
         .ph-section-head {
@@ -1161,7 +1178,7 @@ export default function Profile() {
         }
         .ph-role-blurb {
           border-radius: 14px; padding: 14px 16px;
-          display: flex; gap: 12px; align-items: flex-start; margin-bottom: 0;
+          display: flex; gap: 12px; align-items: flex-start;
         }
         .ph-role-icon-wrap {
           width: 34px; height: 34px; border-radius: 9px;
@@ -1173,68 +1190,72 @@ export default function Profile() {
           display: flex; align-items: center;
           justify-content: space-between; gap: 12px; flex-wrap: wrap;
         }
+
         @media (max-width: 520px) {
           .ph-edit-row { grid-template-columns: 1fr; }
-          .ph-avatar { width: 72px; height: 72px; font-size: 22px; }
+          .ph-avatar { width: 68px; height: 68px; font-size: 20px; }
           .ph-name { font-size: 17px; }
-          .ph-identity { margin-top: -36px; }
-          .ph-hero { height: 120px; }
+          .ph-identity { margin-top: -34px; padding: 0 14px 16px 14px; }
+          .ph-banner { height: 110px; }
         }
       `}</style>
 
       <ToastContainer toasts={toasts} />
 
-      {/* HERO */}
-      <div className="ph-hero">
-        <div className="ph-hero-bg" />
-        <button className="ph-hero-btn" onClick={() => setEditMode(e => !e)}>
-          {editMode ? <><X size={13} /> Cancel</> : <><Pencil size={13} /> Edit Profile</>}
-        </button>
-      </div>
+      {/* ── HERO CARD (banner + identity + stats) ── */}
+      <div className="ph-card">
 
-      {/* IDENTITY */}
-      <div className="ph-identity">
-        <div className="ph-avatar">{initials}</div>
-        <div className="ph-name-block">
-          <div className="ph-name">{displayName}</div>
-          <div className="ph-email">{user?.email}</div>
-          <div className="ph-chips">
-            <span className="ph-chip ph-chip-role">
-              <RoleIcon size={10} strokeWidth={2.2} /> {roleLabel}
-            </span>
-            {isMe && (
-              <span className="ph-chip ph-chip-premium">
-                <Star size={10} strokeWidth={2.2} /> Premium
+        {/* Banner */}
+        <div className="ph-banner">
+          <button className="ph-banner-btn" onClick={() => setEditMode(e => !e)}>
+            {editMode ? <><X size={13} /> Cancel</> : <><Pencil size={13} /> Edit Profile</>}
+          </button>
+        </div>
+
+        {/* Identity */}
+        <div className="ph-identity">
+          <div className="ph-avatar">{initials}</div>
+          <div className="ph-name-block">
+            <div className="ph-name">{displayName}</div>
+            <div className="ph-email">{user?.email}</div>
+            <div className="ph-chips">
+              <span className="ph-chip ph-chip-role">
+                <RoleIcon size={10} strokeWidth={2.2} /> {roleLabel}
               </span>
-            )}
+              {isMe && (
+                <span className="ph-chip ph-chip-premium">
+                  <Star size={10} strokeWidth={2.2} /> Premium
+                </span>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Stats strip */}
+        <div className="ph-stats">
+          {[
+            {
+              val: (
+                <>{streak.current_streak}<Zap size={13} color="var(--warning)" fill="var(--warning)" /></>
+              ),
+              lbl: 'Day Streak',
+            },
+            { val: `${streak.longest_streak}d`, lbl: 'Best Streak' },
+            {
+              val: form.field_of_study ? form.field_of_study.split(' ')[0] : roleLabel,
+              lbl: form.field_of_study ? 'Focus' : 'Role',
+            },
+            { val: form.username ? `@${form.username}` : '—', lbl: 'Handle' },
+          ].map((s, i) => (
+            <div key={i} className="ph-stat">
+              <div className="ph-stat-val">{s.val}</div>
+              <div className="ph-stat-lbl">{s.lbl}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* STATS */}
-      <div className="ph-stats">
-        {[
-          {
-            val: (
-              <>{streak.current_streak}<Zap size={14} color="var(--warning)" fill="var(--warning)" /></>
-            ),
-            lbl: 'Day Streak',
-          },
-          { val: `${streak.longest_streak}d`, lbl: 'Best Streak' },
-          {
-            val: form.field_of_study ? form.field_of_study.split(' ')[0] : roleLabel,
-            lbl: form.field_of_study ? 'Focus' : 'Role',
-          },
-          { val: form.username ? `@${form.username}` : '—', lbl: 'Handle' },
-        ].map((s, i) => (
-          <div key={i} className="ph-stat">
-            <div className="ph-stat-val">{s.val}</div>
-            <div className="ph-stat-lbl">{s.lbl}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* EDIT FORM */}
+      {/* ── EDIT FORM ── */}
       {editMode && (
         <div className="ph-edit">
           <div className="ph-edit-head"><Pencil size={13} /> Editing Profile</div>
@@ -1273,7 +1294,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ABOUT */}
+      {/* ── ABOUT ── */}
       {!editMode && (
         <div className="ph-about">
           <div className="ph-about-head">
@@ -1293,7 +1314,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* MENTORSHIP CARDS */}
+      {/* ── MENTORSHIP CARDS ── */}
       {(showMenteesCard || showMentorCard) && (
         <div
           className="ph-mship-grid"
@@ -1330,7 +1351,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* SETTINGS */}
+      {/* ── SETTINGS ── */}
       <div className="ph-settings">
 
         <div className="ph-section">
