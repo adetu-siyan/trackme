@@ -641,6 +641,23 @@ const PREMIUM_EMAIL = 'adetumosgad@gmail.com'
 // ============================================================
 // CHANGE PASSWORD
 // ============================================================
+import { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { profileApi, mentorApi } from '../lib/api'
+import { useToast, ToastContainer } from '../hooks/useToast'
+import MenteeDashboard from './MenteeDashboard'
+import MenteeDetail from './MenteeDetail'
+import {
+  Pencil, X, Zap, Target, BookOpen, Star,
+  Users, KeyRound, CheckCircle, ClipboardList,
+  ArrowRight, ArrowLeft, ChevronDown, LogOut,
+} from 'lucide-react'
+
+const PREMIUM_EMAIL = 'adetumosgad@gmail.com'
+
+// ============================================================
+// CHANGE PASSWORD
+// ============================================================
 function ChangePasswordSection() {
   const [form, setForm] = useState({ newPassword: '', confirm: '' })
   const [saving, setSaving] = useState(false)
@@ -673,69 +690,48 @@ function ChangePasswordSection() {
   }
 
   return (
-    <div style={{
-      borderRadius: 16,
-      border: '1px solid var(--border)',
-      overflow: 'hidden',
-    }}>
+    <div style={{ borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
       <button
         onClick={() => setShow(s => !s)}
         style={{
           width: '100%', background: 'var(--surface-2)',
           border: 'none', cursor: 'pointer',
-          padding: '14px 18px',
+          padding: '13px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontFamily: 'Urbanist, sans-serif',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <KeyRound size={16} color="var(--text-secondary)" />
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <KeyRound size={15} color="var(--text-secondary)" />
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
             Change Password
           </span>
         </div>
         <ChevronDown
-          size={14}
-          color="var(--text-muted)"
-          style={{
-            transform: show ? 'rotate(180deg)' : 'rotate(0)',
-            transition: 'transform 0.2s',
-          }}
+          size={13} color="var(--text-muted)"
+          style={{ transform: show ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
         />
       </button>
 
       {show && (
-        <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <label style={{
-              fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
-              display: 'block', marginBottom: 6,
-              textTransform: 'uppercase', letterSpacing: '0.7px',
-            }}>
-              New Password
-            </label>
-            <input
-              className="input" type="password"
-              placeholder="Min 8 characters"
-              value={form.newPassword}
-              onChange={update('newPassword')}
-            />
-          </div>
-          <div>
-            <label style={{
-              fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
-              display: 'block', marginBottom: 6,
-              textTransform: 'uppercase', letterSpacing: '0.7px',
-            }}>
-              Confirm Password
-            </label>
-            <input
-              className="input" type="password"
-              placeholder="Repeat new password"
-              value={form.confirm}
-              onChange={update('confirm')}
-            />
-          </div>
+        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+          {['newPassword', 'confirm'].map((field, i) => (
+            <div key={field}>
+              <label style={{
+                fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
+                display: 'block', marginBottom: 5,
+                textTransform: 'uppercase', letterSpacing: '0.7px',
+              }}>
+                {i === 0 ? 'New Password' : 'Confirm Password'}
+              </label>
+              <input
+                className="input" type="password"
+                placeholder={i === 0 ? 'Min 8 characters' : 'Repeat new password'}
+                value={form[field]}
+                onChange={update(field)}
+              />
+            </div>
+          ))}
 
           {msg && (
             <div style={{
@@ -789,10 +785,10 @@ function MentorView() {
     <div>
       <h1 style={{ marginBottom: 24 }}>My Mentor</h1>
       <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-        <Target size={48} strokeWidth={1.2} color="var(--text-muted)"
-          style={{ marginBottom: 16, opacity: 0.4 }} />
+        <Target size={44} strokeWidth={1.2} color="var(--text-muted)"
+          style={{ marginBottom: 14, opacity: 0.35 }} />
         <h3 style={{ marginBottom: 8 }}>No mentor connected yet</h3>
-        <p className="text-muted" style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
+        <p className="text-muted" style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 300, margin: '0 auto' }}>
           Go to your home page and use the "Add a Mentor" card to connect with someone using their email.
         </p>
       </div>
@@ -807,18 +803,18 @@ function MentorView() {
   return (
     <div>
       <h1 style={{ marginBottom: 24 }}>My Mentor</h1>
-      <div className="card" style={{ padding: '24px 28px', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className="card" style={{ padding: '22px 24px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
           <div style={{
-            width: 60, height: 60, borderRadius: '50%',
+            width: 56, height: 56, borderRadius: '50%',
             background: 'linear-gradient(135deg, #4C1D95, #7C3AED)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 20, fontWeight: 800, color: '#fff', flexShrink: 0,
+            fontSize: 18, fontWeight: 800, color: '#fff', flexShrink: 0,
           }}>
             {initials}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 3 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>
               {mp.full_name || 'Your Mentor'}
             </div>
             {mp.field_of_study && (
@@ -828,34 +824,33 @@ function MentorView() {
           <span className="badge badge-success" style={{
             flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
           }}>
-            <CheckCircle size={12} /> Connected
+            <CheckCircle size={11} /> Connected
           </span>
         </div>
 
         {mp.bio && (
           <div style={{
-            padding: '12px 16px', borderRadius: 10,
-            background: 'var(--surface-2)', marginBottom: 14,
+            padding: '11px 14px', borderRadius: 10,
+            background: 'var(--surface-2)', marginBottom: 12,
           }}>
             <div style={{
-              fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
-              textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6,
+              fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
+              textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5,
             }}>
               About
             </div>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
               {mp.bio}
             </p>
           </div>
         )}
 
         <div style={{
-          padding: '12px 16px', borderRadius: 10,
-          background: 'var(--accent-soft)',
-          display: 'flex', alignItems: 'flex-start', gap: 10,
+          padding: '11px 14px', borderRadius: 10, background: 'var(--accent-soft)',
+          display: 'flex', alignItems: 'flex-start', gap: 9,
           fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
         }}>
-          <ClipboardList size={15} color="var(--accent)" style={{ marginTop: 1, flexShrink: 0 }} />
+          <ClipboardList size={14} color="var(--accent)" style={{ marginTop: 1, flexShrink: 0 }} />
           Your daily logs are sent to this mentor for review and sign-off.
           You get notified the moment they sign.
         </div>
@@ -878,7 +873,6 @@ export default function Profile() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editMode, setEditMode] = useState(false)
-
   const [subPage, setSubPage] = useState(null)
   const [selectedMentee, setSelectedMentee] = useState(null)
 
@@ -887,7 +881,6 @@ export default function Profile() {
   const roleMentee = profile?.role === 'mentee'
   const showMenteesCard = roleMentor || isMe
   const showMentorCard = roleMentee || isMe
-
   const RoleIcon = roleMentor ? Target : BookOpen
   const roleLabel = roleMentor ? 'Mentor' : 'Mentee'
 
@@ -933,8 +926,11 @@ export default function Profile() {
     ? form.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.[0]?.toUpperCase() || '?'
 
-  // ── Sub-pages ──────────────────────────────────────────────
+  const displayName = form.full_name
+    ? form.full_name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    : 'Your Name'
 
+  // ── Sub-pages ──────────────────────────────────────────────
   if (subPage === 'mentee-detail' && selectedMentee) {
     return (
       <MenteeDetail
@@ -947,15 +943,12 @@ export default function Profile() {
   if (subPage === 'mentees') {
     return (
       <div className="page">
-        <button
-          onClick={() => setSubPage(null)}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--accent)', fontFamily: 'Urbanist, sans-serif',
-            fontSize: 14, fontWeight: 600, padding: 0,
-            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24,
-          }}
-        >
+        <button onClick={() => setSubPage(null)} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--accent)', fontFamily: 'Urbanist, sans-serif',
+          fontSize: 14, fontWeight: 600, padding: 0,
+          display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24,
+        }}>
           <ArrowLeft size={15} /> Back to Profile
         </button>
         <MenteeDashboard
@@ -968,15 +961,12 @@ export default function Profile() {
   if (subPage === 'mentor') {
     return (
       <div className="page">
-        <button
-          onClick={() => setSubPage(null)}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--accent)', fontFamily: 'Urbanist, sans-serif',
-            fontSize: 14, fontWeight: 600, padding: 0,
-            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24,
-          }}
-        >
+        <button onClick={() => setSubPage(null)} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--accent)', fontFamily: 'Urbanist, sans-serif',
+          fontSize: 14, fontWeight: 600, padding: 0,
+          display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24,
+        }}>
           <ArrowLeft size={15} /> Back to Profile
         </button>
         <MentorView />
@@ -985,13 +975,12 @@ export default function Profile() {
   }
 
   // ── Loading ────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="page">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {[220, 100, 140, 120].map((h, i) => (
-            <div key={i} className="skeleton" style={{ height: h, borderRadius: 16 }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {[200, 90, 130, 110].map((h, i) => (
+            <div key={i} className="skeleton" style={{ height: h, borderRadius: 14 }} />
           ))}
         </div>
       </div>
@@ -999,332 +988,377 @@ export default function Profile() {
   }
 
   // ── Main ───────────────────────────────────────────────────
-
   return (
     <div className="page">
       <style>{`
-        .profile-hero {
+        /* ── Hero ── */
+        .ph-hero {
           position: relative;
-          border-radius: 20px;
+          border-radius: 18px;
           overflow: hidden;
-          margin-bottom: 20px;
-          min-height: 180px;
+          margin-bottom: 0;
+          height: 140px;
         }
-        .profile-hero-bg {
+        .ph-hero-bg {
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(ellipse at 20% 50%, #7C3AED 0%, transparent 55%),
-            radial-gradient(ellipse at 80% 20%, #C026D3 0%, transparent 50%),
-            radial-gradient(ellipse at 60% 80%, #F59E0B 0%, transparent 45%),
-            radial-gradient(ellipse at 10% 90%, #4C1D95 0%, transparent 50%),
-            linear-gradient(135deg, #2e1065 0%, #4C1D95 100%);
+            radial-gradient(ellipse 60% 80% at 15% 40%, #7C3AED 0%, transparent 60%),
+            radial-gradient(ellipse 50% 70% at 85% 10%, #A855F7 0%, transparent 55%),
+            radial-gradient(ellipse 45% 60% at 70% 85%, #D97706 0%, transparent 50%),
+            radial-gradient(ellipse 40% 50% at 40% 100%, #6D28D9 0%, transparent 55%),
+            #1e0a3c;
         }
-        .profile-hero-bg::after {
-          content: '';
+        .ph-hero-btn {
           position: absolute;
-          inset: 0;
-          background: rgba(0,0,0,0.15);
-        }
-        .profile-hero-content {
-          position: relative;
-          z-index: 1;
-          padding: 24px 24px 0 24px;
-        }
-        .profile-hero-top {
-          display: flex;
-          justify-content: flex-end;
-          margin-bottom: 16px;
-        }
-        .profile-edit-btn {
-          background: rgba(255,255,255,0.15);
-          border: 1px solid rgba(255,255,255,0.25);
-          border-radius: 10px;
-          padding: 7px 14px;
+          top: 14px; right: 14px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.22);
+          border-radius: 9px;
+          padding: 6px 13px;
           color: #fff;
           font-family: Urbanist, sans-serif;
-          font-size: 13px;
-          font-weight: 700;
+          font-size: 12px; font-weight: 700;
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          backdrop-filter: blur(8px);
+          display: flex; align-items: center; gap: 6px;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           transition: background 0.15s;
+          z-index: 2;
         }
-        .profile-edit-btn:hover { background: rgba(255,255,255,0.25); }
+        .ph-hero-btn:hover { background: rgba(255,255,255,0.22); }
 
-        .profile-avatar-wrap {
+        /* ── Avatar block ── */
+        .ph-identity {
           display: flex;
           align-items: flex-end;
-          gap: 18px;
-          padding: 0 24px;
-          margin-top: -36px;
+          gap: 16px;
+          padding: 0 4px;
+          margin-top: -44px;
+          margin-bottom: 18px;
           position: relative;
-          z-index: 2;
+          z-index: 3;
           flex-wrap: wrap;
         }
-        .profile-avatar {
-          width: 88px; height: 88px;
+        .ph-avatar {
+          width: 84px; height: 84px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #6D28D9, #8B5CF6);
+          background: linear-gradient(145deg, #6D28D9 0%, #9333EA 100%);
           border: 4px solid var(--surface);
           display: flex; align-items: center; justify-content: center;
-          font-size: 28px; font-weight: 900; color: #fff;
-          flex-shrink: 0; letter-spacing: -1px;
-          box-shadow: 0 4px 20px rgba(109,40,217,0.35);
+          font-size: 26px; font-weight: 900; color: #fff;
+          flex-shrink: 0; letter-spacing: -0.5px;
+          box-shadow: 0 2px 16px rgba(109,40,217,0.4);
         }
-        .profile-name-block { padding-bottom: 16px; flex: 1; min-width: 160px; }
-        .profile-name {
-          font-size: 22px; font-weight: 900;
-          letter-spacing: -0.5px; color: var(--text-primary); margin-bottom: 2px;
+        .ph-name-block {
+          padding-bottom: 6px;
+          flex: 1; min-width: 150px;
         }
-        .profile-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
-        .profile-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-        .profile-role-chip {
+        .ph-name {
+          font-size: 20px; font-weight: 900;
+          letter-spacing: -0.4px;
+          color: var(--text-primary);
+          margin-bottom: 2px;
+          line-height: 1.2;
+        }
+        .ph-email {
+          font-size: 12px; color: var(--text-muted); margin-bottom: 8px;
+        }
+        .ph-chips {
+          display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+        }
+        .ph-chip {
           padding: 3px 10px; border-radius: 20px;
           font-size: 11px; font-weight: 700;
-          background: var(--accent-soft); color: var(--accent);
+          display: inline-flex; align-items: center; gap: 4px;
+        }
+        .ph-chip-role {
+          background: var(--accent-soft);
+          color: var(--accent);
           border: 1px solid var(--border);
-          display: inline-flex; align-items: center; gap: 5px;
         }
-        .profile-premium-chip {
-          padding: 3px 10px; border-radius: 20px;
-          font-size: 11px; font-weight: 700;
-          background: linear-gradient(90deg, #F59E0B22, #C026D322);
-          color: #C026D3; border: 1px solid #C026D344;
-          display: inline-flex; align-items: center; gap: 5px;
+        .ph-chip-premium {
+          background: linear-gradient(90deg, #F59E0B18, #C026D318);
+          color: #C026D3;
+          border: 1px solid #C026D330;
         }
 
-        .profile-stat-strip {
-          display: flex; border-radius: 14px;
-          border: 1px solid var(--border); overflow: hidden;
-          margin-bottom: 20px; background: var(--surface-2);
+        /* ── Stat strip ── */
+        .ph-stats {
+          display: flex;
+          border-radius: 13px;
+          border: 1px solid var(--border);
+          overflow: hidden;
+          margin-bottom: 18px;
+          background: var(--surface-2);
         }
-        .profile-stat-item {
-          flex: 1; padding: 14px 10px; text-align: center;
+        .ph-stat {
+          flex: 1; padding: 13px 8px; text-align: center;
           border-right: 1px solid var(--border);
         }
-        .profile-stat-item:last-child { border-right: none; }
-        .profile-stat-value {
-          font-size: 20px; font-weight: 900;
-          color: var(--text-primary); margin-bottom: 2px;
-          letter-spacing: -0.5px;
+        .ph-stat:last-child { border-right: none; }
+        .ph-stat-val {
+          font-size: 18px; font-weight: 900;
+          color: var(--text-primary); margin-bottom: 3px;
           display: flex; align-items: center;
-          justify-content: center; gap: 5px;
+          justify-content: center; gap: 4px;
+          line-height: 1;
         }
-        .profile-stat-label {
-          font-size: 10px; font-weight: 700;
+        .ph-stat-lbl {
+          font-size: 9px; font-weight: 700;
+          color: var(--text-muted);
+          text-transform: uppercase; letter-spacing: 0.9px;
+        }
+
+        /* ── About card ── */
+        .ph-about {
+          border-radius: 14px;
+          border: 1px solid var(--border);
+          overflow: hidden;
+          margin-bottom: 18px;
+        }
+        .ph-about-head {
+          padding: 12px 16px;
+          border-bottom: 1px solid var(--border);
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .ph-about-label {
+          font-size: 11px; font-weight: 700;
           color: var(--text-muted);
           text-transform: uppercase; letter-spacing: 0.8px;
         }
-
-        .profile-about-card {
-          border-radius: 16px; border: 1px solid var(--border);
-          overflow: hidden; margin-bottom: 20px;
+        .ph-about-edit {
+          background: none; border: none; cursor: pointer;
+          color: var(--accent); font-family: Urbanist, sans-serif;
+          font-size: 12px; font-weight: 700; padding: 0;
+          display: inline-flex; align-items: center; gap: 3px;
         }
-        .profile-about-header {
-          padding: 14px 18px 12px; border-bottom: 1px solid var(--border);
-          display: flex; align-items: center; justify-content: space-between;
+        .ph-about-body { padding: 14px 16px; }
+        .ph-bio-text {
+          font-size: 13px; color: var(--text-secondary);
+          line-height: 1.7; margin: 0;
         }
-        .profile-about-title {
-          font-size: 12px; font-weight: 700; color: var(--text-muted);
-          text-transform: uppercase; letter-spacing: 0.8px;
-        }
-        .profile-about-body { padding: 16px 18px; }
-        .profile-bio-display {
-          font-size: 14px; color: var(--text-secondary);
-          line-height: 1.65; margin: 0;
-        }
-        .profile-bio-empty {
-          font-size: 14px; color: var(--text-muted); font-style: italic;
+        .ph-bio-empty {
+          font-size: 13px; color: var(--text-muted); font-style: italic;
         }
 
-        .profile-edit-form {
-          border-radius: 16px; border: 1px solid var(--accent);
-          overflow: hidden; margin-bottom: 20px;
+        /* ── Edit form ── */
+        .ph-edit {
+          border-radius: 14px;
+          border: 1px solid var(--accent);
+          overflow: hidden;
+          margin-bottom: 18px;
           box-shadow: 0 0 0 3px var(--accent-soft);
         }
-        .profile-edit-header {
-          padding: 14px 18px; background: var(--accent-soft);
+        .ph-edit-head {
+          padding: 12px 16px;
+          background: var(--accent-soft);
           border-bottom: 1px solid var(--border);
           font-size: 13px; font-weight: 700; color: var(--accent);
-          display: flex; align-items: center; gap: 8px;
+          display: flex; align-items: center; gap: 7px;
         }
-        .profile-form-inner {
-          padding: 18px; display: flex; flex-direction: column; gap: 14px;
+        .ph-edit-body {
+          padding: 16px;
+          display: flex; flex-direction: column; gap: 13px;
         }
-        .profile-form-row {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+        .ph-edit-row {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 11px;
         }
-        .profile-field-label {
-          font-size: 12px; font-weight: 700; color: var(--text-muted);
+        .ph-field-lbl {
+          font-size: 11px; font-weight: 700; color: var(--text-muted);
           text-transform: uppercase; letter-spacing: 0.7px;
-          display: block; margin-bottom: 6px;
+          display: block; margin-bottom: 5px;
         }
-        .profile-form-actions {
+        .ph-edit-foot {
           display: flex; gap: 8px; justify-content: flex-end;
-          padding: 12px 18px; background: var(--surface-2);
+          padding: 11px 16px;
+          background: var(--surface-2);
           border-top: 1px solid var(--border);
         }
 
-        .profile-mentorship-grid {
-          display: grid; gap: 12px; margin-bottom: 20px;
+        /* ── Mentorship cards ── */
+        .ph-mship-grid {
+          display: grid; gap: 11px; margin-bottom: 18px;
         }
-        .profile-mentorship-card {
-          border-radius: 16px; padding: 18px 20px;
-          cursor: pointer; display: flex; align-items: center; gap: 16px;
-          border: 1px solid var(--border); background: var(--surface-2);
-          transition: transform 0.15s, box-shadow 0.15s;
+        .ph-mship-card {
+          border-radius: 14px; padding: 16px 18px;
+          cursor: pointer;
+          display: flex; align-items: center; gap: 14px;
+          border: 1px solid var(--border);
+          background: var(--surface-2);
+          transition: transform 0.13s, box-shadow 0.13s;
         }
-        .profile-mentorship-card:hover {
+        .ph-mship-card:hover {
           transform: translateY(-1px);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+          box-shadow: 0 4px 14px rgba(0,0,0,0.07);
         }
-        .profile-mentorship-card.purple {
+        .ph-mship-card.purple {
           background: linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%);
-          border: none; color: #fff;
+          border: none;
         }
-        .profile-mentorship-icon {
-          width: 44px; height: 44px; border-radius: 12px;
+        .ph-mship-icon {
+          width: 40px; height: 40px; border-radius: 11px;
           display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0; background: rgba(255,255,255,0.15);
+          flex-shrink: 0;
         }
-        .profile-mentorship-icon.light { background: var(--accent-soft); }
-        .profile-mentorship-text { flex: 1; min-width: 0; }
-        .profile-mentorship-card-title { font-size: 14px; font-weight: 800; margin-bottom: 2px; }
-        .profile-mentorship-card-sub { font-size: 12px; opacity: 0.75; line-height: 1.4; }
+        .ph-mship-icon.dark { background: rgba(255,255,255,0.14); }
+        .ph-mship-icon.light { background: var(--accent-soft); }
+        .ph-mship-title {
+          font-size: 13px; font-weight: 800; margin-bottom: 1px;
+        }
+        .ph-mship-sub {
+          font-size: 12px; line-height: 1.4;
+        }
 
-        .profile-settings-stack {
-          display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;
+        /* ── Settings ── */
+        .ph-settings {
+          display: flex; flex-direction: column; gap: 11px; margin-bottom: 16px;
         }
-        .profile-account-row {
-          padding: 12px 16px; background: var(--surface-2);
-          border-radius: 12px; display: flex;
-          justify-content: space-between; align-items: center; gap: 10;
+        .ph-section {
+          border-radius: 14px;
+          border: 1px solid var(--border);
+          overflow: hidden;
         }
-        .profile-account-label {
+        .ph-section-head {
+          padding: 11px 16px;
+          background: var(--surface-2);
+          border-bottom: 1px solid var(--border);
           font-size: 11px; font-weight: 700; color: var(--text-muted);
+          text-transform: uppercase; letter-spacing: 0.8px;
+        }
+        .ph-account-row {
+          padding: 11px 14px;
+          display: flex; justify-content: space-between; align-items: center; gap: 10px;
+          border-bottom: 1px solid var(--border);
+        }
+        .ph-account-row:last-child { border-bottom: none; }
+        .ph-account-lbl {
+          font-size: 10px; font-weight: 700; color: var(--text-muted);
           text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px;
         }
-        .profile-account-value {
+        .ph-account-val {
           font-size: 13px; font-weight: 500;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          max-width: 220px;
         }
-        .profile-danger-card {
-          border-radius: 16px; border: 1px solid var(--danger-soft); overflow: hidden;
+        .ph-role-blurb {
+          border-radius: 14px;
+          padding: 14px 16px;
+          display: flex; gap: 12px; align-items: flex-start;
+          margin-bottom: 0;
         }
-        .profile-danger-inner {
-          padding: 16px 18px; display: flex;
-          align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+        .ph-role-icon-wrap {
+          width: 34px; height: 34px; border-radius: 9px;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .ph-danger {
+          border-radius: 14px;
+          border: 1px solid var(--danger-soft);
+          padding: 14px 16px;
+          display: flex; align-items: center;
+          justify-content: space-between; gap: 12px; flex-wrap: wrap;
         }
 
-        @media (max-width: 480px) {
-          .profile-form-row { grid-template-columns: 1fr; }
-          .profile-avatar { width: 76px; height: 76px; font-size: 24px; }
-          .profile-name { font-size: 18px; }
-          .profile-avatar-wrap { margin-top: -28px; }
+        @media (max-width: 520px) {
+          .ph-edit-row { grid-template-columns: 1fr; }
+          .ph-avatar { width: 72px; height: 72px; font-size: 22px; }
+          .ph-name { font-size: 17px; }
+          .ph-identity { margin-top: -36px; }
+          .ph-hero { height: 120px; }
         }
       `}</style>
 
       <ToastContainer toasts={toasts} />
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <div className="profile-hero">
-        <div className="profile-hero-bg" />
-        <div className="profile-hero-content">
-          <div className="profile-hero-top">
-            <button
-              className="profile-edit-btn"
-              onClick={() => setEditMode(e => !e)}
-            >
-              {editMode
-                ? <><X size={14} /> Cancel</>
-                : <><Pencil size={14} /> Edit Profile</>
-              }
-            </button>
-          </div>
-        </div>
+      <div className="ph-hero">
+        <div className="ph-hero-bg" />
+        <button className="ph-hero-btn" onClick={() => setEditMode(e => !e)}>
+          {editMode
+            ? <><X size={13} /> Cancel</>
+            : <><Pencil size={13} /> Edit Profile</>
+          }
+        </button>
       </div>
 
-      {/* ── AVATAR OVERLAP ───────────────────────────────────── */}
-      <div className="profile-avatar-wrap" style={{ marginBottom: 16 }}>
-        <div className="profile-avatar">{initials}</div>
-        <div className="profile-name-block">
-          <div className="profile-name">{form.full_name || 'Your Name'}</div>
-          <div className="profile-sub">{form.field_of_study || user?.email}</div>
-          <div className="profile-badges">
-            <span className="profile-role-chip">
-              <RoleIcon size={11} /> {roleLabel}
+      {/* ── IDENTITY ─────────────────────────────────────────── */}
+      <div className="ph-identity">
+        <div className="ph-avatar">{initials}</div>
+        <div className="ph-name-block">
+          <div className="ph-name">{displayName}</div>
+          <div className="ph-email">{user?.email}</div>
+          <div className="ph-chips">
+            <span className="ph-chip ph-chip-role">
+              <RoleIcon size={10} strokeWidth={2.2} /> {roleLabel}
             </span>
             {isMe && (
-              <span className="profile-premium-chip">
-                <Star size={11} /> Premium
+              <span className="ph-chip ph-chip-premium">
+                <Star size={10} strokeWidth={2.2} /> Premium
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── STAT STRIP ───────────────────────────────────────── */}
-      <div className="profile-stat-strip">
+      {/* ── STATS ────────────────────────────────────────────── */}
+      <div className="ph-stats">
         {[
           {
-            value: (
-              <>
-                {streak.current_streak}
-                <Flame size={16} color="var(--warning)" />
-              </>
+            val: (
+              <>{streak.current_streak}<Zap size={14} color="var(--warning)" fill="var(--warning)" /></>
             ),
-            label: 'Day Streak',
+            lbl: 'Day Streak',
           },
-          { value: `${streak.longest_streak}d`, label: 'Best Streak' },
+          { val: `${streak.longest_streak}d`, lbl: 'Best Streak' },
           {
-            value: form.field_of_study
-              ? form.field_of_study.split(' ').slice(0, 1).join('')
-              : '—',
-            label: 'Focus',
+            val: form.field_of_study ? form.field_of_study.split(' ')[0] : roleLabel,
+            lbl: form.field_of_study ? 'Focus' : 'Role',
           },
-          { value: roleLabel, label: 'Role' },
+          { val: form.username ? `@${form.username}` : '—', lbl: 'Handle' },
         ].map((s, i) => (
-          <div key={i} className="profile-stat-item">
-            <div className="profile-stat-value">{s.value}</div>
-            <div className="profile-stat-label">{s.label}</div>
+          <div key={i} className="ph-stat">
+            <div className="ph-stat-val">{s.val}</div>
+            <div className="ph-stat-lbl">{s.lbl}</div>
           </div>
         ))}
       </div>
 
       {/* ── EDIT FORM ────────────────────────────────────────── */}
       {editMode && (
-        <div className="profile-edit-form">
-          <div className="profile-edit-header">
-            <Pencil size={14} /> Editing Profile
+        <div className="ph-edit">
+          <div className="ph-edit-head">
+            <Pencil size={13} /> Editing Profile
           </div>
-          <div className="profile-form-inner">
-            <div className="profile-form-row">
+          <div className="ph-edit-body">
+            <div className="ph-edit-row">
               <div>
-                <label className="profile-field-label">Full Name</label>
-                <input className="input" value={form.full_name} onChange={update('full_name')} placeholder="Your full name" />
+                <label className="ph-field-lbl">Full Name</label>
+                <input className="input" value={form.full_name}
+                  onChange={update('full_name')} placeholder="Your full name" />
               </div>
               <div>
-                <label className="profile-field-label">Username</label>
-                <input className="input" value={form.username} onChange={update('username')} placeholder="@handle" />
+                <label className="ph-field-lbl">Username</label>
+                <input className="input" value={form.username}
+                  onChange={update('username')} placeholder="@handle" />
               </div>
             </div>
             <div>
-              <label className="profile-field-label">Field of Study / Expertise</label>
-              <input className="input" value={form.field_of_study} onChange={update('field_of_study')} placeholder="e.g. Cloud Engineering, Data Science" />
+              <label className="ph-field-lbl">Field of Study / Expertise</label>
+              <input className="input" value={form.field_of_study}
+                onChange={update('field_of_study')}
+                placeholder="e.g. Cloud Engineering, Data Science" />
             </div>
             <div>
-              <label className="profile-field-label">Bio</label>
+              <label className="ph-field-lbl">Bio</label>
               <textarea
                 className="input" value={form.bio} onChange={update('bio')}
                 placeholder="Tell your mentor or mentees about yourself..."
-                style={{ minHeight: 90 }}
+                style={{ minHeight: 85 }}
               />
             </div>
           </div>
-          <div className="profile-form-actions">
+          <div className="ph-edit-foot">
             <button className="btn btn-secondary btn-sm" onClick={() => setEditMode(false)}>
               Cancel
             </button>
@@ -1337,25 +1371,17 @@ export default function Profile() {
 
       {/* ── ABOUT (view mode) ────────────────────────────────── */}
       {!editMode && (
-        <div className="profile-about-card">
-          <div className="profile-about-header">
-            <span className="profile-about-title">About</span>
-            <button
-              onClick={() => setEditMode(true)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--accent)', fontFamily: 'Urbanist, sans-serif',
-                fontSize: 12, fontWeight: 700, padding: 0,
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-              }}
-            >
-              Edit <ArrowRight size={12} />
+        <div className="ph-about">
+          <div className="ph-about-head">
+            <span className="ph-about-label">About</span>
+            <button className="ph-about-edit" onClick={() => setEditMode(true)}>
+              Edit <ArrowRight size={11} />
             </button>
           </div>
-          <div className="profile-about-body">
+          <div className="ph-about-body">
             {form.bio
-              ? <p className="profile-bio-display">{form.bio}</p>
-              : <span className="profile-bio-empty">
+              ? <p className="ph-bio-text">{form.bio}</p>
+              : <span className="ph-bio-empty">
                   No bio yet — add one to introduce yourself to your {roleMentor ? 'mentees' : 'mentor'}.
                 </span>
             }
@@ -1366,135 +1392,94 @@ export default function Profile() {
       {/* ── MENTORSHIP CARDS ─────────────────────────────────── */}
       {(showMenteesCard || showMentorCard) && (
         <div
-          className="profile-mentorship-grid"
-          style={{
-            gridTemplateColumns: showMenteesCard && showMentorCard ? '1fr 1fr' : '1fr',
-          }}
+          className="ph-mship-grid"
+          style={{ gridTemplateColumns: showMenteesCard && showMentorCard ? '1fr 1fr' : '1fr' }}
         >
           {showMenteesCard && (
-            <div
-              className="profile-mentorship-card purple"
-              onClick={() => setSubPage('mentees')}
-            >
-              <div className="profile-mentorship-icon">
-                <Users size={20} color="#fff" strokeWidth={1.8} />
+            <div className="ph-mship-card purple" onClick={() => setSubPage('mentees')}>
+              <div className="ph-mship-icon dark">
+                <Users size={19} color="#fff" strokeWidth={1.8} />
               </div>
-              <div className="profile-mentorship-text">
-                <div className="profile-mentorship-card-title" style={{ color: '#fff' }}>
-                  My Mentees
-                </div>
-                <div className="profile-mentorship-card-sub" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="ph-mship-title" style={{ color: '#fff' }}>My Mentees</div>
+                <div className="ph-mship-sub" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   Track progress & AI summaries
                 </div>
               </div>
-              <ArrowRight size={16} color="rgba(255,255,255,0.6)" />
+              <ArrowRight size={15} color="rgba(255,255,255,0.5)" />
             </div>
           )}
-
           {showMentorCard && (
-            <div
-              className="profile-mentorship-card"
-              onClick={() => setSubPage('mentor')}
-            >
-              <div className="profile-mentorship-icon light">
-                <Target size={20} color="var(--accent)" strokeWidth={1.8} />
+            <div className="ph-mship-card" onClick={() => setSubPage('mentor')}>
+              <div className="ph-mship-icon light">
+                <Target size={19} color="var(--accent)" strokeWidth={1.8} />
               </div>
-              <div className="profile-mentorship-text">
-                <div className="profile-mentorship-card-title">My Mentor</div>
-                <div className="profile-mentorship-card-sub" style={{ color: 'var(--text-muted)' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="ph-mship-title">My Mentor</div>
+                <div className="ph-mship-sub" style={{ color: 'var(--text-muted)' }}>
                   View connection status
                 </div>
               </div>
-              <ArrowRight size={16} color="var(--text-muted)" />
+              <ArrowRight size={15} color="var(--text-muted)" />
             </div>
           )}
         </div>
       )}
 
-      {/* ── SETTINGS STACK ───────────────────────────────────── */}
-      <div className="profile-settings-stack">
+      {/* ── SETTINGS ─────────────────────────────────────────── */}
+      <div className="ph-settings">
 
-        {/* Account info */}
-        <div style={{ borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
-          <div style={{
-            padding: '12px 18px', background: 'var(--surface-2)',
-            borderBottom: '1px solid var(--border)',
-            fontSize: 12, fontWeight: 700, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.8px',
-          }}>
-            Account
-          </div>
-          <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {[
-              {
-                label: 'Email',
-                value: user?.email,
-                badge: {
-                  text: (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <CheckCircle size={11} /> Verified
-                    </span>
-                  ),
-                  cls: 'badge-success',
-                },
-              },
-              {
-                label: 'Account Type',
-                value: roleLabel,
-                badge: {
-                  text: (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <RoleIcon size={11} /> {roleLabel}
-                    </span>
-                  ),
-                  cls: 'badge-accent',
-                },
-              },
-            ].map((item, i) => (
-              <div key={i} className="profile-account-row">
-                <div style={{ minWidth: 0 }}>
-                  <div className="profile-account-label">{item.label}</div>
-                  <div className="profile-account-value">{item.value}</div>
-                </div>
-                <span className={`badge ${item.badge.cls}`} style={{ flexShrink: 0 }}>
-                  {item.badge.text}
-                </span>
+        {/* Account */}
+        <div className="ph-section">
+          <div className="ph-section-head">Account</div>
+          {[
+            {
+              lbl: 'Email', val: user?.email,
+              badge: <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <CheckCircle size={10} /> Verified
+              </span>,
+            },
+            {
+              lbl: 'Account Type', val: roleLabel,
+              badge: <span className="badge badge-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <RoleIcon size={10} /> {roleLabel}
+              </span>,
+            },
+          ].map((item, i) => (
+            <div key={i} className="ph-account-row">
+              <div style={{ minWidth: 0 }}>
+                <div className="ph-account-lbl">{item.lbl}</div>
+                <div className="ph-account-val">{item.val}</div>
               </div>
-            ))}
-          </div>
+              {item.badge}
+            </div>
+          ))}
         </div>
 
         {/* Role blurb */}
-        <div style={{
-          borderRadius: 16,
-          background: isMe
-            ? 'linear-gradient(135deg, #F59E0B11, #C026D311)'
-            : 'var(--accent-soft)',
-          border: `1px solid ${isMe ? '#C026D333' : 'var(--border)'}`,
-          padding: '16px 18px',
-          display: 'flex', gap: 12, alignItems: 'flex-start',
+        <div className="ph-role-blurb" style={{
+          background: isMe ? 'linear-gradient(135deg,#F59E0B10,#C026D310)' : 'var(--accent-soft)',
+          border: `1px solid ${isMe ? '#C026D328' : 'var(--border)'}`,
         }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: isMe ? '#C026D322' : 'var(--accent-soft)',
-            border: `1px solid ${isMe ? '#C026D344' : 'var(--border)'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          <div className="ph-role-icon-wrap" style={{
+            background: isMe ? '#C026D318' : 'var(--accent-soft)',
+            border: `1px solid ${isMe ? '#C026D330' : 'var(--border)'}`,
           }}>
             {isMe
-              ? <Star size={17} color="#C026D3" strokeWidth={1.8} />
+              ? <Star size={16} color="#C026D3" strokeWidth={1.8} />
               : roleMentor
-              ? <Target size={17} color="var(--accent)" strokeWidth={1.8} />
-              : <BookOpen size={17} color="var(--accent)" strokeWidth={1.8} />
+              ? <Target size={16} color="var(--accent)" strokeWidth={1.8} />
+              : <BookOpen size={16} color="var(--accent)" strokeWidth={1.8} />
             }
           </div>
           <div>
             <div style={{
-              fontSize: 13, fontWeight: 800, marginBottom: 4,
+              fontSize: 12, fontWeight: 800, marginBottom: 3,
               color: isMe ? '#C026D3' : 'var(--accent)',
             }}>
               {isMe ? 'S / Y A N  Premium' : roleMentor ? 'You are a Mentor' : 'You are a Mentee'}
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
               {isMe
                 ? 'Full access to all Dôti features — mentee tracking, mentor connection, and premium tools.'
                 : roleMentor
@@ -1508,24 +1493,25 @@ export default function Profile() {
         <ChangePasswordSection />
 
         {/* Sign out */}
-        <div className="profile-danger-card">
-          <div className="profile-danger-inner">
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 2 }}>
-                Sign Out
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                You'll be returned to the login screen.
-              </div>
-            </div>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={signOut}
-              style={{ color: 'var(--danger)', borderColor: 'var(--danger-soft)', flexShrink: 0 }}
-            >
+        <div className="ph-danger">
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 2 }}>
               Sign Out
-            </button>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              You'll be returned to the login screen.
+            </div>
           </div>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={signOut}
+            style={{
+              color: 'var(--danger)', borderColor: 'var(--danger-soft)',
+              flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <LogOut size={13} /> Sign Out
+          </button>
         </div>
       </div>
     </div>
