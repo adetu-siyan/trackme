@@ -453,15 +453,17 @@ function WaveBackground() {
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      height: '55vh', zIndex: 0, overflow: 'hidden',
+      height: '38vh', zIndex: 0, overflow: 'hidden',
       pointerEvents: 'none',
+      maskImage: 'linear-gradient(to bottom, transparent 0%, black 30%)',
+      WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 30%)',
     }}>
-      <svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMax slice"
+      <svg viewBox="0 0 800 380" preserveAspectRatio="xMidYMax slice"
         style={{ width: '100%', height: '100%', display: 'block' }}>
-        <path d="M-60,500 L-60,280 Q80,180 200,240 Q340,310 440,210 Q560,100 680,200 Q780,280 860,220 L860,500 Z" fill="#3C2A7A" opacity="0.55" />
-        <path d="M-60,500 L-60,330 Q60,260 180,310 Q320,370 440,280 Q580,180 700,270 Q800,330 860,290 L860,500 Z" fill="#6040C0" opacity="0.5" />
-        <path d="M-60,500 L-60,390 Q80,320 200,370 Q340,430 460,350 Q600,260 720,330 Q810,380 860,360 L860,500 Z" fill="#8A68E0" opacity="0.45" />
-        <path d="M-60,500 L-60,440 Q100,380 240,420 Q380,460 500,400 Q640,330 760,390 Q830,420 860,410 L860,500 Z" fill="#B89FF5" opacity="0.35" />
+        <path d="M-60,380 L-60,200 Q80,120 200,170 Q340,230 440,140 Q560,40 680,130 Q780,200 860,150 L860,380 Z" fill="#3C2A7A" opacity="0.6" />
+        <path d="M-60,380 L-60,240 Q60,180 180,220 Q320,270 440,190 Q580,100 700,180 Q800,240 860,200 L860,380 Z" fill="#6040C0" opacity="0.55" />
+        <path d="M-60,380 L-60,290 Q80,230 200,268 Q340,316 460,248 Q600,168 720,230 Q810,272 860,255 L860,380 Z" fill="#8A68E0" opacity="0.5" />
+        <path d="M-60,380 L-60,330 Q100,278 240,310 Q380,346 500,295 Q640,238 760,285 Q830,312 860,305 L860,380 Z" fill="#B89FF5" opacity="0.4" />
       </svg>
     </div>
   )
