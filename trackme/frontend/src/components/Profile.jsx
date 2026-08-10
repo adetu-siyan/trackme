@@ -970,18 +970,13 @@ export default function Profile() {
   return (
     <div className="page">
       <style>{`
-        .ph-card {
-          border-radius: 20px;
-          border: 1px solid var(--border);
-          overflow: hidden;
-          margin-bottom: 16px;
-          background: var(--surface);
-        }
 
-        /* Banner */
+        /* ================================================
+           SHARED BASE STYLES
+        ================================================ */
+
         .ph-banner {
           position: relative;
-          height: 130px;
           background:
             radial-gradient(ellipse 80% 120% at 0% 60%, #7C3AED 0%, transparent 55%),
             radial-gradient(ellipse 60% 100% at 40% -10%, #A855F7 0%, transparent 50%),
@@ -990,6 +985,27 @@ export default function Profile() {
             radial-gradient(ellipse 40% 50% at 85% 90%, #EC4899 0%, transparent 45%),
             #0f0720;
         }
+
+        /* ================================================
+           MOBILE LAYOUT (default)
+        ================================================ */
+
+        .ph-page-wrap {
+          width: 100%;
+        }
+
+        .ph-card {
+          border-radius: 20px;
+          border: 1px solid var(--border);
+          overflow: hidden;
+          margin-bottom: 16px;
+          background: var(--surface);
+        }
+
+        .ph-banner {
+          height: 130px;
+        }
+
         .ph-banner-btn {
           position: absolute;
           top: 12px; right: 12px;
@@ -1009,11 +1025,9 @@ export default function Profile() {
         }
         .ph-banner-btn:hover { background: rgba(255,255,255,0.26); }
 
-        /* Avatar floats over banner bottom edge */
         .ph-avatar-wrap {
           padding: 0 20px;
           margin-top: -36px;
-          margin-bottom: 0;
           position: relative;
           z-index: 3;
         }
@@ -1028,7 +1042,6 @@ export default function Profile() {
           box-shadow: 0 4px 20px rgba(109,40,217,0.45);
         }
 
-        /* Name block sits fully below banner */
         .ph-identity {
           padding: 10px 20px 18px 20px;
         }
@@ -1054,7 +1067,9 @@ export default function Profile() {
           color: #C026D3; border: 1px solid #C026D330;
         }
 
-        /* Stats strip */
+        /* desktop identity — hidden on mobile */
+        .ph-desktop-identity { display: none; }
+
         .ph-stats {
           display: flex;
           border-top: 1px solid var(--border);
@@ -1186,7 +1201,93 @@ export default function Profile() {
           justify-content: space-between; gap: 12px; flex-wrap: wrap;
         }
 
-        @media (max-width: 520px) {
+        /* ================================================
+           DESKTOP LAYOUT (768px+)
+        ================================================ */
+
+        @media (min-width: 768px) {
+
+          /* Center and constrain */
+          .ph-page-wrap {
+            max-width: 620px;
+            margin: 0 auto;
+          }
+
+          /* Taller banner on desktop */
+          .ph-banner {
+            height: 200px;
+          }
+
+          /* Hide the mobile avatar+name blocks */
+          .ph-avatar-wrap { display: none; }
+          .ph-identity { display: none; }
+
+          /* Desktop identity row sits inside the banner at the bottom */
+          .ph-desktop-identity {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            position: absolute;
+            bottom: 22px;
+            left: 24px;
+            right: 140px;
+            z-index: 3;
+          }
+          .ph-desktop-avatar {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #6D28D9 0%, #9333EA 100%);
+            border: 4px solid rgba(255,255,255,0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px; font-weight: 900; color: #fff;
+            letter-spacing: -0.5px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+          }
+          .ph-desktop-name-block {
+            padding-bottom: 4px;
+          }
+          .ph-desktop-name {
+            font-size: 22px; font-weight: 900;
+            letter-spacing: -0.5px;
+            color: #fff;
+            margin-bottom: 3px; line-height: 1.2;
+            text-shadow: 0 1px 8px rgba(0,0,0,0.4);
+          }
+          .ph-desktop-email {
+            font-size: 12px;
+            color: rgba(255,255,255,0.65);
+            margin-bottom: 8px;
+          }
+          .ph-desktop-chips {
+            display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+          }
+          .ph-desktop-chip {
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 700;
+            display: inline-flex; align-items: center; gap: 4px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+          }
+          .ph-desktop-chip-role {
+            background: rgba(255,255,255,0.18);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.28);
+          }
+          .ph-desktop-chip-premium {
+            background: rgba(192,38,211,0.25);
+            color: #f0abfc;
+            border: 1px solid rgba(192,38,211,0.4);
+          }
+
+          /* Banner needs relative positioning for absolute children */
+          .ph-banner { position: relative; }
+        }
+
+        /* ================================================
+           SMALL MOBILE TWEAKS
+        ================================================ */
+        @media (max-width: 400px) {
           .ph-edit-row { grid-template-columns: 1fr; }
           .ph-avatar { width: 66px; height: 66px; font-size: 20px; }
           .ph-name { font-size: 17px; }
@@ -1197,244 +1298,270 @@ export default function Profile() {
 
       <ToastContainer toasts={toasts} />
 
-      {/* ── HERO CARD ── */}
-      <div className="ph-card">
+      <div className="ph-page-wrap">
 
-        {/* Banner */}
-        <div className="ph-banner">
-          <button className="ph-banner-btn" onClick={() => setEditMode(e => !e)}>
-            {editMode ? <><X size={13} /> Cancel</> : <><Pencil size={13} /> Edit Profile</>}
-          </button>
-        </div>
+        {/* ── HERO CARD ── */}
+        <div className="ph-card">
 
-        {/* Avatar — overlaps banner bottom */}
-        <div className="ph-avatar-wrap">
-          <div className="ph-avatar">{initials}</div>
-        </div>
+          {/* Banner */}
+          <div className="ph-banner">
 
-        {/* Name / email / chips — fully below banner */}
-        <div className="ph-identity">
-          <div className="ph-name">{displayName}</div>
-          <div className="ph-email">{user?.email}</div>
-          <div className="ph-chips">
-            <span className="ph-chip ph-chip-role">
-              <RoleIcon size={10} strokeWidth={2.2} /> {roleLabel}
-            </span>
-            {isMe && (
-              <span className="ph-chip ph-chip-premium">
-                <Star size={10} strokeWidth={2.2} /> Premium
+            {/* Edit button — always visible */}
+            <button className="ph-banner-btn" onClick={() => setEditMode(e => !e)}>
+              {editMode ? <><X size={13} /> Cancel</> : <><Pencil size={13} /> Edit Profile</>}
+            </button>
+
+            {/* Desktop identity — lives inside banner */}
+            <div className="ph-desktop-identity">
+              <div className="ph-desktop-avatar">{initials}</div>
+              <div className="ph-desktop-name-block">
+                <div className="ph-desktop-name">{displayName}</div>
+                <div className="ph-desktop-email">{user?.email}</div>
+                <div className="ph-desktop-chips">
+                  <span className="ph-desktop-chip ph-desktop-chip-role">
+                    <RoleIcon size={10} strokeWidth={2.2} /> {roleLabel}
+                  </span>
+                  {isMe && (
+                    <span className="ph-desktop-chip ph-desktop-chip-premium">
+                      <Star size={10} strokeWidth={2.2} /> Premium
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Mobile avatar — overlaps banner, hidden on desktop */}
+          <div className="ph-avatar-wrap">
+            <div className="ph-avatar">{initials}</div>
+          </div>
+
+          {/* Mobile name/email/chips — hidden on desktop */}
+          <div className="ph-identity">
+            <div className="ph-name">{displayName}</div>
+            <div className="ph-email">{user?.email}</div>
+            <div className="ph-chips">
+              <span className="ph-chip ph-chip-role">
+                <RoleIcon size={10} strokeWidth={2.2} /> {roleLabel}
               </span>
+              {isMe && (
+                <span className="ph-chip ph-chip-premium">
+                  <Star size={10} strokeWidth={2.2} /> Premium
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Stats strip — same on both */}
+          <div className="ph-stats">
+            {[
+              {
+                val: (
+                  <>{streak.current_streak}<Zap size={13} color="var(--warning)" fill="var(--warning)" /></>
+                ),
+                lbl: 'Day Streak',
+              },
+              { val: `${streak.longest_streak}d`, lbl: 'Best Streak' },
+              {
+                val: form.field_of_study ? form.field_of_study.split(' ')[0] : roleLabel,
+                lbl: form.field_of_study ? 'Focus' : 'Role',
+              },
+              { val: form.username ? `@${form.username}` : '—', lbl: 'Handle' },
+            ].map((s, i) => (
+              <div key={i} className="ph-stat">
+                <div className="ph-stat-val">{s.val}</div>
+                <div className="ph-stat-lbl">{s.lbl}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── EDIT FORM ── */}
+        {editMode && (
+          <div className="ph-edit">
+            <div className="ph-edit-head"><Pencil size={13} /> Editing Profile</div>
+            <div className="ph-edit-body">
+              <div className="ph-edit-row">
+                <div>
+                  <label className="ph-field-lbl">Full Name</label>
+                  <input className="input" value={form.full_name}
+                    onChange={update('full_name')} placeholder="Your full name" />
+                </div>
+                <div>
+                  <label className="ph-field-lbl">Username</label>
+                  <input className="input" value={form.username}
+                    onChange={update('username')} placeholder="@handle" />
+                </div>
+              </div>
+              <div>
+                <label className="ph-field-lbl">Field of Study / Expertise</label>
+                <input className="input" value={form.field_of_study}
+                  onChange={update('field_of_study')}
+                  placeholder="e.g. Cloud Engineering, Data Science" />
+              </div>
+              <div>
+                <label className="ph-field-lbl">Bio</label>
+                <textarea className="input" value={form.bio} onChange={update('bio')}
+                  placeholder="Tell your mentor or mentees about yourself..."
+                  style={{ minHeight: 85 }} />
+              </div>
+            </div>
+            <div className="ph-edit-foot">
+              <button className="btn btn-secondary btn-sm" onClick={() => setEditMode(false)}>Cancel</button>
+              <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── ABOUT ── */}
+        {!editMode && (
+          <div className="ph-about">
+            <div className="ph-about-head">
+              <span className="ph-about-label">About</span>
+              <button className="ph-about-edit" onClick={() => setEditMode(true)}>
+                Edit <ArrowRight size={11} />
+              </button>
+            </div>
+            <div className="ph-about-body">
+              {form.bio
+                ? <p className="ph-bio-text">{form.bio}</p>
+                : <span className="ph-bio-empty">
+                    No bio yet — add one to introduce yourself to your {roleMentor ? 'mentees' : 'mentor'}.
+                  </span>
+              }
+            </div>
+          </div>
+        )}
+
+        {/* ── MENTORSHIP CARDS ── */}
+        {(showMenteesCard || showMentorCard) && (
+          <div
+            className="ph-mship-grid"
+            style={{ gridTemplateColumns: showMenteesCard && showMentorCard ? '1fr 1fr' : '1fr' }}
+          >
+            {showMenteesCard && (
+              <div className="ph-mship-card purple" onClick={() => setSubPage('mentees')}>
+                <div className="ph-mship-icon dark">
+                  <Users size={19} color="#fff" strokeWidth={1.8} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="ph-mship-title" style={{ color: '#fff' }}>My Mentees</div>
+                  <div className="ph-mship-sub" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    Track progress & AI summaries
+                  </div>
+                </div>
+                <ArrowRight size={15} color="rgba(255,255,255,0.5)" />
+              </div>
+            )}
+            {showMentorCard && (
+              <div className="ph-mship-card" onClick={() => setSubPage('mentor')}>
+                <div className="ph-mship-icon light">
+                  <Target size={19} color="var(--accent)" strokeWidth={1.8} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="ph-mship-title">My Mentor</div>
+                  <div className="ph-mship-sub" style={{ color: 'var(--text-muted)' }}>
+                    View connection status
+                  </div>
+                </div>
+                <ArrowRight size={15} color="var(--text-muted)" />
+              </div>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Stats strip */}
-        <div className="ph-stats">
-          {[
-            {
-              val: (
-                <>{streak.current_streak}<Zap size={13} color="var(--warning)" fill="var(--warning)" /></>
-              ),
-              lbl: 'Day Streak',
-            },
-            { val: `${streak.longest_streak}d`, lbl: 'Best Streak' },
-            {
-              val: form.field_of_study ? form.field_of_study.split(' ')[0] : roleLabel,
-              lbl: form.field_of_study ? 'Focus' : 'Role',
-            },
-            { val: form.username ? `@${form.username}` : '—', lbl: 'Handle' },
-          ].map((s, i) => (
-            <div key={i} className="ph-stat">
-              <div className="ph-stat-val">{s.val}</div>
-              <div className="ph-stat-lbl">{s.lbl}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+        {/* ── SETTINGS ── */}
+        <div className="ph-settings">
 
-      {/* ── EDIT FORM ── */}
-      {editMode && (
-        <div className="ph-edit">
-          <div className="ph-edit-head"><Pencil size={13} /> Editing Profile</div>
-          <div className="ph-edit-body">
-            <div className="ph-edit-row">
-              <div>
-                <label className="ph-field-lbl">Full Name</label>
-                <input className="input" value={form.full_name}
-                  onChange={update('full_name')} placeholder="Your full name" />
-              </div>
-              <div>
-                <label className="ph-field-lbl">Username</label>
-                <input className="input" value={form.username}
-                  onChange={update('username')} placeholder="@handle" />
-              </div>
-            </div>
-            <div>
-              <label className="ph-field-lbl">Field of Study / Expertise</label>
-              <input className="input" value={form.field_of_study}
-                onChange={update('field_of_study')}
-                placeholder="e.g. Cloud Engineering, Data Science" />
-            </div>
-            <div>
-              <label className="ph-field-lbl">Bio</label>
-              <textarea className="input" value={form.bio} onChange={update('bio')}
-                placeholder="Tell your mentor or mentees about yourself..."
-                style={{ minHeight: 85 }} />
-            </div>
-          </div>
-          <div className="ph-edit-foot">
-            <button className="btn btn-secondary btn-sm" onClick={() => setEditMode(false)}>Cancel</button>
-            <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── ABOUT ── */}
-      {!editMode && (
-        <div className="ph-about">
-          <div className="ph-about-head">
-            <span className="ph-about-label">About</span>
-            <button className="ph-about-edit" onClick={() => setEditMode(true)}>
-              Edit <ArrowRight size={11} />
-            </button>
-          </div>
-          <div className="ph-about-body">
-            {form.bio
-              ? <p className="ph-bio-text">{form.bio}</p>
-              : <span className="ph-bio-empty">
-                  No bio yet — add one to introduce yourself to your {roleMentor ? 'mentees' : 'mentor'}.
-                </span>
-            }
-          </div>
-        </div>
-      )}
-
-      {/* ── MENTORSHIP CARDS ── */}
-      {(showMenteesCard || showMentorCard) && (
-        <div
-          className="ph-mship-grid"
-          style={{ gridTemplateColumns: showMenteesCard && showMentorCard ? '1fr 1fr' : '1fr' }}
-        >
-          {showMenteesCard && (
-            <div className="ph-mship-card purple" onClick={() => setSubPage('mentees')}>
-              <div className="ph-mship-icon dark">
-                <Users size={19} color="#fff" strokeWidth={1.8} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="ph-mship-title" style={{ color: '#fff' }}>My Mentees</div>
-                <div className="ph-mship-sub" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  Track progress & AI summaries
+          <div className="ph-section">
+            <div className="ph-section-head">Account</div>
+            {[
+              {
+                lbl: 'Email', val: user?.email,
+                badge: (
+                  <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <CheckCircle size={10} /> Verified
+                  </span>
+                ),
+              },
+              {
+                lbl: 'Account Type', val: roleLabel,
+                badge: (
+                  <span className="badge badge-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <RoleIcon size={10} /> {roleLabel}
+                  </span>
+                ),
+              },
+            ].map((item, i) => (
+              <div key={i} className="ph-account-row">
+                <div style={{ minWidth: 0 }}>
+                  <div className="ph-account-lbl">{item.lbl}</div>
+                  <div className="ph-account-val">{item.val}</div>
                 </div>
+                {item.badge}
               </div>
-              <ArrowRight size={15} color="rgba(255,255,255,0.5)" />
-            </div>
-          )}
-          {showMentorCard && (
-            <div className="ph-mship-card" onClick={() => setSubPage('mentor')}>
-              <div className="ph-mship-icon light">
-                <Target size={19} color="var(--accent)" strokeWidth={1.8} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="ph-mship-title">My Mentor</div>
-                <div className="ph-mship-sub" style={{ color: 'var(--text-muted)' }}>
-                  View connection status
-                </div>
-              </div>
-              <ArrowRight size={15} color="var(--text-muted)" />
-            </div>
-          )}
-        </div>
-      )}
+            ))}
+          </div>
 
-      {/* ── SETTINGS ── */}
-      <div className="ph-settings">
-
-        <div className="ph-section">
-          <div className="ph-section-head">Account</div>
-          {[
-            {
-              lbl: 'Email', val: user?.email,
-              badge: (
-                <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <CheckCircle size={10} /> Verified
-                </span>
-              ),
-            },
-            {
-              lbl: 'Account Type', val: roleLabel,
-              badge: (
-                <span className="badge badge-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <RoleIcon size={10} /> {roleLabel}
-                </span>
-              ),
-            },
-          ].map((item, i) => (
-            <div key={i} className="ph-account-row">
-              <div style={{ minWidth: 0 }}>
-                <div className="ph-account-lbl">{item.lbl}</div>
-                <div className="ph-account-val">{item.val}</div>
-              </div>
-              {item.badge}
-            </div>
-          ))}
-        </div>
-
-        <div className="ph-role-blurb" style={{
-          background: isMe ? 'linear-gradient(135deg,#F59E0B10,#C026D310)' : 'var(--accent-soft)',
-          border: `1px solid ${isMe ? '#C026D328' : 'var(--border)'}`,
-        }}>
-          <div className="ph-role-icon-wrap" style={{
-            background: isMe ? '#C026D318' : 'var(--accent-soft)',
-            border: `1px solid ${isMe ? '#C026D330' : 'var(--border)'}`,
+          <div className="ph-role-blurb" style={{
+            background: isMe ? 'linear-gradient(135deg,#F59E0B10,#C026D310)' : 'var(--accent-soft)',
+            border: `1px solid ${isMe ? '#C026D328' : 'var(--border)'}`,
           }}>
-            {isMe
-              ? <Star size={16} color="#C026D3" strokeWidth={1.8} />
-              : roleMentor
-              ? <Target size={16} color="var(--accent)" strokeWidth={1.8} />
-              : <BookOpen size={16} color="var(--accent)" strokeWidth={1.8} />
-            }
-          </div>
-          <div>
-            <div style={{
-              fontSize: 12, fontWeight: 800, marginBottom: 3,
-              color: isMe ? '#C026D3' : 'var(--accent)',
+            <div className="ph-role-icon-wrap" style={{
+              background: isMe ? '#C026D318' : 'var(--accent-soft)',
+              border: `1px solid ${isMe ? '#C026D330' : 'var(--border)'}`,
             }}>
-              {isMe ? 'S / Y A N  Premium' : roleMentor ? 'You are a Mentor' : 'You are a Mentee'}
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
               {isMe
-                ? 'Full access to all Dôti features — mentee tracking, mentor connection, and premium tools.'
+                ? <Star size={16} color="#C026D3" strokeWidth={1.8} />
                 : roleMentor
-                ? 'Mentees connect using your email. Their logs arrive for your review and sign-off.'
-                : 'Add a mentor by email. They receive your logs and sign off on your progress.'}
-            </p>
+                ? <Target size={16} color="var(--accent)" strokeWidth={1.8} />
+                : <BookOpen size={16} color="var(--accent)" strokeWidth={1.8} />
+              }
+            </div>
+            <div>
+              <div style={{
+                fontSize: 12, fontWeight: 800, marginBottom: 3,
+                color: isMe ? '#C026D3' : 'var(--accent)',
+              }}>
+                {isMe ? 'S / Y A N  Premium' : roleMentor ? 'You are a Mentor' : 'You are a Mentee'}
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                {isMe
+                  ? 'Full access to all Dôti features — mentee tracking, mentor connection, and premium tools.'
+                  : roleMentor
+                  ? 'Mentees connect using your email. Their logs arrive for your review and sign-off.'
+                  : 'Add a mentor by email. They receive your logs and sign off on your progress.'}
+              </p>
+            </div>
+          </div>
+
+          <ChangePasswordSection />
+
+          <div className="ph-danger">
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 2 }}>
+                Sign Out
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                You'll be returned to the login screen.
+              </div>
+            </div>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={signOut}
+              style={{
+                color: 'var(--danger)', borderColor: 'var(--danger-soft)',
+                flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <LogOut size={13} /> Sign Out
+            </button>
           </div>
         </div>
 
-        <ChangePasswordSection />
-
-        <div className="ph-danger">
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 2 }}>
-              Sign Out
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              You'll be returned to the login screen.
-            </div>
-          </div>
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={signOut}
-            style={{
-              color: 'var(--danger)', borderColor: 'var(--danger-soft)',
-              flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            <LogOut size={13} /> Sign Out
-          </button>
-        </div>
       </div>
     </div>
   )
