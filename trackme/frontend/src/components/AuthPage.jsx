@@ -453,21 +453,21 @@ function WaveBackground() {
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      height: '38vh', zIndex: 0, overflow: 'hidden',
+      height: '35vh', zIndex: 0, overflow: 'hidden',
       pointerEvents: 'none',
-      maskImage: 'linear-gradient(to bottom, transparent 0%, black 30%)',
-      WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 30%)',
     }}>
-      <svg viewBox="0 0 800 380" preserveAspectRatio="xMidYMax slice"
+      <svg viewBox="0 0 800 300" preserveAspectRatio="xMidYMax slice"
         style={{ width: '100%', height: '100%', display: 'block' }}>
-        <path d="M-60,380 L-60,200 Q80,120 200,170 Q340,230 440,140 Q560,40 680,130 Q780,200 860,150 L860,380 Z" fill="#3C2A7A" opacity="0.6" />
-        <path d="M-60,380 L-60,240 Q60,180 180,220 Q320,270 440,190 Q580,100 700,180 Q800,240 860,200 L860,380 Z" fill="#6040C0" opacity="0.55" />
-        <path d="M-60,380 L-60,290 Q80,230 200,268 Q340,316 460,248 Q600,168 720,230 Q810,272 860,255 L860,380 Z" fill="#8A68E0" opacity="0.5" />
-        <path d="M-60,380 L-60,330 Q100,278 240,310 Q380,346 500,295 Q640,238 760,285 Q830,312 860,305 L860,380 Z" fill="#B89FF5" opacity="0.4" />
+        {/* darkest layer matches page bg almost exactly — no visible edge */}
+        <path d="M-60,300 L-60,200 Q120,155 260,185 Q400,215 500,170 Q620,120 740,165 Q810,190 860,175 L860,300 Z" fill="#1a1625" />
+        <path d="M-60,300 L-60,220 Q100,178 240,205 Q390,235 500,195 Q630,150 750,188 Q820,210 860,198 L860,300 Z" fill="#2d1f5e" />
+        <path d="M-60,300 L-60,245 Q110,205 250,228 Q390,252 510,218 Q640,178 760,212 Q825,232 860,222 L860,300 Z" fill="#5535a8" />
+        <path d="M-60,300 L-60,265 Q120,235 260,252 Q400,270 520,245 Q650,215 770,240 Q830,254 860,248 L860,300 Z" fill="#8B5CF6" />
       </svg>
     </div>
   )
 }
+
 
 export default function AuthPage() {
   const { signIn, signUp } = useAuth()
