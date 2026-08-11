@@ -183,7 +183,6 @@
 //     </div>
 //   )
 // }
-
 import { useState, useEffect } from 'react'
 import { mentorApi } from '../lib/api'
 import Groups from './Groups'
@@ -200,7 +199,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  // RESTORED: Fetch data on mount
+  // Fetch mentees on mount
   useEffect(() => {
     mentorApi.myMentees()
       .then(res => setMentees(res.mentees || []))
@@ -208,13 +207,13 @@ export default function MenteeDashboard({ onSelectMentee }) {
       .finally(() => setLoading(false))
   }, [])
 
-  // RESTORED: Filter by search
+  // Filter logic
   const filtered = mentees.filter(m => {
     const name = m.profile?.full_name || ''
     return name.toLowerCase().includes(search.toLowerCase())
   })
 
-  // Global styles for light/dark gradients
+  // Unified Styling
   const globalStyles = `
     .mentor-page {
       background: linear-gradient(150deg, #ffffff 0%, #f4f0ff 60%, #e8deff 100%);
@@ -222,9 +221,10 @@ export default function MenteeDashboard({ onSelectMentee }) {
     html[data-theme="dark"] .mentor-page {
       background: linear-gradient(150deg, #0d0a14 0%, #150f24 60%, #1e1535 100%);
     }
+    
     @media (max-width: 640px) {
       .mentee-grid { grid-template-columns: 1fr !important; }
-      .mentee-header { flex-direction: column; align-items: flex-start !important; gap: 12px !important; }
+      .mentee-controls { flex-direction: column; align-items: stretch !important; gap: 12px !important; }
       .mentee-search { width: 100% !important; }
     }
   `
@@ -235,14 +235,16 @@ export default function MenteeDashboard({ onSelectMentee }) {
       display: 'flex', 
       justifyContent: 'center', 
       padding: '40px 0 80px 0',
-      width: '100%'
+      width: '100%',
+      overflowY: 'auto' // Ensures scrolling works
     }}>
       <style>{globalStyles}</style>
 
-      <div style={{ width: '100%', maxWidth: 980, padding: '0 24px' }}>
+      {/* Centralized Container */}
+      <div style={{ width: '100%', maxWidth: 1000, padding: '0 24px' }}>
         
         {/* ── Header ── */}
-        <div className="mentee-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ marginBottom: 4, fontWeight: 700, fontSize: '1.8rem' }}>Mentor Dashboard</h1>
             <p className="text-muted" style={{ fontSize: 14 }}>Manage your mentees and cohorts</p>
@@ -283,8 +285,9 @@ export default function MenteeDashboard({ onSelectMentee }) {
         {/* ── Mentees Tab ── */}
         {activeTab === 'mentees' && (
           <div>
-            {/* Controls Row */}
-            <div className="mentee-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, gap: 16, flexWrap: 'wrap' }}>
+            
+            {/* ── Controls Row ── */}
+            <div className="mentee-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, gap: 16, flexWrap: 'wrap' }}>
               <p className="text-muted" style={{ fontSize: 14, margin: 0 }}>
                 {filtered.length} active mentee{filtered.length !== 1 ? 's' : ''}
                 {search.trim() && filtered.length !== mentees.length && (
@@ -311,7 +314,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
               </div>
             </div>
 
-            {/* ── Grid ── */}
+            {/* ── Mentee Grid Content ── */}
             {loading ? (
               <div className="mentee-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
                 {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 220, borderRadius: 16 }} />)}
@@ -358,7 +361,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
                       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
                     >
-                      {/* ── Top Row ── */}
+                      {/* ── Top Row: Avatar, Name, Status ── */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                         <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
                           <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
@@ -385,7 +388,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
                         </div>
                       </div>
 
-                      {/* ── Stats Grid (2x2 inside a subtle background) ── */}
+                      {/* ── Stats Grid (2x2 Layout) ── */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', background: 'var(--surface-2)', borderRadius: 12, padding: '12px 14px' }}>
                         <div>
                           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>{stats.total_logs || 0}</div>
