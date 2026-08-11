@@ -553,60 +553,105 @@ import MentorCreateProjectModal from './modals/MentorCreateProjectModal'
 import MenteeCreateProjectModal from './modals/MenteeCreateProjectModal'
 import ProjectDetail from './ProjectDetail'
 
-// ── TASK ROW ───────────────────────────────────────────────────
+// ── TASK ROW WITH EXPANDABLE DETAILS ────────────────────────
 function TaskRow({ task, onToggle, toggling }) {
   const isToggling = toggling === task.id
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 14,
-      padding: '10px 4px',
       borderBottom: '1px solid var(--border)',
       opacity: task.completed ? 0.5 : 1,
       transition: 'opacity 0.15s',
     }}>
-      {/* Minimal Checkbox */}
-      <button
-        onClick={() => onToggle(task.id, task.completed)}
-        disabled={isToggling}
-        style={{
-          width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-          border: `1.5px solid ${task.completed ? 'var(--success)' : 'var(--border-strong)'}`,
-          background: task.completed ? 'var(--success)' : 'transparent',
-          cursor: isToggling ? 'not-allowed' : 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        {task.completed && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
-      </button>
+      {/* Main Row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        padding: '10px 4px',
+      }}>
+        {/* Checkbox */}
+        <button
+          onClick={() => onToggle(task.id, task.completed)}
+          disabled={isToggling}
+          style={{
+            width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+            border: `1.5px solid ${task.completed ? 'var(--success)' : 'var(--border-strong)'}`,
+            background: task.completed ? 'var(--success)' : 'transparent',
+            cursor: isToggling ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          {task.completed && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+        </button>
 
-      {/* Task Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontWeight: 500, fontSize: 14,
-          textDecoration: task.completed ? 'line-through' : 'none',
-          color: task.completed ? 'var(--text-muted)' : 'var(--text-primary)',
-        }}>
-          {task.title}
-          {task.carried_over && !task.completed && (
-            <span style={{
-              marginLeft: 8, fontSize: 10, fontWeight: 600,
-              color: 'var(--danger)', background: 'var(--danger-soft)',
-              padding: '1px 6px', borderRadius: 4,
+        {/* Click to expand */}
+        <div 
+          onClick={() => setExpanded(!expanded)} 
+          style={{ flex: 1, minWidth: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontWeight: 500, fontSize: 14,
+              textDecoration: task.completed ? 'line-through' : 'none',
+              color: task.completed ? 'var(--text-muted)' : 'var(--text-primary)',
             }}>
-              ⚠️ Carry-over
-            </span>
-          )}
+              {task.title}
+              {task.carried_over && !task.completed && (
+                <span style={{
+                  marginLeft: 8, fontSize: 10, fontWeight: 600,
+                  color: 'var(--danger)', background: 'var(--danger-soft)',
+                  padding: '1px 6px', borderRadius: 4,
+                }}>
+                  ⚠️ Carry-over
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {/* Category Badge */}
+          <span style={{
+            fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 20,
+            color: 'var(--text-muted)', background: 'var(--surface-3)', flexShrink: 0,
+          }}>
+            {task.category}
+          </span>
+          
+          {/* Expand Chevron */}
+          <ChevronRight size={14} color="var(--text-muted)" style={{
+            transform: expanded ? 'rotate(90deg)' : 'none',
+            transition: 'transform 0.2s ease',
+            flexShrink: 0,
+          }} />
         </div>
       </div>
 
-      {/* Category Badge */}
-      <span style={{
-        fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 20,
-        color: 'var(--text-muted)', background: 'var(--surface-3)', flexShrink: 0,
-      }}>
-        {task.category}
-      </span>
+      {/* ── Expanded Details Section ── */}
+      {expanded && (
+        <div style={{ padding: '0 4px 12px 32px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          {/* Description */}
+          {task.description && (
+            <div style={{ marginBottom: task.mentor_note ? 12 : 0, whiteSpace: 'pre-wrap' }}>
+              {task.description}
+            </div>
+          )}
+          
+          {/* Mentor Note */}
+          {task.mentor_note && (
+            <div style={{
+              padding: '12px 14px', borderRadius: 8,
+              background: 'var(--accent-soft)', border: '1px solid var(--border)',
+              marginTop: 8,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.5px', marginBottom: 4 }}>
+                📌 Mentor's Note
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-primary)' }}>
+                {task.mentor_note}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -863,7 +908,6 @@ export default function Projects() {
     setSelectedProject(null)
   }
 
-  // ── Combine & Sort Projects by creation date (Newest first) ──
   const allProjects = [
     ...projects.created.map(p => ({ ...p, role: 'creator' })),
     ...projects.assigned.map(p => ({ ...p, role: 'member' })),
@@ -882,7 +926,6 @@ export default function Projects() {
   return (
     <div className="page" style={{ display: 'flex', justifyContent: 'center', padding: '20px 0 80px 0' }}>
       
-      {/* Centralized Container */}
       <div style={{ width: '100%', maxWidth: 780, padding: '0 24px' }}>
 
         {/* ── Page Header ── */}
@@ -930,7 +973,6 @@ export default function Projects() {
             </span>
           </div>
 
-          {/* Projects Grid */}
           {loadingProjects ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[1, 2].map(i => (
@@ -968,7 +1010,6 @@ export default function Projects() {
         </div>
       </div>
 
-      {/* Create Modals */}
       {showCreate && (
         isMentor ? (
           <MentorCreateProjectModal

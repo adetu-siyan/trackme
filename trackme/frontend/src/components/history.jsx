@@ -475,13 +475,12 @@
 //   )
 // }
 
-
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { logsApi } from '../lib/api'
 import {
   CheckCircle, Send, FileText, Edit3, Trash2,
-  ChevronDown, PenLine, Inbox, CheckSquare, ChevronRight, 
-  Filter, Search
+  ChevronDown, PenLine, Inbox, CheckSquare, 
+  Filter, Search, ChevronRight, Clock
 } from 'lucide-react'
 
 function statusConfig(log) {
@@ -490,35 +489,26 @@ function statusConfig(log) {
   return { label: 'Draft', color: 'var(--accent)', bg: 'var(--accent-soft)', icon: <FileText size={16} /> }
 }
 
-function groupByDate(logs) {
-  const groups = {}
-  logs.forEach(log => {
-    const date = log.log_date
-    if (!groups[date]) groups[date] = []
-    groups[date].push(log)
-  })
-  return groups
+function formatRelativeTime(dateStr) {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.round(diffMs / 60000)
+  const diffHours = Math.round(diffMs / 3600000)
+  const diffDays = Math.round(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins} min ago`
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+  if (diffDays === 1) return 'Yesterday'
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function formatDate(dateStr) {
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
-  if (dateStr === today) return 'Today'
-  if (dateStr === yesterday) return 'Yesterday'
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
-  })
-}
-
-// Helper to check if a date falls within a certain filter period
 function isWithinRange(dateStr, filter) {
   const date = new Date(dateStr)
   const now = new Date()
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  
-  if (filter === 'today') {
-    return date >= startOfToday
-  }
+  if (filter === 'today') return date >= startOfToday
   if (filter === 'week') {
     const startOfWeek = new Date(startOfToday)
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
@@ -527,33 +517,24 @@ function isWithinRange(dateStr, filter) {
   if (filter === 'month') {
     return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
   }
-  return true // 'all'
+  return true
 }
 
 export default function History() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
-  
-  // Filter & Search states
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const filterRef = useRef(null)
 
-  // Accordion states
-  const [expandedDate, setExpandedDate] = useState(null)
   const [expandedLog, setExpandedLog] = useState(null)
-  
-  // Edit states
   const [editing, setEditing] = useState(null)
   const [editContent, setEditContent] = useState('')
   const [saving, setSaving] = useState(false)
-  
-  // Selection states
   const [selected, setSelected] = useState([])
   const [deleting, setDeleting] = useState(false)
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (filterRef.current && !filterRef.current.contains(event.target)) {
@@ -571,24 +552,19 @@ export default function History() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Filter the logs based on Time + Search Text
   const filteredLogs = useMemo(() => {
-    return logs.filter(log => {
-      // 1. Check time range
-      const inTimeRange = isWithinRange(log.log_date, filter)
-      if (!inTimeRange) return false
-
-      // 2. If search term is empty, include it
-      if (!searchTerm.trim()) return true
-
-      // 3. If search term exists, check Title, Topics, and Content
-      const searchLower = searchTerm.toLowerCase()
-      const titleMatch = log.structured_title?.toLowerCase().includes(searchLower)
-      const contentMatch = log.structured_content?.toLowerCase().includes(searchLower)
-      const topicsMatch = (log.structured_topics || []).some(t => t.toLowerCase().includes(searchLower))
-      
-      return titleMatch || contentMatch || topicsMatch
-    })
+    return logs
+      .filter(log => {
+        const inTimeRange = isWithinRange(log.log_date, filter)
+        if (!inTimeRange) return false
+        if (!searchTerm.trim()) return true
+        const searchLower = searchTerm.toLowerCase()
+        const titleMatch = log.structured_title?.toLowerCase().includes(searchLower)
+        const contentMatch = log.structured_content?.toLowerCase().includes(searchLower)
+        const topicsMatch = (log.structured_topics || []).some(t => t.toLowerCase().includes(searchLower))
+        return titleMatch || contentMatch || topicsMatch
+      })
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) // Newest first
   }, [logs, filter, searchTerm])
 
   const deletableLogs = logs.filter(l => !l.sent_to_mentor && !l.signed)
@@ -613,7 +589,6 @@ export default function History() {
     if (selected.length === 0) return
     if (!window.confirm(`Delete ${selected.length} log(s)? This cannot be undone.`)) return
     setDeleting(true)
-
     try {
       const { supabase } = await import('../lib/supabase')
       const sessionResult = await supabase.auth.getSession()
@@ -627,11 +602,9 @@ export default function History() {
           })
         )
       )
-
       const succeeded = selected.filter((_, i) => results[i].status === 'fulfilled')
       setLogs(prev => prev.filter(l => !succeeded.includes(l.id)))
       setSelected([])
-
       if (succeeded.length < selected.length) {
         alert(`${succeeded.length} deleted. ${selected.length - succeeded.length} failed.`)
       }
@@ -661,9 +634,6 @@ export default function History() {
       setSaving(false)
     }
   }
-
-  const groups = groupByDate(filteredLogs)
-  const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a))
 
   const filterOptions = [
     { value: 'all', label: 'All Time' },
@@ -902,250 +872,188 @@ export default function History() {
             </p>
           </div>
         ) : (
+          /* ── FLAT LIST (Newest First) ── */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0, borderTop: '1px solid var(--border)' }}>
-            {sortedDates.map(date => {
-              const isDateExpanded = expandedDate === date
-              const dateLogs = groups[date]
-              
+            {filteredLogs.map((log, index) => {
+              const status = statusConfig(log)
+              const isExpanded = expandedLog === log.id
+              const isEditing = editing === log.id
+              const canEdit = !log.sent_to_mentor && !log.signed
+              const isSelected = selected.includes(log.id)
+
               return (
-                <div key={date} style={{ borderBottom: '1px solid var(--border)' }}>
-                  
-                  {/* ── Date Header (Accordion Trigger) ── */}
-                  <div
-                    onClick={() => setExpandedDate(isDateExpanded ? null : date)}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '16px 4px',
-                      cursor: 'pointer',
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{
-                        fontSize: 15, fontWeight: 700,
-                        color: 'var(--text-primary)',
-                      }}>
-                        {formatDate(date)}
-                      </span>
-                      <span style={{
-                        fontSize: 12, color: 'var(--text-muted)',
-                      }}>
-                        {dateLogs.length} log{dateLogs.length > 1 ? 's' : ''}
-                      </span>
+                <div key={log.id} style={{ 
+                  borderBottom: index !== filteredLogs.length - 1 ? '1px solid var(--border)' : 'none' 
+                }}>
+                  {/* ── Log Row ── */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '14px 4px',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s',
+                    background: isExpanded ? 'var(--surface-2)' : 'transparent',
+                    border: '1px solid transparent',
+                    borderColor: isSelected ? 'var(--accent)' : 'transparent',
+                    borderRadius: isExpanded ? 8 : 0,
+                    margin: isExpanded ? '8px 0' : 0,
+                  }}>
+                    {/* Checkbox */}
+                    {canEdit && (
+                      <div onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={e => {
+                            e.stopPropagation()
+                            toggleSelect(log.id)
+                          }}
+                          style={{ width: 15, height: 15, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Clickable Area */}
+                    <div onClick={() => setExpandedLog(isExpanded ? null : log.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                      {/* Status Dot */}
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: status.color, flexShrink: 0 }} />
+
+                      {/* Title */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontWeight: 600, fontSize: 14,
+                          color: 'var(--text-primary)',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {log.structured_title || 'Untitled Log'}
+                        </div>
+                      </div>
+
+                      {/* Time Ago */}
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                        <Clock size={11} />
+                        {formatRelativeTime(log.created_at || log.log_date)}
+                      </div>
+
+                      <ChevronRight
+                        size={14}
+                        color="var(--text-muted)"
+                        style={{
+                          transform: isExpanded ? 'rotate(90deg)' : 'none',
+                          transition: 'transform 0.2s ease',
+                          flexShrink: 0,
+                        }}
+                      />
                     </div>
-                    <ChevronDown
-                      size={18}
-                      color="var(--text-muted)"
-                      style={{
-                        transform: isDateExpanded ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.25s ease',
-                      }}
-                    />
                   </div>
 
-                  {/* ── Date Body (Expanded Logs) ── */}
-                  {isDateExpanded && (
-                    <div style={{ 
-                      paddingBottom: 16, 
-                      display: 'flex', flexDirection: 'column', gap: 2,
-                      paddingLeft: 4, paddingRight: 4
+                  {/* ── Expanded Content ── */}
+                  {isExpanded && (
+                    <div style={{
+                      padding: '0 4px 20px 40px',
+                      borderLeft: '2px solid var(--border)',
+                      marginLeft: 12,
                     }}>
-                      {dateLogs.map(log => {
-                        const status = statusConfig(log)
-                        const isLogExpanded = expandedLog === log.id
-                        const isEditing = editing === log.id
-                        const canEdit = !log.sent_to_mentor && !log.signed
-                        const isSelected = selected.includes(log.id)
+                      {/* Badges */}
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '2px 8px', borderRadius: 20,
+                          background: status.bg, fontSize: 11, fontWeight: 600, color: status.color,
+                        }}>
+                          {status.icon} {status.label}
+                        </span>
+                        {log.test_attempted && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '2px 8px', borderRadius: 20,
+                            background: log.test_passed ? 'var(--success-soft)' : 'var(--danger-soft)',
+                            fontSize: 11, fontWeight: 600,
+                            color: log.test_passed ? 'var(--success)' : 'var(--danger)',
+                          }}>
+                            {log.test_passed ? <CheckCircle size={12} /> : <FileText size={12} />}
+                            {log.test_passed ? 'Test passed' : 'Test not passed'}
+                          </span>
+                        )}
+                        {log.signed && log.signed_at && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '2px 8px', borderRadius: 20,
+                            background: 'var(--success-soft)', fontSize: 11, fontWeight: 600, color: 'var(--success)',
+                          }}>
+                            <PenLine size={12} />
+                            Signed {new Date(log.signed_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
 
-                        return (
-                          <div key={log.id}>
-                            {/* ── Log Row ── */}
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 12,
-                              padding: '12px 12px',
-                              borderRadius: 8,
-                              cursor: 'pointer',
-                              background: isLogExpanded ? 'var(--surface-2)' : 'transparent',
-                              transition: 'background 0.15s',
-                              border: '1px solid transparent',
-                              borderColor: isSelected ? 'var(--accent)' : 'transparent',
-                            }}>
-
-                              {/* Checkbox for selection */}
-                              {canEdit && (
-                                <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={e => {
-                                      e.stopPropagation()
-                                      toggleSelect(log.id)
-                                    }}
-                                    style={{
-                                      width: 15, height: 15,
-                                      accentColor: 'var(--accent)',
-                                      cursor: 'pointer',
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {/* Click to expand log details */}
-                              <div
-                                onClick={() => setExpandedLog(isLogExpanded ? null : log.id)}
-                                style={{
-                                  display: 'flex', alignItems: 'center',
-                                  gap: 12, flex: 1, minWidth: 0,
-                                }}
-                              >
-                                {/* Status Indicator (Small circle dot) */}
-                                <div style={{
-                                  width: 8, height: 8, borderRadius: '50%',
-                                  background: status.color, flexShrink: 0,
-                                }} />
-
-                                {/* Log Title */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{
-                                    fontWeight: 600, fontSize: 14,
-                                    color: 'var(--text-primary)',
-                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                  }}>
-                                    {log.structured_title || 'Untitled Log'}
-                                  </div>
-                                </div>
-
-                                {/* Status text (Hidden on very small screens) */}
-                                <div style={{
-                                  fontSize: 12, fontWeight: 500,
-                                  color: status.color,
-                                  display: 'none',
-                                  '@media(min-width: 480px)': { display: 'block' }
-                                }}>
-                                  {status.label}
-                                </div>
-
-                                <ChevronRight
-                                  size={14}
-                                  color="var(--text-muted)"
-                                  style={{
-                                    transform: isLogExpanded ? 'rotate(90deg)' : 'none',
-                                    transition: 'transform 0.2s ease',
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* ── Log Expanded Content ── */}
-                            {isLogExpanded && (
-                              <div style={{
-                                padding: '12px 12px 20px 44px',
-                                borderLeft: '2px solid var(--border)',
-                                marginLeft: 24,
-                              }}>
-                                {/* Test / Signed info */}
-                                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-                                  {log.test_attempted && (
-                                    <span style={{
-                                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                                      padding: '3px 10px', borderRadius: 20,
-                                      background: log.test_passed ? 'var(--success-soft)' : 'var(--danger-soft)',
-                                      fontSize: 11, fontWeight: 600,
-                                      color: log.test_passed ? 'var(--success)' : 'var(--danger)',
-                                    }}>
-                                      {log.test_passed ? <CheckCircle size={12} /> : <FileText size={12} />}
-                                      {log.test_passed ? 'Test passed' : 'Test not passed'}
-                                    </span>
-                                  )}
-                                  {log.signed && log.signed_at && (
-                                    <span style={{
-                                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                                      padding: '3px 10px', borderRadius: 20,
-                                      background: 'var(--success-soft)',
-                                      fontSize: 11, fontWeight: 600, color: 'var(--success)',
-                                    }}>
-                                      <PenLine size={12} />
-                                      Signed {new Date(log.signed_at).toLocaleDateString()}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {isEditing ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    <textarea
-                                      style={{
-                                        width: '100%', minHeight: 160, padding: '12px',
-                                        borderRadius: 8, border: '1.5px solid var(--accent)',
-                                        background: 'var(--surface)', color: 'var(--text-primary)',
-                                        fontFamily: 'Urbanist, sans-serif', fontSize: 13,
-                                        lineHeight: 1.7, resize: 'vertical', outline: 'none',
-                                        boxSizing: 'border-box',
-                                      }}
-                                      value={editContent}
-                                      onChange={e => setEditContent(e.target.value)}
-                                    />
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                      <button
-                                        onClick={() => setEditing(null)}
-                                        style={{
-                                          padding: '5px 14px', borderRadius: 6,
-                                          border: '1px solid var(--border)', background: 'transparent',
-                                          color: 'var(--text-secondary)', cursor: 'pointer',
-                                          fontFamily: 'Urbanist, sans-serif', fontWeight: 600, fontSize: 12,
-                                        }}
-                                      >
-                                        Cancel
-                                      </button>
-                                      <button
-                                        onClick={() => handleSaveEdit(log)}
-                                        disabled={saving}
-                                        style={{
-                                          padding: '5px 14px', borderRadius: 6,
-                                          border: 'none', background: 'var(--accent)',
-                                          color: '#fff', cursor: 'pointer',
-                                          fontFamily: 'Urbanist, sans-serif', fontWeight: 600, fontSize: 12,
-                                        }}
-                                      >
-                                        {saving ? 'Saving...' : 'Save'}
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div style={{
-                                      fontSize: 13, lineHeight: 1.8,
-                                      color: 'var(--text-secondary)', whiteSpace: 'pre-wrap',
-                                      marginBottom: canEdit ? 12 : 0,
-                                    }}>
-                                      {log.structured_content || log.raw_content}
-                                    </div>
-                                    {canEdit && (
-                                      <button
-                                        onClick={() => {
-                                          setEditing(log.id)
-                                          setEditContent(log.structured_content || '')
-                                        }}
-                                        style={{
-                                          padding: '4px 12px', borderRadius: 6,
-                                          border: '1px solid var(--accent)', background: 'transparent',
-                                          color: 'var(--accent)', cursor: 'pointer',
-                                          fontFamily: 'Urbanist, sans-serif', fontWeight: 600, fontSize: 12,
-                                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                                        }}
-                                      >
-                                        <Edit3 size={12} /> Edit
-                                      </button>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            )}
+                      {isEditing ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <textarea
+                            style={{
+                              width: '100%', minHeight: 160, padding: '12px',
+                              borderRadius: 8, border: '1.5px solid var(--accent)',
+                              background: 'var(--surface)', color: 'var(--text-primary)',
+                              fontFamily: 'Urbanist, sans-serif', fontSize: 13,
+                              lineHeight: 1.7, resize: 'vertical', outline: 'none',
+                              boxSizing: 'border-box',
+                            }}
+                            value={editContent}
+                            onChange={e => setEditContent(e.target.value)}
+                          />
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={() => setEditing(null)}
+                              style={{
+                                padding: '5px 14px', borderRadius: 6,
+                                border: '1px solid var(--border)', background: 'transparent',
+                                color: 'var(--text-secondary)', cursor: 'pointer',
+                                fontFamily: 'Urbanist, sans-serif', fontWeight: 600, fontSize: 12,
+                              }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleSaveEdit(log)}
+                              disabled={saving}
+                              style={{
+                                padding: '5px 14px', borderRadius: 6,
+                                border: 'none', background: 'var(--accent)',
+                                color: '#fff', cursor: 'pointer',
+                                fontFamily: 'Urbanist, sans-serif', fontWeight: 600, fontSize: 12,
+                              }}
+                            >
+                              {saving ? 'Saving...' : 'Save'}
+                            </button>
                           </div>
-                        )
-                      })}
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{
+                            fontSize: 13, lineHeight: 1.8,
+                            color: 'var(--text-secondary)', whiteSpace: 'pre-wrap',
+                            marginBottom: canEdit ? 12 : 0,
+                          }}>
+                            {log.structured_content || log.raw_content}
+                          </div>
+                          {canEdit && (
+                            <button
+                              onClick={() => {
+                                setEditing(log.id)
+                                setEditContent(log.structured_content || '')
+                              }}
+                              style={{
+                                padding: '4px 12px', borderRadius: 6,
+                                border: '1px solid var(--accent)', background: 'transparent',
+                                color: 'var(--accent)', cursor: 'pointer',
+                                fontFamily: 'Urbanist, sans-serif', fontWeight: 600, fontSize: 12,
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                              }}
+                            >
+                              <Edit3 size={12} /> Edit
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
