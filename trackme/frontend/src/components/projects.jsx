@@ -552,6 +552,7 @@ import { useAuth } from '../context/AuthContext'
 import MentorCreateProjectModal from './modals/MentorCreateProjectModal'
 import MenteeCreateProjectModal from './modals/MenteeCreateProjectModal'
 import ProjectDetail from './ProjectDetail'
+import { ChevronRight } from 'lucide-react' // <--- I added this import!
 
 // ── TASK ROW WITH EXPANDABLE DETAILS ────────────────────────
 function TaskRow({ task, onToggle, toggling }) {

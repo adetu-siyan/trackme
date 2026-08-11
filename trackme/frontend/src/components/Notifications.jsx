@@ -6,7 +6,7 @@
 // import {
 //   PenLine, ClipboardList, UserPlus, CheckCircle,
 //   Bell, Trash2, XCircle, MoreHorizontal, CheckCheck,
-//   ChevronRight, AlertTriangle,
+//   ChevronRight, AlertTriangle, Calendar, CheckSquare, Square,
 // } from 'lucide-react'
 
 // // ── Config ─────────────────────────────────────────────────────
@@ -15,6 +15,8 @@
 //   project_assigned: { icon: ClipboardList, color: 'var(--accent)',  bg: 'var(--accent-soft)'  },
 //   mentor_request:   { icon: UserPlus,      color: 'var(--warning)', bg: 'var(--warning-soft)' },
 //   test_passed:      { icon: CheckCircle,   color: 'var(--success)', bg: 'var(--success-soft)' },
+//   weekly_focus:     { icon: Calendar,      color: 'var(--accent)',  bg: 'var(--accent-soft)'  },
+//   stuck_flag:       { icon: AlertTriangle, color: 'var(--warning)', bg: 'var(--warning-soft)' },
 // }
 
 // function timeAgo(dateStr) {
@@ -46,6 +48,175 @@
 //     else groups['Earlier'].push(n)
 //   })
 //   return groups
+// }
+
+// // ── Weekly focus tasks panel ────────────────────────────────────
+// function WeeklyFocusTasks({ focusId }) {
+//   const [tasks, setTasks] = useState([])
+//   const [loading, setLoading] = useState(true)
+//   const [focus, setFocus] = useState(null)
+
+//   useEffect(() => {
+//     if (!focusId) return
+//     async function fetchTasks() {
+//       try {
+//         // reuse the existing my-tasks endpoint — it returns focus + tasks for current week
+//         // but we need tasks by focus_id specifically, so call the history endpoint and match
+//         const res = await fetch(`/projects/weekly-focus/my-tasks`, {
+//           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+//         })
+//         const data = await res.json()
+//         if (data.focus?.id === focusId) {
+//           setFocus(data.focus)
+//           setTasks(data.tasks || [])
+//         } else {
+//           // focus is from a past week — fetch from history
+//           const histRes = await fetch(`/projects/weekly-focus/history`, {
+//             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+//           })
+//           const histData = await histRes.json()
+//           const match = (histData.history || []).find(f => f.id === focusId)
+//           if (match) setFocus(match)
+//           // tasks aren't in history payload, show focus summary only
+//         }
+//       } catch (e) {
+//         console.error('[WeeklyFocusTasks]', e)
+//       } finally {
+//         setLoading(false)
+//       }
+//     }
+//     fetchTasks()
+//   }, [focusId])
+
+//   if (loading) {
+//     return (
+//       <div style={{ marginTop: 20 }}>
+//         {[1, 2, 3].map(i => (
+//           <div key={i} className="skeleton" style={{ height: 36, borderRadius: 8, marginBottom: 8 }} />
+//         ))}
+//       </div>
+//     )
+//   }
+
+//   if (!focus && !tasks.length) return null
+
+//   const total = tasks.length
+//   const completed = tasks.filter(t => t.completed).length
+//   const rate = total > 0 ? Math.round((completed / total) * 100) : 0
+//   const barColor = rate >= 80 ? 'var(--success)' : rate >= 50 ? 'var(--warning)' : 'var(--danger)'
+
+//   return (
+//     <div style={{ marginTop: 24 }}>
+//       {/* Section header */}
+//       <div style={{
+//         fontSize: 11, fontWeight: 700, letterSpacing: '1.5px',
+//         textTransform: 'uppercase', color: 'var(--accent)',
+//         marginBottom: 12,
+//       }}>
+//         Weekly Tasks
+//       </div>
+
+//       {/* Summary strip */}
+//       {focus?.summary && (
+//         <div style={{
+//           background: 'var(--surface-2)',
+//           border: '1px solid var(--border)',
+//           borderRadius: 10, padding: '10px 14px',
+//           fontSize: 13, color: 'var(--text-secondary)',
+//           lineHeight: 1.6, marginBottom: 14,
+//         }}>
+//           {focus.edited_summary || focus.summary}
+//         </div>
+//       )}
+
+//       {/* Progress bar */}
+//       {total > 0 && (
+//         <div style={{ marginBottom: 16 }}>
+//           <div style={{
+//             display: 'flex', justifyContent: 'space-between',
+//             fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
+//             marginBottom: 6,
+//           }}>
+//             <span>{completed}/{total} completed</span>
+//             <span style={{ color: barColor, fontWeight: 700 }}>{rate}%</span>
+//           </div>
+//           <div style={{
+//             height: 6, background: 'var(--border)',
+//             borderRadius: 4, overflow: 'hidden',
+//           }}>
+//             <div style={{
+//               height: '100%', width: `${rate}%`,
+//               background: barColor, borderRadius: 4,
+//               transition: 'width 0.4s ease',
+//             }} />
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Task list */}
+//       {tasks.length > 0 ? (
+//         <div style={{
+//           display: 'flex', flexDirection: 'column', gap: 6,
+//         }}>
+//           {tasks.map(task => (
+//             <div key={task.id} style={{
+//               display: 'flex', alignItems: 'flex-start', gap: 10,
+//               padding: '10px 12px', borderRadius: 10,
+//               background: task.completed ? 'var(--success-soft)' : 'var(--surface-2)',
+//               border: `1px solid ${task.completed ? 'var(--success)' : 'var(--border)'}`,
+//               opacity: task.completed ? 0.75 : 1,
+//               transition: 'all 0.15s',
+//             }}>
+//               {task.completed
+//                 ? <CheckSquare size={15} color="var(--success)" style={{ flexShrink: 0, marginTop: 1 }} />
+//                 : <Square size={15} color="var(--text-muted)" style={{ flexShrink: 0, marginTop: 1 }} />
+//               }
+//               <div style={{ flex: 1, minWidth: 0 }}>
+//                 <div style={{
+//                   fontSize: 13, fontWeight: task.completed ? 500 : 600,
+//                   color: task.completed ? 'var(--text-muted)' : 'var(--text-primary)',
+//                   textDecoration: task.completed ? 'line-through' : 'none',
+//                   marginBottom: task.description ? 2 : 0,
+//                 }}>
+//                   {task.title}
+//                 </div>
+//                 {task.description && (
+//                   <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+//                     {task.description}
+//                   </div>
+//                 )}
+//               </div>
+//               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+//                 {task.category && (
+//                   <span style={{
+//                     fontSize: 10, fontWeight: 700,
+//                     background: 'var(--accent-soft)', color: 'var(--accent)',
+//                     padding: '2px 7px', borderRadius: 20,
+//                     whiteSpace: 'nowrap',
+//                   }}>
+//                     {task.category}
+//                   </span>
+//                 )}
+//                 {task.carried_over && (
+//                   <span style={{
+//                     fontSize: 10, fontWeight: 600,
+//                     color: 'var(--warning)',
+//                     whiteSpace: 'nowrap',
+//                   }}>
+//                     ↩ carried over
+//                   </span>
+//                 )}
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       ) : (
+//         <div style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+//           Tasks not available for past weeks.
+//         </div>
+//       )}
+//     </div>
+//   )
 // }
 
 // // ── Mentor request actions ──────────────────────────────────────
@@ -143,6 +314,7 @@
 //   const cfg = typeConfig[notification.type] || typeConfig.log_signed
 //   const IconComponent = cfg.icon
 //   const hasAction = notification.type === 'mentor_request' && notification.metadata?.action_required
+//   const focusId = notification.metadata?.focus_id
 
 //   return (
 //     <div style={{
@@ -199,6 +371,9 @@
 //         {notification.message}
 //       </p>
 
+//       {/* Weekly focus tasks */}
+//       {focusId && <WeeklyFocusTasks focusId={focusId} />}
+
 //       {/* Mentor request actions */}
 //       {hasAction && (
 //         <MentorRequestActions
@@ -230,7 +405,6 @@
 //         position: 'relative',
 //       }}
 //     >
-//       {/* Checkbox (select mode) */}
 //       {selectMode && (
 //         <input
 //           type="checkbox"
@@ -245,7 +419,6 @@
 //         />
 //       )}
 
-//       {/* Icon */}
 //       <div style={{
 //         width: 36, height: 36, borderRadius: 10,
 //         background: 'var(--surface-2)',
@@ -257,7 +430,6 @@
 //         <IconComponent size={16} strokeWidth={1.8} />
 //       </div>
 
-//       {/* Content */}
 //       <div style={{ flex: 1, minWidth: 0 }}>
 //         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
 //           {!n.read && (
@@ -283,7 +455,6 @@
 //         </div>
 //       </div>
 
-//       {/* Time + arrow */}
 //       <div style={{
 //         display: 'flex', flexDirection: 'column',
 //         alignItems: 'flex-end', gap: 4, flexShrink: 0,
@@ -315,12 +486,9 @@
 //     return () => window.removeEventListener('resize', handler)
 //   }, [])
 
-//   // Close menu on outside click
 //   useEffect(() => {
 //     function handleClick(e) {
-//       if (menuRef.current && !menuRef.current.contains(e.target)) {
-//         setMenuOpen(false)
-//       }
+//       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
 //     }
 //     document.addEventListener('mousedown', handleClick)
 //     return () => document.removeEventListener('mousedown', handleClick)
@@ -407,7 +575,6 @@
 //   const groups = groupByTime(notifications)
 //   const allSelected = notifications.length > 0 && selected.length === notifications.length
 
-//   // ── List panel content ─────────────────────────────────────
 //   const listContent = (
 //     <div style={{
 //       width: isDesktop ? 360 : '100%',
@@ -418,7 +585,6 @@
 //       height: isDesktop ? 'calc(100vh - 120px)' : 'auto',
 //       overflow: 'hidden',
 //     }}>
-//       {/* List header */}
 //       <div style={{
 //         padding: '20px 16px 14px',
 //         borderBottom: '1px solid var(--border)',
@@ -440,7 +606,6 @@
 //         </div>
 
 //         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-//           {/* Select mode delete */}
 //           {selectMode && selected.length > 0 && (
 //             <button
 //               onClick={handleDeleteSelected}
@@ -458,7 +623,6 @@
 //             </button>
 //           )}
 
-//           {/* Select mode cancel */}
 //           {selectMode && (
 //             <button
 //               onClick={toggleSelectMode}
@@ -474,7 +638,6 @@
 //             </button>
 //           )}
 
-//           {/* ⋯ menu */}
 //           {!selectMode && (
 //             <div ref={menuRef} style={{ position: 'relative' }}>
 //               <button
@@ -544,7 +707,6 @@
 //         </div>
 //       </div>
 
-//       {/* List body */}
 //       <div style={{ overflowY: 'auto', flex: 1 }}>
 //         {loading ? (
 //           <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -605,7 +767,6 @@
 //     </div>
 //   )
 
-//   // ── Render ─────────────────────────────────────────────────
 //   return (
 //     <div className="page" style={{ padding: 0 }}>
 //       <style>{`
@@ -613,7 +774,6 @@
 //       `}</style>
 
 //       {isDesktop ? (
-//         // Desktop: split pane
 //         <div style={{
 //           display: 'flex',
 //           height: 'calc(100vh - 120px)',
@@ -630,9 +790,7 @@
 //           />
 //         </div>
 //       ) : (
-//         // Mobile: single column
 //         <div style={{ padding: '0 0 80px' }}>
-//           {/* Mobile header */}
 //           <div style={{
 //             padding: '20px 16px 16px',
 //             display: 'flex', alignItems: 'center',
@@ -690,7 +848,6 @@
 //             </div>
 //           </div>
 
-//           {/* Mobile list */}
 //           {loading ? (
 //             <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
 //               {[1, 2, 3, 4].map(i => (
@@ -744,7 +901,6 @@
 //                               handleSelect(isOpen ? null : n)
 //                             }}
 //                           />
-//                           {/* Mobile expand */}
 //                           {isOpen && (
 //                             <div style={{
 //                               borderTop: '1px solid var(--border)',
@@ -767,7 +923,6 @@
 //             </div>
 //           )}
 
-//           {/* Mobile select bar */}
 //           {selectMode && selected.length > 0 && (
 //             <div style={{
 //               position: 'fixed', bottom: 90, left: 16, right: 16,
@@ -808,6 +963,7 @@ import {
   PenLine, ClipboardList, UserPlus, CheckCircle,
   Bell, Trash2, XCircle, MoreHorizontal, CheckCheck,
   ChevronRight, AlertTriangle, Calendar, CheckSquare, Square,
+  ChevronLeft, Search
 } from 'lucide-react'
 
 // ── Config ─────────────────────────────────────────────────────
@@ -861,8 +1017,6 @@ function WeeklyFocusTasks({ focusId }) {
     if (!focusId) return
     async function fetchTasks() {
       try {
-        // reuse the existing my-tasks endpoint — it returns focus + tasks for current week
-        // but we need tasks by focus_id specifically, so call the history endpoint and match
         const res = await fetch(`/projects/weekly-focus/my-tasks`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         })
@@ -871,14 +1025,12 @@ function WeeklyFocusTasks({ focusId }) {
           setFocus(data.focus)
           setTasks(data.tasks || [])
         } else {
-          // focus is from a past week — fetch from history
           const histRes = await fetch(`/projects/weekly-focus/history`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
           })
           const histData = await histRes.json()
           const match = (histData.history || []).find(f => f.id === focusId)
           if (match) setFocus(match)
-          // tasks aren't in history payload, show focus summary only
         }
       } catch (e) {
         console.error('[WeeklyFocusTasks]', e)
@@ -908,7 +1060,6 @@ function WeeklyFocusTasks({ focusId }) {
 
   return (
     <div style={{ marginTop: 24 }}>
-      {/* Section header */}
       <div style={{
         fontSize: 11, fontWeight: 700, letterSpacing: '1.5px',
         textTransform: 'uppercase', color: 'var(--accent)',
@@ -917,7 +1068,6 @@ function WeeklyFocusTasks({ focusId }) {
         Weekly Tasks
       </div>
 
-      {/* Summary strip */}
       {focus?.summary && (
         <div style={{
           background: 'var(--surface-2)',
@@ -930,7 +1080,6 @@ function WeeklyFocusTasks({ focusId }) {
         </div>
       )}
 
-      {/* Progress bar */}
       {total > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{
@@ -954,11 +1103,8 @@ function WeeklyFocusTasks({ focusId }) {
         </div>
       )}
 
-      {/* Task list */}
       {tasks.length > 0 ? (
-        <div style={{
-          display: 'flex', flexDirection: 'column', gap: 6,
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {tasks.map(task => (
             <div key={task.id} style={{
               display: 'flex', alignItems: 'flex-start', gap: 10,
@@ -1093,7 +1239,7 @@ function MentorRequestActions({ relationshipId, onRespond }) {
 }
 
 // ── Detail panel ────────────────────────────────────────────────
-function DetailPanel({ notification, onRespond, isMobile }) {
+function DetailPanel({ notification, onRespond, onClose, isMobile }) {
   if (!notification) {
     return (
       <div style={{
@@ -1124,7 +1270,20 @@ function DetailPanel({ notification, onRespond, isMobile }) {
       overflowY: 'auto',
       animation: 'fadeIn 0.15s ease',
     }}>
-      {/* Action required banner */}
+      {isMobile && (
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none', border: 'none',
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)',
+            cursor: 'pointer', padding: 0, marginBottom: 20, fontFamily: 'Urbanist, sans-serif',
+          }}
+        >
+          <ChevronLeft size={16} /> Back to inbox
+        </button>
+      )}
+
       {hasAction && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
@@ -1139,11 +1298,10 @@ function DetailPanel({ notification, onRespond, isMobile }) {
         </div>
       )}
 
-      {/* Icon + title */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20 }}>
         <div style={{
           width: 48, height: 48, borderRadius: 14,
-          background: 'var(--surface-2)',
+          background: cfg.bg,
           border: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: cfg.color, flexShrink: 0,
@@ -1160,10 +1318,8 @@ function DetailPanel({ notification, onRespond, isMobile }) {
         </div>
       </div>
 
-      {/* Divider */}
       <div style={{ height: 1, background: 'var(--border)', marginBottom: 20 }} />
 
-      {/* Message */}
       <p style={{
         fontSize: 14, lineHeight: 1.8,
         color: 'var(--text-secondary)',
@@ -1172,10 +1328,8 @@ function DetailPanel({ notification, onRespond, isMobile }) {
         {notification.message}
       </p>
 
-      {/* Weekly focus tasks */}
       {focusId && <WeeklyFocusTasks focusId={focusId} />}
 
-      {/* Mentor request actions */}
       {hasAction && (
         <MentorRequestActions
           relationshipId={notification.metadata.relationship_id}
@@ -1187,7 +1341,7 @@ function DetailPanel({ notification, onRespond, isMobile }) {
 }
 
 // ── Notification row ────────────────────────────────────────────
-function NotifRow({ n, isSelected, isActive, selectMode, onSelect, onClick }) {
+function NotifRow({ n, isActive, selectMode, onSelect, onClick }) {
   const cfg = typeConfig[n.type] || typeConfig.log_signed
   const IconComponent = cfg.icon
   const hasAction = n.type === 'mentor_request' && n.metadata?.action_required
@@ -1198,10 +1352,10 @@ function NotifRow({ n, isSelected, isActive, selectMode, onSelect, onClick }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 16px', cursor: 'pointer',
-        borderLeft: !n.read ? '3px solid var(--accent)' : '3px solid transparent',
         background: isActive
-          ? 'var(--accent-soft)'
-          : n.read ? 'transparent' : 'var(--surface-2)',
+          ? 'var(--surface-2)'
+          : n.read ? 'transparent' : 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
         transition: 'background 0.12s',
         position: 'relative',
       }}
@@ -1209,7 +1363,7 @@ function NotifRow({ n, isSelected, isActive, selectMode, onSelect, onClick }) {
       {selectMode && (
         <input
           type="checkbox"
-          checked={isSelected}
+          checked={n.selected || false}
           onChange={e => { e.stopPropagation(); onSelect() }}
           onClick={e => e.stopPropagation()}
           style={{
@@ -1220,33 +1374,35 @@ function NotifRow({ n, isSelected, isActive, selectMode, onSelect, onClick }) {
         />
       )}
 
+      {/* Unread dot */}
+      {!n.read && !selectMode && (
+        <div style={{
+          width: 6, height: 6, borderRadius: '50%',
+          background: 'var(--accent)', flexShrink: 0,
+          position: 'absolute', left: 6,
+        }} />
+      )}
+
+      {/* Icon box */}
       <div style={{
         width: 36, height: 36, borderRadius: 10,
-        background: 'var(--surface-2)',
+        background: hasAction ? 'var(--warning-soft)' : cfg.bg,
         border: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: hasAction ? 'var(--warning)' : cfg.color,
-        flexShrink: 0,
+        flexShrink: 0, marginLeft: !n.read && !selectMode ? 8 : 0,
       }}>
         <IconComponent size={16} strokeWidth={1.8} />
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-          {!n.read && (
-            <div style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: 'var(--accent)', flexShrink: 0,
-            }} />
-          )}
-          <div style={{
-            fontWeight: n.read ? 500 : 700,
-            fontSize: 13,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            color: 'var(--text-primary)',
-          }}>
-            {n.title}
-          </div>
+        <div style={{
+          fontWeight: n.read ? 500 : 700,
+          fontSize: 13,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          color: 'var(--text-primary)',
+        }}>
+          {n.title}
         </div>
         <div style={{
           fontSize: 12, color: 'var(--text-muted)',
@@ -1263,7 +1419,7 @@ function NotifRow({ n, isSelected, isActive, selectMode, onSelect, onClick }) {
         <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
           {timeAgo(n.created_at)}
         </span>
-        <ChevronRight size={12} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+        <ChevronRight size={12} color="var(--text-muted)" style={{ opacity: isActive ? 1 : 0.5 }} />
       </div>
     </div>
   )
@@ -1298,7 +1454,7 @@ export default function Notifications({ onCountChange }) {
   async function load() {
     try {
       const res = await notificationsApi.list()
-      const notifs = res.notifications || []
+      const notifs = (res.notifications || []).map(n => ({ ...n, selected: false }))
       setNotifications(notifs)
       onCountChange?.(notifs.filter(n => !n.read).length)
     } catch (e) {
@@ -1336,6 +1492,9 @@ export default function Notifications({ onCountChange }) {
     setSelected(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
+    setNotifications(prev => prev.map(n => 
+      n.id === id ? { ...n, selected: !n.selected } : n
+    ))
   }
 
   async function handleDeleteSelected() {
@@ -1356,7 +1515,7 @@ export default function Notifications({ onCountChange }) {
     }
   }
 
-  function handleRespond(notifId) {
+  function handleRespond(notifId, action) {
     setNotifications(prev => prev.map(x =>
       x.id === notifId
         ? { ...x, read: true, metadata: { ...x.metadata, action_required: false } }
@@ -1378,7 +1537,7 @@ export default function Notifications({ onCountChange }) {
 
   const listContent = (
     <div style={{
-      width: isDesktop ? 360 : '100%',
+      width: isDesktop ? 380 : '100%',
       flexShrink: 0,
       borderRight: isDesktop ? '1px solid var(--border)' : 'none',
       display: 'flex',
@@ -1536,29 +1695,23 @@ export default function Notifications({ onCountChange }) {
                   fontSize: 11, fontWeight: 700,
                   color: 'var(--text-muted)',
                   textTransform: 'uppercase', letterSpacing: '0.8px',
-                  borderBottom: '1px solid var(--border)',
-                  background: 'var(--surface)',
+                  background: 'var(--surface-2)',
                 }}>
                   {label}
                 </div>
                 {items.map((n, idx) => (
-                  <div key={n.id} style={{
-                    borderBottom: idx < items.length - 1
-                      ? '1px solid var(--border)'
-                      : 'none',
-                  }}>
-                    <NotifRow
-                      n={n}
-                      isActive={active?.id === n.id}
-                      isSelected={selected.includes(n.id)}
-                      selectMode={selectMode}
-                      onSelect={() => toggleCheck(n.id)}
-                      onClick={() => {
-                        if (selectMode) { toggleCheck(n.id); return }
-                        handleSelect(n)
-                      }}
-                    />
-                  </div>
+                  <NotifRow
+                    key={n.id}
+                    n={n}
+                    isActive={active?.id === n.id}
+                    selectMode={selectMode}
+                    onSelect={() => toggleCheck(n.id)}
+                    onClick={() => {
+                      if (selectMode) { toggleCheck(n.id); return }
+                      if (active?.id === n.id && isDesktop) return // Keep open on desktop
+                      handleSelect(n)
+                    }}
+                  />
                 ))}
               </div>
             )
@@ -1582,15 +1735,17 @@ export default function Notifications({ onCountChange }) {
           border: '1px solid var(--border)',
           borderRadius: 16,
           background: 'var(--surface)',
+          boxShadow: 'var(--shadow-sm)',
         }}>
           {listContent}
           <DetailPanel
             notification={active}
             isMobile={false}
-            onRespond={() => active && handleRespond(active.id)}
+            onRespond={(action) => active && handleRespond(active.id, action)}
           />
         </div>
       ) : (
+        /* Mobile Layout */
         <div style={{ padding: '0 0 80px' }}>
           <div style={{
             padding: '20px 16px 16px',
@@ -1664,6 +1819,15 @@ export default function Notifications({ onCountChange }) {
                 Mentor sign-offs, project updates, and requests show up here.
               </p>
             </div>
+          ) : active ? (
+            <div style={{ border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', margin: '0 16px', background: 'var(--surface)' }}>
+              <DetailPanel
+                notification={active}
+                isMobile={true}
+                onClose={() => setActive(null)}
+                onRespond={(action) => handleRespond(active.id, action)}
+              />
+            </div>
           ) : (
             <div style={{
               border: '1px solid var(--border)',
@@ -1680,44 +1844,23 @@ export default function Notifications({ onCountChange }) {
                       fontSize: 11, fontWeight: 700,
                       color: 'var(--text-muted)',
                       textTransform: 'uppercase', letterSpacing: '0.8px',
-                      borderBottom: '1px solid var(--border)',
                       background: 'var(--surface-2)',
                     }}>
                       {label}
                     </div>
-                    {items.map((n, idx) => {
-                      const isOpen = active?.id === n.id
-                      return (
-                        <div key={n.id} style={{
-                          borderBottom: idx < items.length - 1 ? '1px solid var(--border)' : 'none',
-                        }}>
-                          <NotifRow
-                            n={n}
-                            isActive={isOpen}
-                            isSelected={selected.includes(n.id)}
-                            selectMode={selectMode}
-                            onSelect={() => toggleCheck(n.id)}
-                            onClick={() => {
-                              if (selectMode) { toggleCheck(n.id); return }
-                              handleSelect(isOpen ? null : n)
-                            }}
-                          />
-                          {isOpen && (
-                            <div style={{
-                              borderTop: '1px solid var(--border)',
-                              background: 'var(--surface-2)',
-                              animation: 'fadeIn 0.15s ease',
-                            }}>
-                              <DetailPanel
-                                notification={n}
-                                isMobile={true}
-                                onRespond={() => handleRespond(n.id)}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
+                    {items.map((n, idx) => (
+                      <NotifRow
+                        key={n.id}
+                        n={n}
+                        isActive={false}
+                        selectMode={selectMode}
+                        onSelect={() => toggleCheck(n.id)}
+                        onClick={() => {
+                          if (selectMode) { toggleCheck(n.id); return }
+                          handleSelect(n)
+                        }}
+                      />
+                    ))}
                   </div>
                 )
               })}
