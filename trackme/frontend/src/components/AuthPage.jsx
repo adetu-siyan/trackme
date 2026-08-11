@@ -146,12 +146,8 @@ export default function AuthPage() {
       50% { transform: scale(1.08); }
     }
     .auth-page {
+      /* PURE WHITE AND VIOLET GRADIENT - FORCED FOR EVERYONE */
       background: linear-gradient(150deg, #ffffff 0%, #f4f0ff 60%, #e8deff 100%);
-    }
-    @media (prefers-color-scheme: dark) {
-      .auth-page {
-        background: linear-gradient(150deg, #0d0a14 0%, #150f24 60%, #1e1535 100%);
-      }
     }
   `
 
@@ -168,7 +164,6 @@ export default function AuthPage() {
     boxShadow: 'var(--shadow-lg)', position: 'relative', zIndex: 1,
   }
 
-  // Set the S / Y A N text color based on light/dark scheme automatically
   const logoBlock = (
     <div style={{ marginBottom: 32, textAlign: 'center', position: 'relative', zIndex: 1 }}>
       <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-1.5px', color: 'var(--text-primary)' }}>
