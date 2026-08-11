@@ -1485,7 +1485,7 @@ export default function Profile() {
     }
 
     @media (min-width: 768px) {
-      .ph-page-wrap { max-width: 780px; margin: 0 auto; }
+      .ph-page-wrap { max-width: 900px; margin: 0 auto; }
       .ph-banner { height: 200px; }
       .ph-avatar-wrap { display: none; }
       .ph-identity { display: none; }

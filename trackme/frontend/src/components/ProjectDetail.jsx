@@ -679,7 +679,7 @@ import {
   Package, Settings, Upload, BarChart2,
   Crown, User, Code2, Search, Palette,
   TrendingUp, PenLine, Folder, ExternalLink,
-  AlertTriangle, CheckCircle2, RefreshCw, XCircle, Circle
+  AlertTriangle, CheckCircle2, RefreshCw, XCircle
 } from 'lucide-react'
 
 const STATUS_CONFIG = {
