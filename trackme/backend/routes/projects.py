@@ -421,12 +421,15 @@ async def create_weekly_focus(
         supabase.table("weekly_tasks").insert(tasks_to_insert).execute()
 
     await create_notification(
-        body.mentee_id,
-        "project_assigned",
-        "📅 New Weekly Focus Set",
-        f"Your mentor set your focus for the week of {week_start.strftime('%b %d')}: {ai_result.get('summary', '')}",
-        {"focus_id": focus_id}
-    )
+        user_id=mentee_id,
+        type="weekly_focus",
+        title="New Weekly Focus Set",
+        message=f"Your mentor set your focus for the week of {week_start}: {summary}",
+        metadata={
+            "focus_id": str(focus.id),  # ← this is the key part
+            "week_start": str(week_start),
+    }
+)
 
     try:
         mentee_email = get_user_email(body.mentee_id)
