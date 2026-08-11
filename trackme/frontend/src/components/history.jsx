@@ -476,12 +476,12 @@
 // }
 
 
-
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { logsApi } from '../lib/api'
 import {
   CheckCircle, Send, FileText, Edit3, Trash2,
-  ChevronDown, PenLine, Inbox, CheckSquare, ChevronRight, Filter
+  ChevronDown, PenLine, Inbox, CheckSquare, ChevronRight, 
+  Filter, Search
 } from 'lucide-react'
 
 function statusConfig(log) {
@@ -534,8 +534,9 @@ export default function History() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   
-  // Filter & Dropdown states
+  // Filter & Search states
   const [filter, setFilter] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const filterRef = useRef(null)
 
@@ -570,10 +571,25 @@ export default function History() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Filter the logs based on the selected timeframe
+  // Filter the logs based on Time + Search Text
   const filteredLogs = useMemo(() => {
-    return logs.filter(log => isWithinRange(log.log_date, filter))
-  }, [logs, filter])
+    return logs.filter(log => {
+      // 1. Check time range
+      const inTimeRange = isWithinRange(log.log_date, filter)
+      if (!inTimeRange) return false
+
+      // 2. If search term is empty, include it
+      if (!searchTerm.trim()) return true
+
+      // 3. If search term exists, check Title, Topics, and Content
+      const searchLower = searchTerm.toLowerCase()
+      const titleMatch = log.structured_title?.toLowerCase().includes(searchLower)
+      const contentMatch = log.structured_content?.toLowerCase().includes(searchLower)
+      const topicsMatch = (log.structured_topics || []).some(t => t.toLowerCase().includes(searchLower))
+      
+      return titleMatch || contentMatch || topicsMatch
+    })
+  }, [logs, filter, searchTerm])
 
   const deletableLogs = logs.filter(l => !l.sent_to_mentor && !l.signed)
   const allDeletableSelected = deletableLogs.length > 0 && selected.length === deletableLogs.length
@@ -649,7 +665,6 @@ export default function History() {
   const groups = groupByDate(filteredLogs)
   const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a))
 
-  // Filter options
   const filterOptions = [
     { value: 'all', label: 'All Time' },
     { value: 'month', label: 'This Month' },
@@ -657,7 +672,6 @@ export default function History() {
     { value: 'today', label: 'Today' }
   ]
 
-  // Global styles for the gradient
   const globalStyles = `
     .history-page {
       background: linear-gradient(150deg, #ffffff 0%, #f4f0ff 60%, #e8deff 100%);
@@ -667,7 +681,10 @@ export default function History() {
     }
     @media (max-width: 640px) {
       .history-container { padding: 0 16px !important; }
-      .history-header { flex-direction: column; align-items: flex-start !important; gap: 12px; }
+      .history-header { flex-direction: column; align-items: stretch !important; gap: 12px; }
+      .history-controls { width: 100%; justify-content: space-between; }
+      .search-wrapper { flex: 1; }
+      .search-wrapper input { width: 100% !important; }
     }
   `
 
@@ -702,11 +719,44 @@ export default function History() {
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
               {filteredLogs.length} log{filteredLogs.length !== 1 ? 's' : ''}
+              {logs.length !== filteredLogs.length && (
+                <span style={{ marginLeft: 6, color: 'var(--accent)' }}>
+                  (filtered from {logs.length})
+                </span>
+              )}
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="history-controls" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             
+            {/* ── Search Bar ── */}
+            <div className="search-wrapper" style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="Search by title or topic..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  padding: '8px 12px 8px 36px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  color: 'var(--text-primary)',
+                  fontSize: 13,
+                  fontFamily: 'Urbanist, sans-serif',
+                  width: 200,
+                  outline: 'none',
+                  transition: 'border 0.2s',
+                }}
+              />
+              <Search size={14} style={{
+                position: 'absolute',
+                left: 12, top: '50%', transform: 'translateY(-50%)',
+                color: 'var(--text-muted)',
+                pointerEvents: 'none',
+              }} />
+            </div>
+
             {/* ── Filter Dropdown ── */}
             <div ref={filterRef} style={{ position: 'relative' }}>
               <button
@@ -848,7 +898,7 @@ export default function History() {
             </div>
             <h3 style={{ marginBottom: 8, fontSize: '1.2rem', color: 'var(--text-secondary)' }}>No logs found</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-              Try changing your filter or write your first log to get started.
+              {searchTerm ? 'Try adjusting your search or clearing the filter.' : 'Write your first log to get started.'}
             </p>
           </div>
         ) : (
