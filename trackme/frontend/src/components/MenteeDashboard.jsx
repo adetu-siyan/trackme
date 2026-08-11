@@ -200,6 +200,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
+  // RESTORED: Fetch data on mount
   useEffect(() => {
     mentorApi.myMentees()
       .then(res => setMentees(res.mentees || []))
@@ -207,12 +208,13 @@ export default function MenteeDashboard({ onSelectMentee }) {
       .finally(() => setLoading(false))
   }, [])
 
+  // RESTORED: Filter by search
   const filtered = mentees.filter(m => {
     const name = m.profile?.full_name || ''
     return name.toLowerCase().includes(search.toLowerCase())
   })
 
-  // ── Global Styles for this page ──
+  // Global styles for light/dark gradients
   const globalStyles = `
     .mentor-page {
       background: linear-gradient(150deg, #ffffff 0%, #f4f0ff 60%, #e8deff 100%);
@@ -222,19 +224,25 @@ export default function MenteeDashboard({ onSelectMentee }) {
     }
     @media (max-width: 640px) {
       .mentee-grid { grid-template-columns: 1fr !important; }
-      .mentee-header-row { flex-direction: column; align-items: flex-start !important; gap: 12px !important; }
-      .mentee-search-bar { width: 100% !important; }
+      .mentee-header { flex-direction: column; align-items: flex-start !important; gap: 12px !important; }
+      .mentee-search { width: 100% !important; }
     }
   `
 
   return (
-    <div className="mentor-page" style={{ minHeight: '100vh', padding: '40px 0 80px 0', width: '100%', display: 'flex', justifyContent: 'center' }}>
+    <div className="mentor-page" style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      justifyContent: 'center', 
+      padding: '40px 0 80px 0',
+      width: '100%'
+    }}>
       <style>{globalStyles}</style>
 
       <div style={{ width: '100%', maxWidth: 980, padding: '0 24px' }}>
         
-        {/* ── Page Header ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
+        {/* ── Header ── */}
+        <div className="mentee-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ marginBottom: 4, fontWeight: 700, fontSize: '1.8rem' }}>Mentor Dashboard</h1>
             <p className="text-muted" style={{ fontSize: 14 }}>Manage your mentees and cohorts</p>
@@ -275,13 +283,18 @@ export default function MenteeDashboard({ onSelectMentee }) {
         {/* ── Mentees Tab ── */}
         {activeTab === 'mentees' && (
           <div>
-            {/* Control Row */}
-            <div className="mentee-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, gap: 16, flexWrap: 'wrap' }}>
+            {/* Controls Row */}
+            <div className="mentee-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, gap: 16, flexWrap: 'wrap' }}>
               <p className="text-muted" style={{ fontSize: 14, margin: 0 }}>
                 {filtered.length} active mentee{filtered.length !== 1 ? 's' : ''}
+                {search.trim() && filtered.length !== mentees.length && (
+                  <span style={{ color: 'var(--accent)', marginLeft: 6 }}>
+                    · {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+                  </span>
+                )}
               </p>
 
-              <div className="mentee-search-bar" style={{ position: 'relative', width: 260 }}>
+              <div className="mentee-search" style={{ position: 'relative', width: 260 }}>
                 <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: 'var(--text-muted)', pointerEvents: 'none' }}>🔍</span>
                 <input
                   type="text"
@@ -298,7 +311,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
               </div>
             </div>
 
-            {/* ── Content ── */}
+            {/* ── Grid ── */}
             {loading ? (
               <div className="mentee-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
                 {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 220, borderRadius: 16 }} />)}
@@ -321,14 +334,13 @@ export default function MenteeDashboard({ onSelectMentee }) {
                   const streak = m.streak || {}
                   const daysSinceLog = daysSince(stats.last_log_date)
                   
-                  // Sleek status config
-                  const activityColor = daysSinceLog === null ? 'var(--text-muted)'
-                    : daysSinceLog === 0 ? 'var(--success)'
-                    : daysSinceLog <= 3 ? 'var(--warning)' : 'var(--danger)'
-
                   const initials = profile.full_name 
                     ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) 
                     : '?'
+
+                  const activityColor = daysSinceLog === null ? 'var(--text-muted)'
+                    : daysSinceLog === 0 ? 'var(--success)'
+                    : daysSinceLog <= 3 ? 'var(--warning)' : 'var(--danger)'
 
                   return (
                     <div 
@@ -346,15 +358,10 @@ export default function MenteeDashboard({ onSelectMentee }) {
                       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
                     >
-                      {/* ── Top Row: Avatar + Name + Status ── */}
+                      {/* ── Top Row ── */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                         <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
-                          <div style={{ 
-                            width: 44, height: 44, borderRadius: '50%', 
-                            background: 'var(--accent)', 
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                            fontSize: 15, fontWeight: 800, color: '#fff', flexShrink: 0 
-                          }}>
+                          <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
                             {initials}
                           </div>
                           <div style={{ minWidth: 0 }}>
@@ -369,7 +376,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
                         <div style={{ 
                           display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
                           padding: '3px 8px', borderRadius: 12,
-                          background: 'var(--surface-2)', border: `1px solid ${activityColor}`,
+                          background: 'var(--surface-2)',
                         }}>
                           <div style={{ width: 6, height: 6, borderRadius: '50%', background: activityColor }} />
                           <span style={{ fontSize: 10, fontWeight: 600, color: activityColor, whiteSpace: 'nowrap' }}>
@@ -378,7 +385,7 @@ export default function MenteeDashboard({ onSelectMentee }) {
                         </div>
                       </div>
 
-                      {/* ── Stats Grid (2x2 for better breathing room) ── */}
+                      {/* ── Stats Grid (2x2 inside a subtle background) ── */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', background: 'var(--surface-2)', borderRadius: 12, padding: '12px 14px' }}>
                         <div>
                           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>{stats.total_logs || 0}</div>
