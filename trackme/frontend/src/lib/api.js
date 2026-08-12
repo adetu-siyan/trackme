@@ -175,6 +175,35 @@ export const groupsApi = {
   delete: (groupId) => request('DELETE', `/groups/${groupId}`),
 }
 
+// ============================================================
+// ROADMAP
+// ============================================================
+export const roadmapApi = {
+  // Mentor: upload Excel roadmap for a mentee
+  upload: (menteeId, formData) => requestFormData('POST', `/projects/roadmap/upload/${menteeId}`, formData),
+
+  // Mentor: delete roadmap for a mentee
+  delete: (menteeId) => request('DELETE', `/projects/roadmap/${menteeId}`),
+
+  // Mentor: view roadmap they set for a mentee
+  getMenteeRoadmap: (menteeId) => request('GET', `/projects/roadmap/mentee/${menteeId}`),
+
+  // Mentor: manually trigger delay check for all active mentees
+  checkDelays: () => request('POST', '/projects/roadmap/check-delays'),
+
+  // Mentee: view own roadmap (Guide tab)
+  myGuide: () => request('GET', '/projects/roadmap/my-guide'),
+
+  // Mentee: mark a task complete — returns 10 test questions
+  completeTask: (taskId) => request('POST', `/projects/roadmap/task/${taskId}/complete`),
+
+  // Mentee: submit test answers
+  submitTest: (testId, answers) => request('POST', `/projects/roadmap/test/${testId}/submit`, { answers }),
+
+  // Mentee/Mentor: view test results
+  getTestResults: (testId) => request('GET', `/projects/roadmap/test/${testId}/results`),
+}
+
 
 
 

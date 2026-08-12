@@ -176,7 +176,68 @@ async def run_reminder_scheduler():
                     logger.info(f"[SCHEDULER] ✅ Sent {slot} reminder → {email}")
                 except Exception as e:
                     logger.error(f"[SCHEDULER] ❌ Failed for {email}: {e}")
+                    
+# ── Roadmap delay check (runs once daily at 8am) ──
+            if current_time == "08:00":
+                try:
+                    active_roadmaps = supabase.table("roadmaps") \
+                        .select("id, mentor_id, mentee_id, start_date, duration_type, total_units") \
+                        .eq("status", "active").execute()
 
+                    from datetime import date
+                    today = date.today()
+
+                    for roadmap in (active_roadmaps.data or []):
+                        start = date.fromisoformat(roadmap["start_date"])
+                        days_elapsed = (today - start).days
+                        duration_type = roadmap["duration_type"]
+
+                        expected_unit = min(
+                            (days_elapsed + 1) if duration_type == "daily" else (days_elapsed // 7 + 1),
+                            roadmap["total_units"]
+                        )
+
+                        units = supabase.table("roadmap_units") \
+                            .select("unit_number, title, id, roadmap_tasks(title, completed)") \
+                            .eq("roadmap_id", roadmap["id"]) \
+                            .eq("unlocked", True).eq("completed", False) \
+                            .order("unit_number").limit(1).execute()
+
+                        if not units.data:
+                            continue
+
+                        current_unit = units.data[0]
+                        if current_unit["unit_number"] < expected_unit:
+                            from services.groq_service import analyze_roadmap_delay
+                            from services.supabase_service import create_notification
+
+                            days_behind = expected_unit - current_unit["unit_number"]
+                            incomplete = [
+                                t["title"] for t in current_unit.get("roadmap_tasks", [])
+                                if not t["completed"]
+                            ]
+                            mentee_name = supabase.table("profiles") \
+                                .select("full_name").eq("id", roadmap["mentee_id"]).execute()
+                            name = mentee_name.data[0]["full_name"] if mentee_name.data else "Your mentee"
+
+                            alert_msg = await analyze_roadmap_delay(
+                                mentee_name=name,
+                                unit_title=current_unit["title"],
+                                unit_number=current_unit["unit_number"],
+                                days_behind=days_behind,
+                                tasks_incomplete=incomplete
+                            )
+                            await create_notification(
+                                roadmap["mentor_id"],
+                                "roadmap_delay",
+                                f"⚠️ Delay — {name}",
+                                alert_msg,
+                                {"roadmap_id": roadmap["id"], "days_behind": days_behind}
+                            )
+                            logger.info(f"[SCHEDULER] ⚠️ Delay alert fired for roadmap {roadmap['id']}")
+
+                except Exception as e:
+                    logger.error(f"[SCHEDULER] Roadmap delay check failed: {e}")
         except Exception as e:
             logger.error(f"[SCHEDULER] Loop error: {e}")
 

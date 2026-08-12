@@ -11,3 +11,4 @@ httpx==0.28.1
 python-multipart==0.0.18
 slowapi==0.1.10
 apscheduler
+openpyxl
