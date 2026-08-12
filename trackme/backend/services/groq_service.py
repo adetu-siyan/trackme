@@ -1195,7 +1195,7 @@ Return ONLY valid JSON, no markdown:
             model=FAST_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
-            max_tokens=13000,
+            max_tokens=4000,
         )
 
     response = await asyncio.to_thread(_call)
