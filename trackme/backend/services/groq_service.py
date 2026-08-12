@@ -1142,7 +1142,7 @@ Respond with ONLY valid JSON, no markdown:
 # ─────────────────────────────────────────────────────────────────────────────
 # ROADMAP EXCEL PARSING
 # ─────────────────────────────────────────────────────────────────────────────
-
+FAST_MODEL = "llama-3.1-8b-instant"
 async def parse_roadmap_excel(raw_data: list, mentee_name: str) -> dict:
     """
     raw_data: list of dicts from openpyxl — each row from the Excel sheet
@@ -1192,10 +1192,10 @@ Return ONLY valid JSON, no markdown:
 
     def _call():
         return client.chat.completions.create(
-            model=MODEL,
+            model=FAST_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
-            max_tokens=4000,
+            max_tokens=13000,
         )
 
     response = await asyncio.to_thread(_call)
@@ -1212,7 +1212,7 @@ Return ONLY valid JSON, no markdown:
 # TASK TEST GENERATION (10 QUESTIONS)
 # ─────────────────────────────────────────────────────────────────────────────
 
-FAST_MODEL = "llama-3.1-8b-instant"
+
 
 async def generate_task_test(task_title: str, task_description: str, unit_goal: str) -> list:
     """
