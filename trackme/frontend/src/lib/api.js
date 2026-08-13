@@ -179,7 +179,8 @@ export const groupsApi = {
 // ROADMAP
 // ============================================================
 export const roadmapApi = {
-  save: (menteeId, body) => request('POST', `/projects/roadmap/save/${menteeId}`, body),
+  upload: (menteeId, body) => request('POST', `/projects/roadmap/save/${menteeId}`, body),
+  // save: (menteeId, body) => request('POST', `/projects/roadmap/save/${menteeId}`, body),
   delete: (menteeId) => request('DELETE', `/projects/roadmap/${menteeId}`),
   getMenteeRoadmap: (menteeId) => request('GET', `/projects/roadmap/mentee/${menteeId}`),
   checkDelays: () => request('POST', '/projects/roadmap/check-delays'),
