@@ -1139,73 +1139,73 @@ Respond with ONLY valid JSON, no markdown:
     return result.get("matched_task_ids", [])
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ROADMAP EXCEL PARSING
-# ─────────────────────────────────────────────────────────────────────────────
-FAST_MODEL = "llama-3.1-8b-instant"
-async def parse_roadmap_excel(raw_data: list, mentee_name: str) -> dict:
-    """
-    raw_data: list of dicts from openpyxl — each row from the Excel sheet
-    Returns structured roadmap with title, duration_type, units[]
-    """
-    rows_text = "\n".join([
-        f"Row {i+1}: {json.dumps(row)}"
-        for i, row in enumerate(raw_data[:120])  # cap at 120 rows
-    ])
+# # ─────────────────────────────────────────────────────────────────────────────
+# # ROADMAP EXCEL PARSING
+# # ─────────────────────────────────────────────────────────────────────────────
+# FAST_MODEL = "llama-3.1-8b-instant"
+# async def parse_roadmap_excel(raw_data: list, mentee_name: str) -> dict:
+#     """
+#     raw_data: list of dicts from openpyxl — each row from the Excel sheet
+#     Returns structured roadmap with title, duration_type, units[]
+#     """
+#     rows_text = "\n".join([
+#         f"Row {i+1}: {json.dumps(row)}"
+#         for i, row in enumerate(raw_data[:120])  # cap at 120 rows
+#     ])
 
-    prompt = f"""You are parsing a mentorship roadmap uploaded as an Excel sheet for {mentee_name}.
+#     prompt = f"""You are parsing a mentorship roadmap uploaded as an Excel sheet for {mentee_name}.
 
-The mentor uploaded rows from a spreadsheet. Each row represents a learning unit (a day or a week).
-Your job is to:
-1. Detect if this is a daily or weekly roadmap (look at column headers or row patterns)
-2. Extract each unit cleanly
-3. Return a structured JSON roadmap
+# The mentor uploaded rows from a spreadsheet. Each row represents a learning unit (a day or a week).
+# Your job is to:
+# 1. Detect if this is a daily or weekly roadmap (look at column headers or row patterns)
+# 2. Extract each unit cleanly
+# 3. Return a structured JSON roadmap
 
-Excel rows:
-{rows_text}
+# Excel rows:
+# {rows_text}
 
-Rules:
-- duration_type must be "daily" or "weekly"
-- total_units = number of units you extracted
-- Each unit must have: unit_number (int), title (str), goal (str), tasks (list of str), resources (str), links (str)
-- tasks should be extracted from any task/activity column — split by comma or newline if multiple
-- If a column is missing, use empty string or empty list
-- title for each unit should be descriptive, not just "Day 1" — infer from content if possible
-- Keep the mentor's original intent — don't rewrite their content, just structure it
+# Rules:
+# - duration_type must be "daily" or "weekly"
+# - total_units = number of units you extracted
+# - Each unit must have: unit_number (int), title (str), goal (str), tasks (list of str), resources (str), links (str)
+# - tasks should be extracted from any task/activity column — split by comma or newline if multiple
+# - If a column is missing, use empty string or empty list
+# - title for each unit should be descriptive, not just "Day 1" — infer from content if possible
+# - Keep the mentor's original intent — don't rewrite their content, just structure it
 
-Return ONLY valid JSON, no markdown:
-{{
-  "roadmap_title": "...",
-  "duration_type": "daily" or "weekly",
-  "total_units": <int>,
-  "units": [
-    {{
-      "unit_number": 1,
-      "title": "...",
-      "goal": "...",
-      "tasks": ["task1", "task2"],
-      "resources": "...",
-      "links": "..."
-    }}
-  ]
-}}"""
+# Return ONLY valid JSON, no markdown:
+# {{
+#   "roadmap_title": "...",
+#   "duration_type": "daily" or "weekly",
+#   "total_units": <int>,
+#   "units": [
+#     {{
+#       "unit_number": 1,
+#       "title": "...",
+#       "goal": "...",
+#       "tasks": ["task1", "task2"],
+#       "resources": "...",
+#       "links": "..."
+#     }}
+#   ]
+# }}"""
 
-    def _call():
-        return client.chat.completions.create(
-            model=FAST_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=4000,
-        )
+#     def _call():
+#         return client.chat.completions.create(
+#             model=FAST_MODEL,
+#             messages=[{"role": "user", "content": prompt}],
+#             temperature=0.2,
+#             max_tokens=4000,
+#         )
 
-    response = await asyncio.to_thread(_call)
-    text = _clean_json(response.choices[0].message.content.strip())
-    return _safe_json(text, {
-        "roadmap_title": "Mentorship Roadmap",
-        "duration_type": "daily",
-        "total_units": 0,
-        "units": []
-    })
+#     response = await asyncio.to_thread(_call)
+#     text = _clean_json(response.choices[0].message.content.strip())
+#     return _safe_json(text, {
+#         "roadmap_title": "Mentorship Roadmap",
+#         "duration_type": "daily",
+#         "total_units": 0,
+#         "units": []
+#     })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
