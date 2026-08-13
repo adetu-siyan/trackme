@@ -324,17 +324,25 @@ export default function MenteeDetail({ mentee, onBack }) {
           return
         }
 
-        function findCol(keywords) {
-          return Object.keys(rows[0]).find(h =>
-            keywords.some(kw => h.toLowerCase().includes(kw))
-          ) || null
-        }
+        // With this:
+function findCol(keywords) {
+  const headers = Object.keys(rows[0])
+  for (const kw of keywords) {
+    const match = headers.find(h => h.toLowerCase() === kw)
+    if (match) return match
+  }
+  for (const kw of keywords) {
+    const match = headers.find(h => h.toLowerCase().includes(kw))
+    if (match) return match
+  }
+  return null
+}
 
-        const titleCol    = findCol(['title', 'topic', 'day', 'week', 'unit', 'name'])
-        const goalCol     = findCol(['goal', 'objective', 'outcome', 'target'])
-        const tasksCol    = findCol(['task', 'activity', 'todo', 'work'])
-        const resourceCol = findCol(['resource', 'material', 'reference', 'content'])
-        const linksCol    = findCol(['link', 'url', 'http'])
+const titleCol    = findCol(['topic', 'title', 'unit', 'name', 'day', 'week'])
+const goalCol     = findCol(['description', 'goal', 'objective', 'outcome', 'target'])
+const tasksCol    = findCol(['task_type', 'task', 'activity', 'todo', 'work'])
+const resourceCol = findCol(['resource', 'material', 'reference', 'content'])
+const linksCol    = findCol(['link', 'url', 'http'])
 
         if (!titleCol) {
           showToast('Could not find a title/topic/day column. Check your column headers.')
