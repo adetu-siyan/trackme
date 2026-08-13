@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import * as XLSX from 'xlsx'
+import * as XLSX from 'sheetjs' // <-- FIXED: Added this import to fix build error
 import {
   ArrowLeft, Calendar, BarChart2, CheckCircle2, Circle, Pin, Pencil,
   AlertTriangle, Bot, RefreshCw, Check, FileText, PenLine, Flame,
@@ -392,6 +392,7 @@ export default function MenteeDetail({ mentee, onBack }) {
     if (!parsedRoadmap) return
     setSavingRoadmap(true)
     try {
+      // FIX: Change roadmapApi.upload to roadmapApi.save to match backend
       const res = await roadmapApi.save(mentee.mentee_id, {
         title: parsedRoadmap.title,
         duration_type: parsedRoadmap.duration_type,
@@ -935,6 +936,7 @@ export default function MenteeDetail({ mentee, onBack }) {
     </div>
   )
 }
+
 
 // import { useEffect, useState } from 'react'
 // import * as XLSX from 'xlsx'
