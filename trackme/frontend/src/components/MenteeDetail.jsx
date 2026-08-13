@@ -308,94 +308,101 @@ export default function MenteeDetail({ mentee, onBack }) {
 
   // ── Roadmap Handlers ──
   function handleRoadmapUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    e.target.value = ''
+  const file = e.target.files[0]
+  if (!file) return
+  e.target.value = ''
 
-    const reader = new FileReader()
-    reader.onload = (evt) => {
-      try {
-        const wb = XLSX.read(evt.target.result, { type: 'array' })
-        const ws = wb.Sheets[wb.SheetNames[0]]
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+  const reader = new FileReader()
+  reader.onload = async (evt) => {
+    try {
+      const wb = XLSX.read(evt.target.result, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
 
-        if (!rows.length) {
-          showToast('File appears empty. Check your sheet has data rows.')
-          return
-        }
-
-        // With this:
-function findCol(keywords) {
-  const headers = Object.keys(rows[0])
-  for (const kw of keywords) {
-    const match = headers.find(h => h.toLowerCase() === kw)
-    if (match) return match
-  }
-  for (const kw of keywords) {
-    const match = headers.find(h => h.toLowerCase().includes(kw))
-    if (match) return match
-  }
-  return null
-}
-
-const titleCol    = findCol(['topic', 'title', 'unit', 'name', 'day', 'week'])
-const goalCol     = findCol(['description', 'goal', 'objective', 'outcome', 'target'])
-const tasksCol    = findCol(['task_type', 'task', 'activity', 'todo', 'work'])
-const resourceCol = findCol(['resource', 'material', 'reference', 'content'])
-const linksCol    = findCol(['link', 'url', 'http'])
-
-        if (!titleCol) {
-          showToast('Could not find a title/topic/day column. Check your column headers.')
-          return
-        }
-
-        const titleHeader = titleCol.toLowerCase()
-        const durationType = titleHeader.includes('week') ? 'weekly' : 'daily'
-
-        const units = rows
-          .filter(row => row[titleCol]?.toString().trim())
-          .map((row, i) => {
-            const rawTasks = tasksCol ? row[tasksCol]?.toString() || '' : ''
-            const tasks = rawTasks
-              .split(/[,;\n]+/)
-              .map(t => t.trim())
-              .filter(Boolean)
-
-            return {
-              unit_number: i + 1,
-              title: row[titleCol]?.toString().trim(),
-              goal: goalCol ? row[goalCol]?.toString().trim() || '' : '',
-              tasks,
-              resources: resourceCol ? row[resourceCol]?.toString().trim() || '' : '',
-              links: linksCol ? row[linksCol]?.toString().trim() || '' : '',
-            }
-          })
-
-        if (!units.length) {
-          showToast('No valid rows found. Make sure your sheet has data under the headers.')
-          return
-        }
-
-        const roadmapTitle = file.name
-          .replace(/\.(xlsx|xls)$/i, '')
-          .replace(/[_-]/g, ' ')
-          .replace(/\b\w/g, c => c.toUpperCase())
-
-        setParsedRoadmap({
-          title: roadmapTitle,
-          duration_type: durationType,
-          total_units: units.length,
-          units,
-          detected: { titleCol, goalCol, tasksCol, resourceCol, linksCol }
-        })
-        setShowRoadmapPreviewModal(true)
-
-      } catch (err) {
-        showToast('Could not read file. Make sure it is a valid .xlsx file.')
+      if (!rows.length) {
+        showToast('File appears empty.')
+        return
       }
+
+      const headers = Object.keys(rows[0])
+      const sample = rows.slice(0, 5)
+
+      showToast('Analysing file structure...', 'info')
+
+      let validation
+      try {
+        validation = await roadmapApi.validate(headers, sample)
+      } catch {
+        showToast('Could not analyse file structure. Check your Excel file.')
+        return
+      }
+
+      if (!validation.is_roadmap) {
+        showToast(validation.rejection_reason || 'This doesn\'t look like a learning roadmap. Please upload a structured plan with topics and learning units.')
+        return
+      }
+
+      const { column_map } = validation
+
+      if (!column_map?.title) {
+        showToast('Could not identify a title/topic column. Make sure your file has a column for unit titles or topics.')
+        return
+      }
+
+      const titleHeader = column_map.title
+      const durationType = column_map.duration_type || 'daily'
+
+      const units = rows
+        .filter(row => row[titleHeader]?.toString().trim())
+        .map((row, i) => {
+          const rawTasks = column_map.tasks ? row[column_map.tasks]?.toString() || '' : ''
+          const tasks = rawTasks
+            .split(/[,;\n]+/)
+            .map(t => t.trim())
+            .filter(Boolean)
+
+          return {
+            unit_number: i + 1,
+            title: row[titleHeader]?.toString().trim(),
+            goal: column_map.goal ? row[column_map.goal]?.toString().trim() || '' : '',
+            tasks,
+            resources: column_map.resources ? row[column_map.resources]?.toString().trim() || '' : '',
+            links: column_map.links ? row[column_map.links]?.toString().trim() || '' : '',
+          }
+        })
+
+      if (!units.length) {
+        showToast('No valid rows found after parsing.')
+        return
+      }
+
+      const roadmapTitle = file.name
+        .replace(/\.(xlsx|xls)$/i, '')
+        .replace(/[_-]/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
+
+      setParsedRoadmap({
+        title: roadmapTitle,
+        duration_type: durationType,
+        total_units: units.length,
+        units,
+        detected: {
+          titleCol: column_map.title,
+          goalCol: column_map.goal,
+          tasksCol: column_map.tasks,
+          resourceCol: column_map.resources,
+          linksCol: column_map.links,
+        }
+      })
+      setShowRoadmapPreviewModal(true)
+
+    } catch (err) {
+      console.error(err)
+      showToast('Could not read file. Make sure it is a valid .xlsx file.')
     }
-    reader.readAsArrayBuffer(file)
   }
+  reader.readAsArrayBuffer(file)
+}
 
   async function handleConfirmRoadmap() {
     if (!parsedRoadmap) return
@@ -462,8 +469,22 @@ const linksCol    = findCol(['link', 'url', 'http'])
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999, padding: '12px 20px', borderRadius: 12, background: toast.type === 'error' ? 'var(--danger)' : '#059669', color: '#fff', fontSize: 14, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeUp 0.2s ease' }}>
-          {toast.type === 'error' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />} {toast.msg}
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999, padding: '12px 20px',
+         borderRadius: 12,
+          background: toast.type === 'error' 
+          ? 'var(--danger)' 
+          : toast.type === 'info' 
+          ? 'var(--accent)' 
+          : '#059669',
+
+
+           color: '#fff',
+            fontSize: 14, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeUp 0.2s ease' }}>
+          {toast.type === 'error' 
+          ? <AlertTriangle size={16} /> 
+          : toast.type === 'info'
+          ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+          : <CheckCircle2 size={16} />} {toast.msg}
         </div>
       )}
 

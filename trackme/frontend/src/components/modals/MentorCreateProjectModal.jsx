@@ -484,12 +484,15 @@ export default function MentorCreateProjectModal({ onClose, onCreated }) {
           <div style={{
             position: 'fixed', bottom: 24, right: 24, zIndex: 999,
             padding: '12px 20px', borderRadius: 12,
-            background: toast.type === 'error' ? 'var(--danger)' : '#059669',
-            color: '#fff', fontSize: 14, fontWeight: 600,
+background: toast.type === 'error' ? 'var(--danger)' : toast.type === 'info' ? 'var(--accent)' : '#059669',            color: '#fff', fontSize: 14, fontWeight: 600,
             boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', gap: 10,
           }}>
-            <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
+            <span>{toast.type === 'error' 
+  ? <XCircle size={16} /> 
+  : toast.type === 'info'
+  ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+  : <CheckCircle size={16} />}</span>
             {toast.msg}
           </div>
         )}

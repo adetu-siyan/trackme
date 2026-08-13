@@ -8,7 +8,7 @@ from config import settings
 
 client = Groq(api_key=settings.groq_api_key)
 MODEL = "llama-3.3-70b-versatile"
-
+FAST_MODEL = "llama-3.1-8b-instant"
 
 def get_groq_client():
     return client
@@ -36,20 +36,19 @@ def _safe_json(text: str, fallback: dict) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 # LOG RESTRUCTURING
 # ─────────────────────────────────────────────────────────────────────────────
-
 async def restructure_log(raw_content: str) -> dict:
     prompt = f"""You are a learning log assistant for a tech mentorship platform.
 
 A mentee has written their daily learning log below. Your job is to:
 1. Give it a clear, professional title (e.g. "Introduction to Docker Containers")
 2. Extract 3-6 key topics as short tags (e.g. ["Docker", "Containers", "Port Mapping"])
-3. Rewrite the content as a structured professional log — MAXIMUM 700 characters total
+3. Rewrite the content as a structured professional log — MAXIMUM 1200 characters total
 
 Rules:
 - Keep the meaning and substance of what the mentee wrote
 - Use professional language without losing their voice
 - Structure: What I Learned, Key Concepts, Challenges, Next Steps
-- structured_content MUST be under 700 characters — be concise
+- structured_content MUST be under 1200 characters — be thorough but concise
 - Do not pad or repeat information
 
 Respond with ONLY valid JSON, no markdown:
@@ -67,7 +66,7 @@ Raw log:
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=800,
+            max_tokens=1200,  # was 800
         )
 
     response = await asyncio.to_thread(_call)
@@ -75,14 +74,13 @@ Raw log:
     result = _safe_json(text, {
         "title": "Daily Learning Log",
         "topics": ["General Learning"],
-        "structured_content": raw_content[:700]
+        "structured_content": raw_content[:1200]
     })
 
-    if len(result.get("structured_content", "")) > 700:
-        result["structured_content"] = result["structured_content"][:697] + "..."
+    if len(result.get("structured_content", "")) > 1200:
+        result["structured_content"] = result["structured_content"][:1197] + "..."
 
     return result
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DIFFICULTY DETECTION
@@ -621,18 +619,18 @@ async def summarise_mentee_logs(logs: list, mentee_name: str) -> dict:
     if not logs:
         return empty_response
 
-    total = len(logs[:20])
-    signed_count = sum(1 for l in logs[:20] if l.get("signed"))
-    passed_count = sum(1 for l in logs[:20] if l.get("test_passed"))
+    total = len(logs[:30])
+    signed_count = sum(1 for l in logs[:30] if l.get("signed"))
+    passed_count = sum(1 for l in logs[:30] if l.get("test_passed"))
     failed_count = sum(
-        1 for l in logs[:20]
+        1 for l in logs[:30]
         if l.get("test_attempted") and not l.get("test_passed")
     )
-    not_attempted = sum(1 for l in logs[:20] if not l.get("test_attempted"))
+    not_attempted = sum(1 for l in logs[:30] if not l.get("test_attempted"))
 
     from datetime import datetime
     dates = []
-    for l in logs[:20]:
+    for l in logs[:30]:
         d = l.get("log_date")
         if d:
             try:
@@ -650,7 +648,7 @@ async def summarise_mentee_logs(logs: list, mentee_name: str) -> dict:
 
     # Word count trend for quality signal
     word_counts = []
-    for l in logs[:20]:
+    for l in logs[:30]:
         content = l.get("structured_content") or l.get("raw_content") or ""
         word_counts.append(len(content.split()))
     avg_words = round(sum(word_counts) / len(word_counts)) if word_counts else 0
@@ -659,7 +657,7 @@ async def summarise_mentee_logs(logs: list, mentee_name: str) -> dict:
 
     # Topic repetition signal
     all_topics = []
-    for l in logs[:20]:
+    for l in logs[:30]:
         all_topics.extend(l.get("structured_topics", []))
     unique_topic_ratio = len(set(all_topics)) / len(all_topics) if all_topics else 1.0
     topics_repetitive = unique_topic_ratio < 0.4
@@ -672,7 +670,7 @@ async def summarise_mentee_logs(logs: list, mentee_name: str) -> dict:
         f"Words: {len((l.get('structured_content') or l.get('raw_content') or '').split())} | "
         f"Test: {'Passed' if l.get('test_passed') else ('Failed' if l.get('test_attempted') else 'Not taken')} | "
         f"Signed: {'Yes' if l.get('signed') else 'No'}"
-        for l in logs[:20]
+        for l in logs[:30]
     ])
 
     prompt = f"""You are a senior technical mentor reviewing {mentee_name}'s learning logs.
@@ -704,17 +702,17 @@ Return ONLY valid JSON with EXACTLY these keys — no extras, no markdown:
 
 {{
   "focus_areas": ["topic1", "topic2", "topic3"],
-  "overview": "2-3 sentences on what they have been learning and overall trajectory. Be specific.",
-  "recommendations": "2-3 specific actionable recommendations grounded in THIS mentee's data. No generic advice.",
+  "overview": "4-5 sentences covering their learning trajectory, topic depth, consistency pattern, test performance, and one honest concern or strength grounded in the actual data.",
+  "recommendations": "3-4 specific actionable recommendations grounded in THIS mentee's data. Each must start with a verb. No generic advice.",
   "activity_pattern": "One honest sentence on logging frequency and consistency.",
   "consistency_signal": "Strong | Moderate | Inconsistent | At Risk",
   "learning_depth_pattern": "Deepening | Broadening | Surface-level | Mixed | Declining",
   "risk_flags": ["flag tied to specific data point", "another flag if present"],
   "strength_signals": ["strength tied to specific data point"],
   "session_agenda": ["agenda item 1 tied to a gap or strength", "item 2", "item 3"],
-  "where_they_are_going": "2-3 sentences: are topics coherent? Is there a clear technical direction?",
-  "how_they_are_going": "2-3 sentences: honest read of trajectory based on depth, consistency, test results.",
-  "what_mentor_should_do_next": "3-4 concrete feed-forward actions the mentor should take this week. Start each with a verb."
+  "where_they_are_going": "3-4 sentences: are their topics building toward a coherent goal? Is there a clear technical direction or are they scattered?",
+  "how_they_are_going": "3-4 sentences: honest read of trajectory based on depth, consistency, test results, and log quality. Name specific patterns.",
+  "what_mentor_should_do_next": "4-5 concrete feed-forward actions the mentor should take this week. Each must start with a verb and reference something specific in the data."
 }}"""
 
     def _call():
@@ -722,7 +720,7 @@ Return ONLY valid JSON with EXACTLY these keys — no extras, no markdown:
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.35,
-            max_tokens=1400,
+            max_tokens=2500,
         )
 
     response = await asyncio.to_thread(_call)
@@ -1139,6 +1137,49 @@ Respond with ONLY valid JSON, no markdown:
     return result.get("matched_task_ids", [])
 
 
+# roadmap structure validation
+
+async def validate_roadmap_structure(headers: list, sample_rows: list) -> dict:
+    prompt = f"""You are validating an Excel file uploaded to a mentorship platform.
+The mentor is uploading a LEARNING ROADMAP — a structured plan with learning units (days or weeks), topics, goals, and tasks.
+
+Headers found: {json.dumps(headers)}
+First 5 rows: {json.dumps(sample_rows)}
+
+Your job:
+1. Determine if this looks like a learning roadmap (has topics/days/weeks/learning content)
+2. If it does NOT look like a roadmap (e.g. financial data, transactions, invoices, employee records, product inventory) — reject it
+3. If it IS a roadmap, identify which column maps to each field
+
+Return ONLY valid JSON, no markdown:
+{{
+  "is_roadmap": true or false,
+  "rejection_reason": "explain why if not a roadmap, else null",
+  "column_map": {{
+    "title": "exact column name for the unit title/topic",
+    "goal": "exact column name for goal/description, or null",
+    "tasks": "exact column name for tasks/activities, or null",
+    "resources": "exact column name for resources/materials, or null",
+    "links": "exact column name for links/urls, or null",
+    "duration_type": "daily or weekly based on column names or content"
+  }}
+}}"""
+
+    def _call():
+        return client.chat.completions.create(
+            model=FAST_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=300,
+        )
+
+    response = await asyncio.to_thread(_call)
+    text = _clean_json(response.choices[0].message.content.strip())
+    return _safe_json(text, {
+        "is_roadmap": False,
+        "rejection_reason": "Could not analyse file structure.",
+        "column_map": None
+    })
 # # ─────────────────────────────────────────────────────────────────────────────
 # # ROADMAP EXCEL PARSING
 # # ─────────────────────────────────────────────────────────────────────────────
