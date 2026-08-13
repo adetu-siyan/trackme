@@ -881,7 +881,6 @@
 #     }
 
 
-
 import json
 from datetime import date, timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -1630,6 +1629,20 @@ async def update_focus_summary(
 # ============================================================
 # ROADMAP
 # ============================================================
+
+# 🔽 FIX: Redirect /upload to /save to prevent 404 errors 🔽
+@router.post("/roadmap/upload/{mentee_id}")
+async def upload_roadmap_redirect(
+    mentee_id: str,
+    body: SaveRoadmapRequest,
+    user=Depends(get_current_user)
+):
+    """
+    Redirects the deprecated /upload endpoint to the existing /save endpoint.
+    This prevents 404 errors from older frontend versions.
+    """
+    return await save_roadmap(mentee_id, body, user)
+# 🔽 END OF FIX 🔽
 
 @router.post("/roadmap/save/{mentee_id}")
 async def save_roadmap(
