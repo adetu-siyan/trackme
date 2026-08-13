@@ -179,18 +179,7 @@ export const groupsApi = {
 // ROADMAP
 // ============================================================
 export const roadmapApi = {
-validate: async (headers, sampleRows) => {
-  const res = await fetch(`${API_BASE}/projects/roadmap/validate`, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getToken()}`
-    },
-    body: JSON.stringify({ headers, sample_rows: sampleRows })
-  })
-  if (!res.ok) throw new Error('Validation failed')
-  return res.json()
-},
+ validate: (headers, sampleRows) => request('POST', '/projects/roadmap/validate', { headers, sample_rows: sampleRows }),
   save: (menteeId, body) => request('POST', `/projects/roadmap/save/${menteeId}`, body),
   delete: (menteeId) => request('DELETE', `/projects/roadmap/${menteeId}`),
   getMenteeRoadmap: (menteeId) => request('GET', `/projects/roadmap/mentee/${menteeId}`),
