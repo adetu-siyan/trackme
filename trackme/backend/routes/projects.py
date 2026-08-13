@@ -1641,7 +1641,14 @@ async def upload_roadmap_redirect(
     Redirects the deprecated /upload endpoint to the existing /save endpoint.
     This prevents 404 errors from older frontend versions.
     """
-    return await save_roadmap(mentee_id, body, user)
+    # 🔽 DEBUG: Added try/except to catch and print the real validation error
+    try:
+        return await save_roadmap(mentee_id, body, user)
+    except Exception as e:
+        print(f"[DEBUG] Roadmap upload failed with error: {e}")
+        # Re-raise the exception so FastAPI still returns the 422/500 error to the frontend
+        raise e
+    # 🔽 END DEBUG
 # 🔽 END OF FIX 🔽
 
 @router.post("/roadmap/save/{mentee_id}")
