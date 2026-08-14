@@ -361,11 +361,16 @@ export default function MenteeDetail({ mentee, onBack }) {
             .map(t => t.trim())
             .filter(Boolean)
 
+          const goal = column_map.goal ? row[column_map.goal]?.toString().trim() || '' : ''
+          const finalTasks = tasks.length > 0
+            ? tasks
+            : (goal ? [goal] : [`Complete: ${row[titleHeader]?.toString().trim()}`])
+
           return {
             unit_number: i + 1,
             title: row[titleHeader]?.toString().trim(),
-            goal: column_map.goal ? row[column_map.goal]?.toString().trim() || '' : '',
-            tasks,
+            goal,
+            tasks: finalTasks,
             resources: column_map.resources ? row[column_map.resources]?.toString().trim() || '' : '',
             links: column_map.links ? row[column_map.links]?.toString().trim() || '' : '',
           }
