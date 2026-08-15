@@ -1008,6 +1008,46 @@ async def get_test_results(test_id: str, user=Depends(get_current_user)):
         raise HTTPException(404, "Test not found")
     return test.data[0]
 
+@router.post("/roadmap/generate-tasks")
+async def generate_roadmap_tasks(
+    body: dict,
+    user=Depends(get_current_user)
+):
+    units = body.get("units", [])
+    if not units:
+        raise HTTPException(400, "No units provided")
+
+    prompt = """You are a learning roadmap assistant. For each topic below, generate 2-4 concise, actionable learning tasks.
+
+Respond ONLY with valid JSON — an array of objects with keys:
+- "unit_number": (integer, 1-indexed)
+- "tasks": (array of short action strings)
+
+No markdown, no explanation, just the JSON array.
+
+Topics:
+"""
+    for i, u in enumerate(units):
+        goal_part = f" — Goal: {u['goal']}" if u.get('goal') else ""
+        prompt += f"{i + 1}. {u['title']}{goal_part}\n"
+
+    response = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.4,
+        max_tokens=1500,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    raw = re.sub(r"```json|```", "", raw).strip()
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(500, "AI returned invalid JSON for task generation")
+
+    return result
+
 
 @router.post("/roadmap/check-delays")
 async def check_roadmap_delays(user=Depends(get_current_user)):
