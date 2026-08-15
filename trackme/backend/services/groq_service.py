@@ -7,7 +7,7 @@ from config import settings
 
 client = Groq(api_key=settings.groq_api_key)
 MODEL = "openai/gpt-oss-120b"
-FAST_MODEL = "openai/gpt-oss-20b"
+FAST_MODEL = "llama-3.1-8b-instant"
 
 def get_groq_client():
     return client
