@@ -307,7 +307,7 @@ export default function MenteeDetail({ mentee, onBack }) {
   }
 
   // ── Roadmap Handlers ──
-  function handleRoadmapUpload(e) {
+ function handleRoadmapUpload(e) {
   const file = e.target.files[0]
   if (!file) return
   e.target.value = ''
@@ -322,9 +322,9 @@ export default function MenteeDetail({ mentee, onBack }) {
       if (!rows.length) { showToast('File appears empty.'); return }
 
       const headers = Object.keys(rows[0])
-      const sample = rows.slice(0, 5)
+      const sample = rows.slice(0, 3)
 
-      // ── Local header detection (fallback if validate fails) ──
+      // ── Local header detection (fallback) ──
       function detectCol(candidates) {
         return headers.find(h =>
           candidates.some(c => h.toLowerCase().includes(c))
@@ -334,19 +334,16 @@ export default function MenteeDetail({ mentee, onBack }) {
       const localMap = {
         title:     detectCol(['title', 'topic', 'day', 'week', 'unit', 'module', 'lesson']),
         goal:      detectCol(['goal', 'objective', 'outcome', 'aim']),
-        tasks:     detectCol(['task', 'subtask', 'activity', 'exercise', 'todo']),
         resources: detectCol(['resource', 'material', 'reference', 'reading']),
         links:     detectCol(['link', 'url', 'href']),
       }
 
-      // Detect duration type locally
       const hasWeekCol = headers.some(h => /week/i.test(h))
       const hasDayCol  = headers.some(h => /day/i.test(h))
       const localDurationType = hasWeekCol && !hasDayCol ? 'weekly' : 'daily'
 
       showToast('Analysing file structure...', 'info')
 
-      // ── Try validate, fall back to local map on failure ──
       let column_map = localMap
       let duration_type = localDurationType
 
@@ -359,9 +356,7 @@ export default function MenteeDetail({ mentee, onBack }) {
           showToast(validation.rejection_reason || 'This doesn\'t look like a learning roadmap.')
           return
         }
-        // if validate succeeded but no title col, fall through to local
       } catch {
-        // validate failed — use local detection, warn softly
         if (!localMap.title) {
           showToast('Could not identify a title column. Make sure your file has a Day/Topic/Unit column.')
           return
@@ -374,64 +369,18 @@ export default function MenteeDetail({ mentee, onBack }) {
         return
       }
 
-      const titleHeader    = column_map.title
-      const hasTasksCol    = !!column_map.tasks
-      const hasGoalCol     = !!column_map.goal
+      // ── Parse rows — topic is the unit, no task generation needed ──
+      const units = rows
+        .filter(row => row[column_map.title]?.toString().trim())
+        .map((row, i) => ({
+          unit_number: i + 1,
+          title:     row[column_map.title]?.toString().trim(),
+          goal:      column_map.goal      ? row[column_map.goal]?.toString().trim()      || '' : '',
+          resources: column_map.resources ? row[column_map.resources]?.toString().trim() || '' : '',
+          links:     column_map.links     ? row[column_map.links]?.toString().trim()     || '' : '',
+        }))
 
-      // ── Parse rows into units ──
-      const rawUnits = rows
-        .filter(row => row[titleHeader]?.toString().trim())
-        .map((row, i) => {
-          const title = row[titleHeader]?.toString().trim()
-          const goal  = hasGoalCol ? row[column_map.goal]?.toString().trim() || '' : ''
-
-          const rawTasks = hasTasksCol
-            ? row[column_map.tasks]?.toString() || ''
-            : ''
-          const parsedTasks = rawTasks
-            .split(/[,;\n]+/)
-            .map(t => t.trim())
-            .filter(Boolean)
-
-          return {
-            unit_number: i + 1,
-            title,
-            goal,
-            tasks: parsedTasks,          // may be empty — filled below
-            needsGeneration: parsedTasks.length === 0,
-            resources: column_map.resources ? row[column_map.resources]?.toString().trim() || '' : '',
-            links:     column_map.links     ? row[column_map.links]?.toString().trim()     || '' : '',
-          }
-        })
-
-      if (!rawUnits.length) { showToast('No valid rows found after parsing.'); return }
-
-      // ── AI-generate tasks for units that have none ──
-      const unitsNeedingTasks = rawUnits.filter(u => u.needsGeneration)
-
-      if (unitsNeedingTasks.length > 0) {
-        showToast(`Generating tasks for ${unitsNeedingTasks.length} units...`, 'info')
-        try {
-          // Batch: send all titles+goals, get tasks back per unit
-          const generated = await roadmapApi.generateTasks(
-            unitsNeedingTasks.map(u => ({ title: u.title, goal: u.goal }))
-          )
-          // Merge generated tasks back
-          generated.forEach(({ unit_number, tasks }) => {
-            const unit = rawUnits.find(u => u.unit_number === unit_number)
-            if (unit && tasks?.length) unit.tasks = tasks
-          })
-        } catch {
-          // fallback: derive a simple task from title/goal
-          unitsNeedingTasks.forEach(u => {
-            u.tasks = u.goal
-              ? [`Understand: ${u.goal}`, `Practice: ${u.title}`]
-              : [`Study: ${u.title}`, `Complete exercises for: ${u.title}`]
-          })
-        }
-      }
-
-      const units = rawUnits.map(({ needsGeneration, ...u }) => u)
+      if (!units.length) { showToast('No valid rows found after parsing.'); return }
 
       const roadmapTitle = file.name
         .replace(/\.(xlsx|xls)$/i, '')
@@ -446,7 +395,6 @@ export default function MenteeDetail({ mentee, onBack }) {
         detected: {
           titleCol:    column_map.title,
           goalCol:     column_map.goal,
-          tasksCol:    column_map.tasks,
           resourceCol: column_map.resources,
           linksCol:    column_map.links,
         }

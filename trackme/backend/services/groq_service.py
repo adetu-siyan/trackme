@@ -1038,25 +1038,23 @@ Return ONLY valid JSON, no markdown:
 
 
 # roadmap structure validation
-
 async def validate_roadmap_structure(headers: list, sample_rows: list) -> dict:
     prompt = f"""Validate an Excel file uploaded to a mentorship platform as a learning roadmap.
 
 Headers: {json.dumps(headers)}
-First 5 rows: {json.dumps(sample_rows)}
+First 3 rows: {json.dumps(sample_rows[:3])}
 
-1. Is this a learning roadmap? (has topics/days/weeks/learning content)
-2. Reject if it's financial data, transactions, invoices, employee records, or inventory
-3. If valid, map columns to fields
+1. Is this a learning roadmap? (has topics/days/weeks/modules/lessons/units)
+2. Reject ONLY if clearly financial, HR, or inventory data with no learning content
+3. If valid, map columns — topic/title is enough, everything else is optional
 
 Return ONLY valid JSON, no markdown:
 {{
   "is_roadmap": true or false,
-  "rejection_reason": "reason if not a roadmap, else null",
+  "rejection_reason": "reason if rejected, else null",
   "column_map": {{
-    "title": "column name for unit title/topic",
-    "goal": "column name for goal/description, or null",
-    "tasks": "column name for tasks/activities, or null",
+    "title": "column name for title/topic/day/week/unit",
+    "goal": "column name for goal/objective, or null",
     "resources": "column name for resources/materials, or null",
     "links": "column name for links/urls, or null",
     "duration_type": "daily or weekly"
@@ -1068,7 +1066,7 @@ Return ONLY valid JSON, no markdown:
             model=FAST_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
-            max_tokens=300,
+            max_tokens=250,
         )
 
     response = await asyncio.to_thread(_call)
