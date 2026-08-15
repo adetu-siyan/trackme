@@ -1048,7 +1048,6 @@ First 3 rows: {json.dumps(sample_rows[:3])}
 2. Reject ONLY if clearly financial, HR, or inventory data with no learning content
 3. If valid, map columns — topic/title is enough, everything else is optional
 
-Return ONLY valid JSON, no markdown:
 {{
   "is_roadmap": true or false,
   "rejection_reason": "reason if rejected, else null",
@@ -1064,20 +1063,24 @@ Return ONLY valid JSON, no markdown:
     def _call():
         return client.chat.completions.create(
             model=FAST_MODEL,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "You are a JSON-only API. Return valid JSON and nothing else. No code, no markdown, no explanation."},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.1,
             max_tokens=250,
+            response_format={"type": "json_object"},
         )
 
     response = await asyncio.to_thread(_call)
     text = _clean_json(response.choices[0].message.content.strip())
-    print(f"[VALIDATE] Raw: {text}")        # ← ADD
+    print(f"[VALIDATE] Raw: {text}")
     result = _safe_json(text, {
         "is_roadmap": False,
         "rejection_reason": "Could not analyse file structure.",
         "column_map": None
     })
-    print(f"[VALIDATE] Parsed: {result}")   # ← ADD
+    print(f"[VALIDATE] Parsed: {result}")
     return result
 # # ─────────────────────────────────────────────────────────────────────────────
 # # ROADMAP EXCEL PARSING
