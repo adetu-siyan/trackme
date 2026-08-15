@@ -179,17 +179,18 @@ export const groupsApi = {
 // ROADMAP
 // ============================================================
 export const roadmapApi = {
-  validate: (headers, sampleRows) => request('POST', '/roadmap/validate', { headers, sample_rows: sampleRows }),
-  save: (menteeId, body) => request('POST', `/roadmap/save/${menteeId}`, body),
-  delete: (menteeId) => request('DELETE', `/roadmap/${menteeId}`),
-  getMenteeRoadmap: (menteeId) => request('GET', `/roadmap/mentee/${menteeId}`),
-  checkDelays: () => request('POST', '/roadmap/check-delays'),
-  myGuide: () => request('GET', '/roadmap/my-guide'),
-  completeTask: (taskId) => request('POST', `/roadmap/task/${taskId}/complete`),
-  submitTest: (testId, answers) => request('POST', `/roadmap/test/${testId}/submit`, { answers }),
-  getTestResults: (testId) => request('GET', `/roadmap/test/${testId}/results`),
-  taskInstructions: (taskTitle, unitGoal) => request('POST', '/roadmap/task-instructions', { task_title: taskTitle, unit_goal: unitGoal }),
+ validate: (headers, sampleRows) => request('POST', '/projects/roadmap/validate', { headers, sample_rows: sampleRows }),
+  save: (menteeId, body) => request('POST', `/projects/roadmap/save/${menteeId}`, body),
+  delete: (menteeId) => request('DELETE', `/projects/roadmap/${menteeId}`),
+  getMenteeRoadmap: (menteeId) => request('GET', `/projects/roadmap/mentee/${menteeId}`),
+  checkDelays: () => request('POST', '/projects/roadmap/check-delays'),
+  myGuide: () => request('GET', '/projects/roadmap/my-guide'),
+  completeTask: (taskId) => request('POST', `/projects/roadmap/task/${taskId}/complete`),
+  submitTest: (testId, answers) => request('POST', `/projects/roadmap/test/${testId}/submit`, { answers }),
+  getTestResults: (testId) => request('GET', `/projects/roadmap/test/${testId}/results`),
+  taskInstructions: (taskTitle, unitGoal) => request('POST', '/projects/roadmap/task-instructions', { task_title: taskTitle, unit_goal: unitGoal }),
 }
+
 
 
 // import { supabase } from './supabase'
