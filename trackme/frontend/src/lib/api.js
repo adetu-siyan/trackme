@@ -189,7 +189,9 @@ export const roadmapApi = {
   submitTest: (testId, answers) => request('POST', `/projects/roadmap/test/${testId}/submit`, { answers }),
   getTestResults: (testId) => request('GET', `/projects/roadmap/test/${testId}/results`),
   taskInstructions: (taskTitle, unitGoal) => request('POST', '/projects/roadmap/task-instructions', { task_title: taskTitle, unit_goal: unitGoal }),
+  generateUnitTasks: (unitId) => request('POST', `/projects/roadmap/unit/${unitId}/generate-tasks`),
 }
+
 
 
 

@@ -534,6 +534,8 @@ export default function History() {
   const [saving, setSaving] = useState(false)
   const [selected, setSelected] = useState([])
   const [deleting, setDeleting] = useState(false)
+  const [generatingTasks, setGeneratingTasks] = useState(false)
+  
 
   useEffect(() => {
     function handleClickOutside(event) {

@@ -587,6 +587,7 @@ function UnitCard({ unit, activeTestTaskId, onStartTest, onTaskComplete }) {
   // instructionCache: { [taskId]: { text: string, loading: bool } }
   const [instructionCache, setInstructionCache] = useState({})
   const [completingTask, setCompletingTask] = useState(null)
+    const [generatingTasks, setGeneratingTasks] = useState(false)
 
   const completedCount = tasks.filter(t => t.completed).length
   const totalCount = tasks.length
@@ -597,6 +598,17 @@ function UnitCard({ unit, activeTestTaskId, onStartTest, onTaskComplete }) {
   // Token cost: ~150-250 tokens per task, FAST_MODEL only.
   // If 30 tasks: mentor uploaded 30 units, mentee will only ever expand
   // the active unit — so realistically 1-5 generations per session.
+  useEffect(() => {
+  if (!expanded || !unit.unlocked) return
+  if (tasks.length > 0) return
+
+  setGeneratingTasks(true)
+  roadmapApi.generateUnitTasks(unit.id)
+    .then(res => setTasks(res.tasks || []))
+    .catch(() => {})
+    .finally(() => setGeneratingTasks(false))
+}, [expanded])
+  
   useEffect(() => {
     if (!expanded || !unit.unlocked) return
     tasks.forEach(task => {
@@ -617,7 +629,7 @@ function UnitCard({ unit, activeTestTaskId, onStartTest, onTaskComplete }) {
           }))
         })
     })
-  }, [expanded, unit.unlocked])
+  }, [expanded, unit.tasks])
 
   async function handleMarkDone(task) {
     // Step 1: optimistically mark task done in UI

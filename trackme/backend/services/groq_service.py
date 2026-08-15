@@ -1104,6 +1104,34 @@ Plain text only, under 100 words."""
 
     response = await asyncio.to_thread(_call)
     return response.choices[0].message.content.strip()
+
+#to generate task
+async def generate_roadmap_tasks_for_unit(title: str, goal: str) -> list:
+    prompt = f"""Generate 3-5 concise actionable learning tasks for this lesson.
+
+Lesson: {title}
+Goal: {goal or 'Complete this lesson'}
+
+Rules:
+- Each task is one clear action (e.g. "Install Python 3.12 and verify with python --version")
+- Specific, not vague ("Read about variables" is bad, "Write 5 examples of each Python data type" is good)
+- No numbering, no bullet symbols
+
+Return ONLY valid JSON, no markdown:
+{{"tasks": ["task1", "task2", "task3"]}}"""
+
+    def _call():
+        return client.chat.completions.create(
+            model=FAST_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            max_tokens=300,
+        )
+
+    response = await asyncio.to_thread(_call)
+    text = _clean_json(response.choices[0].message.content.strip())
+    result = _safe_json(text, {"tasks": []})
+    return result.get("tasks", [])
 # # ─────────────────────────────────────────────────────────────────────────────
 # # ROADMAP EXCEL PARSING
 # # ─────────────────────────────────────────────────────────────────────────────

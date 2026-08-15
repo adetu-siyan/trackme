@@ -21,6 +21,7 @@ from services.groq_service import (
     generate_task_test,
     analyze_roadmap_delay,
     validate_roadmap_structure,
+    generate_roadmap_tasks_for_unit,
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -746,7 +747,35 @@ async def update_focus_summary(
         .update({"edited_summary": body.summary}).eq("id", focus_id).execute()
     return {"success": True, "focus": result.data[0] if result.data else {}}
 
+@router.post("/roadmap/unit/{unit_id}/generate-tasks")
+async def generate_unit_tasks(unit_id: str, user=Depends(get_current_user)):
+    unit_res = supabase.table("roadmap_units") \
+        .select("*").eq("id", unit_id).execute()
+    if not unit_res.data:
+        raise HTTPException(404, "Unit not found")
 
+    unit = unit_res.data[0]
+
+    generated = await generate_roadmap_tasks_for_unit(
+        unit["title"], unit.get("goal", "")
+    )
+
+    if generated:
+        supabase.table("roadmap_tasks").insert([
+            {
+                "unit_id": unit_id,
+                "roadmap_id": unit["roadmap_id"],
+                "title": t,
+                "completed": False,
+            }
+            for t in generated if t.strip()
+        ]).execute()
+
+    updated = supabase.table("roadmap_units") \
+        .select("*, roadmap_tasks(*)") \
+        .eq("id", unit_id).execute()
+
+    return {"tasks": updated.data[0].get("roadmap_tasks", []) if updated.data else []}
 # ============================================================
 # ROADMAP
 # ============================================================
