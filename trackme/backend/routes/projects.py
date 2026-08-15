@@ -750,6 +750,7 @@ async def update_focus_summary(
 # ============================================================
 # ROADMAP
 # ============================================================
+# ── VALIDATE ──────────────────────────────────────────────────
 @router.post("/roadmap/validate")
 async def validate_roadmap(
     body: ValidateRoadmapRequest,
@@ -758,6 +759,143 @@ async def validate_roadmap(
     result = await validate_roadmap_structure(body.headers, body.sample_rows)
     return result
 
+
+# ── MY GUIDE (mentee view) ────────────────────────────────────
+@router.get("/roadmap/my-guide")
+async def get_my_roadmap(user=Depends(get_current_user)):
+    mentee_id = str(user.id)
+    roadmap = supabase.table("roadmaps") \
+        .select("*").eq("mentee_id", mentee_id) \
+        .eq("status", "active").execute()
+
+    if not roadmap.data:
+        return {"roadmap": None, "units": []}
+
+    roadmap_data = roadmap.data[0]
+    units = supabase.table("roadmap_units") \
+        .select("*, roadmap_tasks(*)") \
+        .eq("roadmap_id", roadmap_data["id"]) \
+        .order("unit_number").execute()
+
+    return {"roadmap": roadmap_data, "units": units.data or []}
+
+
+# ── CHECK DELAYS ──────────────────────────────────────────────
+@router.post("/roadmap/check-delays")
+async def check_roadmap_delays(user=Depends(get_current_user)):
+    mentor_id = str(user.id)
+    today = date.today()
+
+    roadmaps = supabase.table("roadmaps") \
+        .select("*").eq("mentor_id", mentor_id).eq("status", "active").execute()
+
+    alerts_fired = 0
+    for roadmap in (roadmaps.data or []):
+        start = date.fromisoformat(roadmap["start_date"])
+        duration_type = roadmap["duration_type"]
+        days_elapsed = (today - start).days
+
+        expected_unit = min(
+            (days_elapsed + 1) if duration_type == "daily" else (days_elapsed // 7 + 1),
+            roadmap["total_units"]
+        )
+
+        units = supabase.table("roadmap_units") \
+            .select("*, roadmap_tasks(title, completed)") \
+            .eq("roadmap_id", roadmap["id"]) \
+            .eq("unlocked", True).eq("completed", False) \
+            .order("unit_number").limit(1).execute()
+
+        if not units.data:
+            continue
+
+        current_unit = units.data[0]
+        if current_unit["unit_number"] < expected_unit:
+            days_behind = expected_unit - current_unit["unit_number"]
+            incomplete_tasks = [
+                t["title"] for t in current_unit.get("roadmap_tasks", [])
+                if not t["completed"]
+            ]
+            mentee_name = get_profile_name(roadmap["mentee_id"], fallback="Your mentee")
+            alert_msg = await analyze_roadmap_delay(
+                mentee_name=mentee_name,
+                unit_title=current_unit["title"],
+                unit_number=current_unit["unit_number"],
+                days_behind=days_behind,
+                tasks_incomplete=incomplete_tasks
+            )
+            await create_notification(
+                mentor_id,
+                "roadmap_delay",
+                f"⚠️ Delay — {mentee_name}",
+                alert_msg,
+                {
+                    "roadmap_id": roadmap["id"],
+                    "mentee_id": roadmap["mentee_id"],
+                    "days_behind": days_behind
+                }
+            )
+            alerts_fired += 1
+
+    return {"success": True, "alerts_fired": alerts_fired}
+
+
+# ── GENERATE TASKS ────────────────────────────────────────────
+@router.post("/roadmap/generate-tasks")
+async def generate_roadmap_tasks(
+    body: dict,
+    user=Depends(get_current_user)
+):
+    units = body.get("units", [])
+    if not units:
+        raise HTTPException(400, "No units provided")
+
+    prompt = """You are a learning roadmap assistant. For each topic below, generate 2-4 concise, actionable learning tasks.
+
+Respond ONLY with valid JSON — an array of objects with keys:
+- "unit_number": (integer, 1-indexed)
+- "tasks": (array of short action strings)
+
+No markdown, no explanation, just the JSON array.
+
+Topics:
+"""
+    for i, u in enumerate(units):
+        goal_part = f" — Goal: {u['goal']}" if u.get('goal') else ""
+        prompt += f"{i + 1}. {u['title']}{goal_part}\n"
+
+    response = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.4,
+        max_tokens=1500,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    raw = re.sub(r"```json|```", "", raw).strip()
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(500, "AI returned invalid JSON for task generation")
+
+    return result
+
+
+# ── TASK INSTRUCTIONS ─────────────────────────────────────────
+@router.post("/roadmap/task-instructions")
+async def task_instructions(
+    body: TaskInstructionsRequest,
+    user=Depends(get_current_user)
+):
+    instructions = await generate_task_instructions(
+        body.task_title,
+        body.unit_goal
+    )
+    return {"instructions": instructions}
+
+
+# ── SAVE ROADMAP ──────────────────────────────────────────────
 @router.post("/roadmap/save/{mentee_id}")
 async def save_roadmap(
     mentee_id: str,
@@ -833,115 +971,7 @@ async def save_roadmap(
     }
 
 
-@router.delete("/roadmap/{mentee_id}")
-async def delete_roadmap(mentee_id: str, user=Depends(get_current_user)):
-    mentor_id = str(user.id)
-    existing = supabase.table("roadmaps") \
-        .select("id").eq("mentor_id", mentor_id) \
-        .eq("mentee_id", mentee_id).execute()
-    if not existing.data:
-        raise HTTPException(404, "No roadmap found for this mentee")
-
-    roadmap_id = existing.data[0]["id"]
-    supabase.table("roadmaps").delete().eq("id", roadmap_id).execute()
-    return {"success": True, "deleted_roadmap_id": roadmap_id}
-
-
-@router.get("/roadmap/mentee/{mentee_id}")
-async def get_roadmap_for_mentor(mentee_id: str, user=Depends(get_current_user)):
-    mentor_id = str(user.id)
-    roadmap = supabase.table("roadmaps") \
-        .select("*").eq("mentor_id", mentor_id) \
-        .eq("mentee_id", mentee_id).execute()
-
-    if not roadmap.data:
-        return {"roadmap": None, "units": []}
-
-    roadmap_data = roadmap.data[0]
-    units = supabase.table("roadmap_units") \
-        .select("*, roadmap_tasks(*)") \
-        .eq("roadmap_id", roadmap_data["id"]) \
-        .order("unit_number").execute()
-
-    return {"roadmap": roadmap_data, "units": units.data or []}
-
-
-@router.get("/roadmap/my-guide")
-async def get_my_roadmap(user=Depends(get_current_user)):
-    mentee_id = str(user.id)
-    roadmap = supabase.table("roadmaps") \
-        .select("*").eq("mentee_id", mentee_id) \
-        .eq("status", "active").execute()
-
-    if not roadmap.data:
-        return {"roadmap": None, "units": []}
-
-    roadmap_data = roadmap.data[0]
-    units = supabase.table("roadmap_units") \
-        .select("*, roadmap_tasks(*)") \
-        .eq("roadmap_id", roadmap_data["id"]) \
-        .order("unit_number").execute()
-
-    return {"roadmap": roadmap_data, "units": units.data or []}
-
-
-@router.post("/roadmap/task/{task_id}/complete")
-async def complete_roadmap_task(task_id: str, user=Depends(get_current_user)):
-    mentee_id = str(user.id)
-
-    task_res = supabase.table("roadmap_tasks") \
-        .select("*, roadmap_units(title, goal, unit_number, roadmap_id, id)") \
-        .eq("id", task_id).execute()
-    if not task_res.data:
-        raise HTTPException(404, "Task not found")
-
-    task = task_res.data[0]
-    unit = task.get("roadmap_units", {})
-
-    roadmap_res = supabase.table("roadmaps") \
-        .select("id, mentee_id, mentor_id").eq("id", unit.get("roadmap_id")).execute()
-    if not roadmap_res.data or roadmap_res.data[0]["mentee_id"] != mentee_id:
-        raise HTTPException(403, "Not your task")
-
-    supabase.table("roadmap_tasks").update({
-        "completed": True,
-        "completed_at": datetime.utcnow().isoformat()
-    }).eq("id", task_id).execute()
-
-    questions = await generate_task_test(
-        task_title=task["title"],
-        task_description=task.get("description", task["title"]),
-        unit_goal=unit.get("goal", "")
-    )
-
-    test_res = supabase.table("roadmap_task_tests").insert({
-        "task_id": task_id,
-        "mentee_id": mentee_id,
-        "questions": questions,
-    }).execute()
-
-    test_id = test_res.data[0]["id"] if test_res.data else None
-
-    all_tasks = supabase.table("roadmap_tasks") \
-        .select("completed").eq("unit_id", unit.get("id")).execute()
-    all_done = all(t["completed"] for t in (all_tasks.data or []))
-
-    if all_done:
-        supabase.table("roadmap_units").update({"completed": True}) \
-            .eq("id", unit.get("id")).execute()
-        next_unit_number = unit.get("unit_number", 0) + 1
-        supabase.table("roadmap_units").update({"unlocked": True}) \
-            .eq("roadmap_id", unit.get("roadmap_id")) \
-            .eq("unit_number", next_unit_number).execute()
-
-    return {
-        "success": True,
-        "test_id": test_id,
-        "questions": questions,
-        "unit_completed": all_done,
-    }
-
-
+# ── TEST SUBMIT ───────────────────────────────────────────────
 @router.post("/roadmap/test/{test_id}/submit")
 async def submit_roadmap_test(
     test_id: str,
@@ -1000,6 +1030,7 @@ async def submit_roadmap_test(
     }
 
 
+# ── TEST RESULTS ──────────────────────────────────────────────
 @router.get("/roadmap/test/{test_id}/results")
 async def get_test_results(test_id: str, user=Depends(get_current_user)):
     test = supabase.table("roadmap_task_tests") \
@@ -1008,119 +1039,99 @@ async def get_test_results(test_id: str, user=Depends(get_current_user)):
         raise HTTPException(404, "Test not found")
     return test.data[0]
 
-@router.post("/roadmap/generate-tasks")
-async def generate_roadmap_tasks(
-    body: dict,
-    user=Depends(get_current_user)
-):
-    units = body.get("units", [])
-    if not units:
-        raise HTTPException(400, "No units provided")
 
-    prompt = """You are a learning roadmap assistant. For each topic below, generate 2-4 concise, actionable learning tasks.
+# ── COMPLETE TASK ─────────────────────────────────────────────
+@router.post("/roadmap/task/{task_id}/complete")
+async def complete_roadmap_task(task_id: str, user=Depends(get_current_user)):
+    mentee_id = str(user.id)
 
-Respond ONLY with valid JSON — an array of objects with keys:
-- "unit_number": (integer, 1-indexed)
-- "tasks": (array of short action strings)
+    task_res = supabase.table("roadmap_tasks") \
+        .select("*, roadmap_units(title, goal, unit_number, roadmap_id, id)") \
+        .eq("id", task_id).execute()
+    if not task_res.data:
+        raise HTTPException(404, "Task not found")
 
-No markdown, no explanation, just the JSON array.
+    task = task_res.data[0]
+    unit = task.get("roadmap_units", {})
 
-Topics:
-"""
-    for i, u in enumerate(units):
-        goal_part = f" — Goal: {u['goal']}" if u.get('goal') else ""
-        prompt += f"{i + 1}. {u['title']}{goal_part}\n"
+    roadmap_res = supabase.table("roadmaps") \
+        .select("id, mentee_id, mentor_id").eq("id", unit.get("roadmap_id")).execute()
+    if not roadmap_res.data or roadmap_res.data[0]["mentee_id"] != mentee_id:
+        raise HTTPException(403, "Not your task")
 
-    response = groq_client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.4,
-        max_tokens=1500,
+    supabase.table("roadmap_tasks").update({
+        "completed": True,
+        "completed_at": datetime.utcnow().isoformat()
+    }).eq("id", task_id).execute()
+
+    questions = await generate_task_test(
+        task_title=task["title"],
+        task_description=task.get("description", task["title"]),
+        unit_goal=unit.get("goal", "")
     )
 
-    raw = response.choices[0].message.content.strip()
-    raw = re.sub(r"```json|```", "", raw).strip()
+    test_res = supabase.table("roadmap_task_tests").insert({
+        "task_id": task_id,
+        "mentee_id": mentee_id,
+        "questions": questions,
+    }).execute()
 
-    try:
-        result = json.loads(raw)
-    except json.JSONDecodeError:
-        raise HTTPException(500, "AI returned invalid JSON for task generation")
+    test_id = test_res.data[0]["id"] if test_res.data else None
 
-    return result
+    all_tasks = supabase.table("roadmap_tasks") \
+        .select("completed").eq("unit_id", unit.get("id")).execute()
+    all_done = all(t["completed"] for t in (all_tasks.data or []))
 
-# routes/roadmap.py  (or wherever your roadmap routes live)
-@router.post("/roadmap/task-instructions")
-async def task_instructions(body: TaskInstructionsRequest):
-    # Use FAST_MODEL — llama-3.1-8b-instant
-    # Prompt: given task_title + unit_goal, return 2-3 sentence
-    # plain-English guide on what the mentee should do/learn
-    instructions = await generate_task_instructions(
-        body.task_title,
-        body.unit_goal
-    )
-    return { "instructions": instructions }
+    if all_done:
+        supabase.table("roadmap_units").update({"completed": True}) \
+            .eq("id", unit.get("id")).execute()
+        next_unit_number = unit.get("unit_number", 0) + 1
+        supabase.table("roadmap_units").update({"unlocked": True}) \
+            .eq("roadmap_id", unit.get("roadmap_id")) \
+            .eq("unit_number", next_unit_number).execute()
+
+    return {
+        "success": True,
+        "test_id": test_id,
+        "questions": questions,
+        "unit_completed": all_done,
+    }
 
 
-@router.post("/roadmap/check-delays")
-async def check_roadmap_delays(user=Depends(get_current_user)):
+# ── GET MENTEE ROADMAP (mentor view) ──────────────────────────
+@router.get("/roadmap/mentee/{mentee_id}")
+async def get_roadmap_for_mentor(mentee_id: str, user=Depends(get_current_user)):
     mentor_id = str(user.id)
-    today = date.today()
+    roadmap = supabase.table("roadmaps") \
+        .select("*").eq("mentor_id", mentor_id) \
+        .eq("mentee_id", mentee_id).execute()
 
-    roadmaps = supabase.table("roadmaps") \
-        .select("*").eq("mentor_id", mentor_id).eq("status", "active").execute()
+    if not roadmap.data:
+        return {"roadmap": None, "units": []}
 
-    alerts_fired = 0
-    for roadmap in (roadmaps.data or []):
-        start = date.fromisoformat(roadmap["start_date"])
-        duration_type = roadmap["duration_type"]
-        days_elapsed = (today - start).days
+    roadmap_data = roadmap.data[0]
+    units = supabase.table("roadmap_units") \
+        .select("*, roadmap_tasks(*)") \
+        .eq("roadmap_id", roadmap_data["id"]) \
+        .order("unit_number").execute()
 
-        expected_unit = min(
-            (days_elapsed + 1) if duration_type == "daily" else (days_elapsed // 7 + 1),
-            roadmap["total_units"]
-        )
-
-        units = supabase.table("roadmap_units") \
-            .select("*, roadmap_tasks(title, completed)") \
-            .eq("roadmap_id", roadmap["id"]) \
-            .eq("unlocked", True).eq("completed", False) \
-            .order("unit_number").limit(1).execute()
-
-        if not units.data:
-            continue
-
-        current_unit = units.data[0]
-        if current_unit["unit_number"] < expected_unit:
-            days_behind = expected_unit - current_unit["unit_number"]
-            incomplete_tasks = [
-                t["title"] for t in current_unit.get("roadmap_tasks", [])
-                if not t["completed"]
-            ]
-            mentee_name = get_profile_name(roadmap["mentee_id"], fallback="Your mentee")
-            alert_msg = await analyze_roadmap_delay(
-                mentee_name=mentee_name,
-                unit_title=current_unit["title"],
-                unit_number=current_unit["unit_number"],
-                days_behind=days_behind,
-                tasks_incomplete=incomplete_tasks
-            )
-            await create_notification(
-                mentor_id,
-                "roadmap_delay",
-                f"⚠️ Delay — {mentee_name}",
-                alert_msg,
-                {
-                    "roadmap_id": roadmap["id"],
-                    "mentee_id": roadmap["mentee_id"],
-                    "days_behind": days_behind
-                }
-            )
-            alerts_fired += 1
-
-    return {"success": True, "alerts_fired": alerts_fired}
+    return {"roadmap": roadmap_data, "units": units.data or []}
 
 
-# import json
+# ── DELETE ROADMAP ────────────────────────────────────────────
+@router.delete("/roadmap/{mentee_id}")
+async def delete_roadmap(mentee_id: str, user=Depends(get_current_user)):
+    mentor_id = str(user.id)
+    existing = supabase.table("roadmaps") \
+        .select("id").eq("mentor_id", mentor_id) \
+        .eq("mentee_id", mentee_id).execute()
+    if not existing.data:
+        raise HTTPException(404, "No roadmap found for this mentee")
+
+    roadmap_id = existing.data[0]["id"]
+    supabase.table("roadmaps").delete().eq("id", roadmap_id).execute()
+    return {"success": True, "deleted_roadmap_id": roadmap_id}
+
 # from datetime import date, timedelta, datetime
 # from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 # from pydantic import BaseModel
