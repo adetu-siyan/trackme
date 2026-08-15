@@ -1071,11 +1071,14 @@ Return ONLY valid JSON, no markdown:
 
     response = await asyncio.to_thread(_call)
     text = _clean_json(response.choices[0].message.content.strip())
-    return _safe_json(text, {
+    print(f"[VALIDATE] Raw: {text}")        # ← ADD
+    result = _safe_json(text, {
         "is_roadmap": False,
         "rejection_reason": "Could not analyse file structure.",
         "column_map": None
     })
+    print(f"[VALIDATE] Parsed: {result}")   # ← ADD
+    return result
 # # ─────────────────────────────────────────────────────────────────────────────
 # # ROADMAP EXCEL PARSING
 # # ─────────────────────────────────────────────────────────────────────────────
