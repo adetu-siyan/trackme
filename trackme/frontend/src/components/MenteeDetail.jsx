@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
 import {
@@ -16,7 +15,6 @@ function formatDate(dateStr) {
   })
 }
 
-// ── Mentor Task Card ──────────────────────────────────────────
 function MentorTaskCard({ task, onSaveNote, onSaveEdit }) {
   const [expanded, setExpanded] = useState(false)
   const [editingNote, setEditingNote] = useState(false)
@@ -32,11 +30,8 @@ function MentorTaskCard({ task, onSaveNote, onSaveEdit }) {
     try {
       await onSaveNote(task.id, noteValue)
       setEditingNote(false)
-    } catch (e) {
-      alert(e.message)
-    } finally {
-      setSavingNote(false)
-    }
+    } catch (e) { alert(e.message) }
+    finally { setSavingNote(false) }
   }
 
   async function handleSaveEdit() {
@@ -44,11 +39,8 @@ function MentorTaskCard({ task, onSaveNote, onSaveEdit }) {
     try {
       await onSaveEdit(task.id, { title: editTitle, description: editDescription })
       setEditingTask(false)
-    } catch (e) {
-      alert(e.message)
-    } finally {
-      setSavingEdit(false)
-    }
+    } catch (e) { alert(e.message) }
+    finally { setSavingEdit(false) }
   }
 
   return (
@@ -134,14 +126,12 @@ function MentorTaskCard({ task, onSaveNote, onSaveEdit }) {
   )
 }
 
-// ── Main Component ────────────────────────────────────────────
 export default function MenteeDetail({ mentee, onBack }) {
   const [overview, setOverview] = useState(null)
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(null)
 
-  // Weekly focus
   const [currentFocus, setCurrentFocus] = useState(null)
   const [focusTasks, setFocusTasks] = useState([])
   const [focusLoading, setFocusLoading] = useState(true)
@@ -157,7 +147,6 @@ export default function MenteeDetail({ mentee, onBack }) {
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [editingReview, setEditingReview] = useState(false)
 
-  // Roadmap
   const [roadmap, setRoadmap] = useState(null)
   const [roadmapUnits, setRoadmapUnits] = useState([])
   const [roadmapLoading, setRoadmapLoading] = useState(true)
@@ -183,7 +172,6 @@ export default function MenteeDetail({ mentee, onBack }) {
     setTimeout(() => setToast(null), 4000)
   }
 
-  // ── Fetching ──
   useEffect(() => {
     async function load() {
       try {
@@ -193,11 +181,8 @@ export default function MenteeDetail({ mentee, onBack }) {
         ])
         setOverview(overviewRes)
         setLogs(logsRes.logs || [])
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setLoading(false)
-      }
+      } catch (e) { console.error(e) }
+      finally { setLoading(false) }
     }
     load()
   }, [mentee.mentee_id])
@@ -209,11 +194,8 @@ export default function MenteeDetail({ mentee, onBack }) {
         setCurrentFocus(res.focus)
         setFocusTasks(res.tasks || [])
         setSummaryValue(res.focus?.edited_summary || res.focus?.summary || '')
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setFocusLoading(false)
-      }
+      } catch (e) { console.error(e) }
+      finally { setFocusLoading(false) }
     }
     loadFocus()
   }, [mentee.mentee_id])
@@ -224,16 +206,12 @@ export default function MenteeDetail({ mentee, onBack }) {
         const res = await roadmapApi.getMenteeRoadmap(mentee.mentee_id)
         setRoadmap(res.roadmap)
         setRoadmapUnits(res.units || [])
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setRoadmapLoading(false)
-      }
+      } catch (e) { console.error(e) }
+      finally { setRoadmapLoading(false) }
     }
     loadRoadmap()
   }, [mentee.mentee_id])
 
-  // ── Weekly Focus Handlers ──
   async function handleCreateFocus() {
     if (!focusInput.trim()) return
     setCreatingFocus(true)
@@ -245,11 +223,8 @@ export default function MenteeDetail({ mentee, onBack }) {
       setCurrentFocus(updated.focus)
       setFocusTasks(updated.tasks || [])
       setSummaryValue(updated.focus?.edited_summary || updated.focus?.summary || '')
-    } catch (e) {
-      showToast(e.message || 'Failed to create focus')
-    } finally {
-      setCreatingFocus(false)
-    }
+    } catch (e) { showToast(e.message || 'Failed to create focus') }
+    finally { setCreatingFocus(false) }
   }
 
   async function handleSaveSummary() {
@@ -260,11 +235,8 @@ export default function MenteeDetail({ mentee, onBack }) {
       setCurrentFocus(prev => ({ ...prev, edited_summary: summaryValue }))
       setEditingSummary(false)
       showToast('Summary updated', 'success')
-    } catch (e) {
-      showToast(e.message || 'Failed to update summary')
-    } finally {
-      setSavingSummary(false)
-    }
+    } catch (e) { showToast(e.message || 'Failed to update summary') }
+    finally { setSavingSummary(false) }
   }
 
   async function handleSaveNote(taskId, note) {
@@ -284,11 +256,8 @@ export default function MenteeDetail({ mentee, onBack }) {
       const res = await weeklyFocusApi.getReviewPreview(currentFocus.id)
       setReviewPreview(res)
       setShowReviewModal(true)
-    } catch (e) {
-      showToast(e.message || 'Failed to generate preview')
-    } finally {
-      setSendingReview(false)
-    }
+    } catch (e) { showToast(e.message || 'Failed to generate preview') }
+    finally { setSendingReview(false) }
   }
 
   async function handleConfirmSendReview() {
@@ -299,115 +268,103 @@ export default function MenteeDetail({ mentee, onBack }) {
       setShowReviewModal(false)
       setEditingReview(false)
       showToast('Review sent!', 'success')
-    } catch (e) {
-      showToast(e.message || 'Failed to send review')
-    } finally {
-      setSendingReview(false)
-    }
+    } catch (e) { showToast(e.message || 'Failed to send review') }
+    finally { setSendingReview(false) }
   }
 
-  // ── Roadmap Handlers ──
- function handleRoadmapUpload(e) {
-  const file = e.target.files[0]
-  if (!file) return
-  e.target.value = ''
+  function handleRoadmapUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    e.target.value = ''
 
-  const reader = new FileReader()
-  reader.onload = async (evt) => {
-    try {
-      const wb = XLSX.read(evt.target.result, { type: 'array' })
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
-
-      if (!rows.length) { showToast('File appears empty.'); return }
-
-      const headers = Object.keys(rows[0])
-      const sample = rows.slice(0, 3)
-
-      // ── Local header detection (fallback) ──
-      function detectCol(candidates) {
-        return headers.find(h =>
-          candidates.some(c => h.toLowerCase().includes(c))
-        ) || null
-      }
-
-      const localMap = {
-        title:     detectCol(['title', 'topic', 'day', 'week', 'unit', 'module', 'lesson']),
-        goal:      detectCol(['goal', 'objective', 'outcome', 'aim']),
-        resources: detectCol(['resource', 'material', 'reference', 'reading']),
-        links:     detectCol(['link', 'url', 'href']),
-      }
-
-      const hasWeekCol = headers.some(h => /week/i.test(h))
-      const hasDayCol  = headers.some(h => /day/i.test(h))
-      const localDurationType = hasWeekCol && !hasDayCol ? 'weekly' : 'daily'
-
-      showToast('Analysing file structure...', 'info')
-
-      let column_map = localMap
-      let duration_type = localDurationType
-
+    const reader = new FileReader()
+    reader.onload = async (evt) => {
       try {
-        const validation = await roadmapApi.validate(headers, sample)
-        if (validation.is_roadmap && validation.column_map?.title) {
-          column_map = { ...localMap, ...validation.column_map }
-          duration_type = validation.column_map.duration_type || localDurationType
-        } else if (!validation.is_roadmap) {
-          showToast(validation.rejection_reason || 'This doesn\'t look like a learning roadmap.')
+        const wb = XLSX.read(evt.target.result, { type: 'array' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+
+        if (!rows.length) { showToast('File appears empty.'); return }
+
+        const headers = Object.keys(rows[0])
+        const sample = rows.slice(0, 3)
+
+        function detectCol(candidates) {
+          return headers.find(h =>
+            candidates.some(c => h.toLowerCase().includes(c))
+          ) || null
+        }
+
+        const localMap = {
+          title:     detectCol(['title', 'topic', 'day', 'week', 'unit', 'module', 'lesson']),
+          goal:      detectCol(['goal', 'objective', 'outcome', 'aim', 'description']),
+          resources: detectCol(['resource', 'material', 'reference', 'reading']),
+          links:     detectCol(['link', 'url', 'href']),
+        }
+
+        const hasWeekCol = headers.some(h => /week/i.test(h))
+        const hasDayCol  = headers.some(h => /day/i.test(h))
+        const localDurationType = hasWeekCol && !hasDayCol ? 'weekly' : 'daily'
+
+        showToast('Analysing file structure...', 'info')
+
+        let column_map = localMap
+        let duration_type = localDurationType
+
+        try {
+          const validation = await roadmapApi.validate(headers, sample)
+          if (validation.is_roadmap && validation.column_map?.title) {
+            column_map = { ...localMap, ...validation.column_map }
+            duration_type = validation.column_map.duration_type || localDurationType
+          }
+          // if is_roadmap false — still try local, don't hard block
+        } catch {
+          // silent fallback to localMap
+        }
+
+        if (!column_map.title) {
+          showToast('Could not identify a title/topic column.')
           return
         }
-      } catch {
-        if (!localMap.title) {
-          showToast('Could not identify a title column. Make sure your file has a Day/Topic/Unit column.')
-          return
-        }
-        showToast('Using local structure detection (AI unavailable).', 'info')
+
+        const units = rows
+          .filter(row => row[column_map.title]?.toString().trim())
+          .map((row, i) => ({
+            unit_number: i + 1,
+            title:     row[column_map.title]?.toString().trim(),
+            goal:      column_map.goal      ? row[column_map.goal]?.toString().trim()      || '' : '',
+            resources: column_map.resources ? row[column_map.resources]?.toString().trim() || '' : '',
+            links:     column_map.links     ? row[column_map.links]?.toString().trim()     || '' : '',
+          }))
+
+        if (!units.length) { showToast('No valid rows found after parsing.'); return }
+
+        const roadmapTitle = file.name
+          .replace(/\.(xlsx|xls)$/i, '')
+          .replace(/[_-]/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase())
+
+        setParsedRoadmap({
+          title: roadmapTitle,
+          duration_type,
+          total_units: units.length,
+          units,
+          detected: {
+            titleCol:    column_map.title,
+            goalCol:     column_map.goal,
+            resourceCol: column_map.resources,
+            linksCol:    column_map.links,
+          }
+        })
+        setShowRoadmapPreviewModal(true)
+
+      } catch (err) {
+        console.error(err)
+        showToast('Could not read file. Make sure it is a valid .xlsx file.')
       }
-
-      if (!column_map.title) {
-        showToast('Could not identify a title/topic column.')
-        return
-      }
-
-      // ── Parse rows — topic is the unit, no task generation needed ──
-      const units = rows
-        .filter(row => row[column_map.title]?.toString().trim())
-        .map((row, i) => ({
-          unit_number: i + 1,
-          title:     row[column_map.title]?.toString().trim(),
-          goal:      column_map.goal      ? row[column_map.goal]?.toString().trim()      || '' : '',
-          resources: column_map.resources ? row[column_map.resources]?.toString().trim() || '' : '',
-          links:     column_map.links     ? row[column_map.links]?.toString().trim()     || '' : '',
-        }))
-
-      if (!units.length) { showToast('No valid rows found after parsing.'); return }
-
-      const roadmapTitle = file.name
-        .replace(/\.(xlsx|xls)$/i, '')
-        .replace(/[_-]/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase())
-
-      setParsedRoadmap({
-        title: roadmapTitle,
-        duration_type,
-        total_units: units.length,
-        units,
-        detected: {
-          titleCol:    column_map.title,
-          goalCol:     column_map.goal,
-          resourceCol: column_map.resources,
-          linksCol:    column_map.links,
-        }
-      })
-      setShowRoadmapPreviewModal(true)
-
-    } catch (err) {
-      console.error(err)
-      showToast('Could not read file. Make sure it is a valid .xlsx file.')
     }
+    reader.readAsArrayBuffer(file)
   }
-  reader.readAsArrayBuffer(file)
-}
 
   async function handleConfirmRoadmap() {
     if (!parsedRoadmap) return
@@ -425,11 +382,8 @@ export default function MenteeDetail({ mentee, onBack }) {
       const updated = await roadmapApi.getMenteeRoadmap(mentee.mentee_id)
       setRoadmap(updated.roadmap)
       setRoadmapUnits(updated.units || [])
-    } catch (e) {
-      showToast(e.message || 'Save failed')
-    } finally {
-      setSavingRoadmap(false)
-    }
+    } catch (e) { showToast(e.message || 'Save failed') }
+    finally { setSavingRoadmap(false) }
   }
 
   async function handleDeleteRoadmap() {
@@ -440,11 +394,8 @@ export default function MenteeDetail({ mentee, onBack }) {
       setRoadmap(null)
       setRoadmapUnits([])
       showToast('Roadmap deleted', 'success')
-    } catch (e) {
-      showToast(e.message || 'Delete failed')
-    } finally {
-      setDeletingRoadmap(false)
-    }
+    } catch (e) { showToast(e.message || 'Delete failed') }
+    finally { setDeletingRoadmap(false) }
   }
 
   const completedTasks = focusTasks.filter(t => t.completed)
@@ -472,30 +423,18 @@ export default function MenteeDetail({ mentee, onBack }) {
     <div className="mentee-detail-bg" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', padding: '40px 0 80px 0', width: '100%', overflowY: 'auto' }}>
       <style>{globalStyles}</style>
 
-      {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999, padding: '12px 20px',
-         borderRadius: 12,
-          background: toast.type === 'error' 
-          ? 'var(--danger)' 
-          : toast.type === 'info' 
-          ? 'var(--accent)' 
-          : '#059669',
-
-
-           color: '#fff',
-            fontSize: 14, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeUp 0.2s ease' }}>
-          {toast.type === 'error' 
-          ? <AlertTriangle size={16} /> 
-          : toast.type === 'info'
-          ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-          : <CheckCircle2 size={16} />} {toast.msg}
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999, padding: '12px 20px', borderRadius: 12,
+          background: toast.type === 'error' ? 'var(--danger)' : toast.type === 'info' ? 'var(--accent)' : '#059669',
+          color: '#fff', fontSize: 14, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeUp 0.2s ease' }}>
+          {toast.type === 'error' ? <AlertTriangle size={16} /> : toast.type === 'info' ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={16} />}
+          {toast.msg}
         </div>
       )}
 
       <div className="detail-container" style={{ width: '100%', maxWidth: 900, padding: '0 24px' }}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex', alignItems: 'center' }}>
@@ -515,17 +454,13 @@ export default function MenteeDetail({ mentee, onBack }) {
             </button>
             {currentFocus && (
               <button className="btn btn-secondary btn-sm" onClick={handlePreviewReview} disabled={sendingReview || reviewSent}>
-                {reviewSent
-                  ? <><CheckCircle2 size={14} /> Sent</>
-                  : sendingReview
-                  ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                  : <><BarChart2 size={14} /> Review</>}
+                {reviewSent ? <><CheckCircle2 size={14} /> Sent</> : sendingReview ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <><BarChart2 size={14} /> Review</>}
               </button>
             )}
           </div>
         </div>
 
-        {/* ── Stats ── */}
+        {/* Stats */}
         <div className="stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
           {[
             { icon: <FileText size={16} />, label: 'Logs', value: stats.total_logs || 0 },
@@ -543,7 +478,7 @@ export default function MenteeDetail({ mentee, onBack }) {
           ))}
         </div>
 
-        {/* ── Set Focus Modal ── */}
+        {/* Set Focus Modal */}
         {showFocusInput && (
           <div className="modal-overlay" onClick={() => setShowFocusInput(false)}>
             <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
@@ -558,16 +493,14 @@ export default function MenteeDetail({ mentee, onBack }) {
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button className="btn btn-secondary" onClick={() => setShowFocusInput(false)}>Cancel</button>
                 <button className="btn btn-primary" onClick={handleCreateFocus} disabled={creatingFocus || !focusInput.trim()}>
-                  {creatingFocus
-                    ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Generating...</>
-                    : <><Sparkles size={14} /> Generate Plan</>}
+                  {creatingFocus ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Generating...</> : <><Sparkles size={14} /> Generate Plan</>}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── Roadmap Card ── */}
+        {/* Roadmap Card */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 20, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16 }}>
@@ -597,7 +530,7 @@ export default function MenteeDetail({ mentee, onBack }) {
                   Upload a structured Excel guide for {profile.full_name?.split(' ')[0]}.
                 </p>
                 <p className="text-muted" style={{ fontSize: 11, marginBottom: 16 }}>
-                  Any layout works — just make sure headers include words like: title/day/week, goal, task, resources, links.
+                  Any layout works — just make sure headers include words like: title/day/week, goal, resources, links.
                 </p>
                 <label style={{ cursor: 'pointer' }}>
                   <input type="file" accept=".xlsx,.xls" onChange={handleRoadmapUpload} style={{ display: 'none' }} />
@@ -632,7 +565,6 @@ export default function MenteeDetail({ mentee, onBack }) {
                   })()}
                 </div>
 
-                {/* First 2 units */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {roadmapUnits.slice(0, 2).map(unit => (
                     <div key={unit.id} style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '10px 14px', border: '1px solid var(--border)', opacity: unit.unlocked ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -642,7 +574,7 @@ export default function MenteeDetail({ mentee, onBack }) {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{unit.title}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                          {unit.roadmap_tasks?.length || 0} tasks · {unit.completed ? '✓ Complete' : unit.unlocked ? 'In progress' : 'Locked'}
+                          {unit.completed ? '✓ Complete' : unit.unlocked ? 'In progress' : 'Locked'}
                         </div>
                       </div>
                       {!unit.unlocked && <Lock size={13} color="var(--text-muted)" />}
@@ -650,7 +582,6 @@ export default function MenteeDetail({ mentee, onBack }) {
                   ))}
                 </div>
 
-                {/* View all toggle */}
                 {roadmapUnits.length > 2 && (
                   <button onClick={() => setShowRoadmapPreview(!showRoadmapPreview)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
                     {showRoadmapPreview ? 'Hide' : `View all ${roadmapUnits.length} units`}
@@ -668,7 +599,7 @@ export default function MenteeDetail({ mentee, onBack }) {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{unit.title}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                            {unit.roadmap_tasks?.length || 0} tasks · {unit.completed ? '✓ Done' : unit.unlocked ? 'Active' : 'Locked'}
+                            {unit.completed ? '✓ Done' : unit.unlocked ? 'Active' : 'Locked'}
                           </div>
                         </div>
                         {!unit.unlocked && <Lock size={12} color="var(--text-muted)" />}
@@ -677,7 +608,6 @@ export default function MenteeDetail({ mentee, onBack }) {
                   </div>
                 )}
 
-                {/* Replace */}
                 <label style={{ cursor: 'pointer', alignSelf: 'flex-start' }}>
                   <input type="file" accept=".xlsx,.xls" onChange={handleRoadmapUpload} style={{ display: 'none' }} />
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -689,7 +619,7 @@ export default function MenteeDetail({ mentee, onBack }) {
           </div>
         </div>
 
-        {/* ── Weekly Focus ── */}
+        {/* Weekly Focus */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 32, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16 }}><Calendar size={17} /> This Week</h3>
@@ -742,7 +672,7 @@ export default function MenteeDetail({ mentee, onBack }) {
           </div>
         </div>
 
-        {/* ── AI Overview ── */}
+        {/* AI Overview */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 32, padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <Bot size={18} /><h3 style={{ fontSize: 16 }}>AI Overview</h3>
@@ -795,7 +725,7 @@ export default function MenteeDetail({ mentee, onBack }) {
           )}
         </div>
 
-        {/* ── Log History ── */}
+        {/* Log History */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
             <h3 style={{ fontSize: 16 }}>Log History</h3>
@@ -848,7 +778,7 @@ export default function MenteeDetail({ mentee, onBack }) {
           )}
         </div>
 
-        {/* ── Review Modal ── */}
+        {/* Review Modal */}
         {showReviewModal && reviewPreview && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => { setShowReviewModal(false); setEditingReview(false) }}>
             <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '28px', width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }} onClick={e => e.stopPropagation()}>
@@ -889,7 +819,7 @@ export default function MenteeDetail({ mentee, onBack }) {
           </div>
         )}
 
-        {/* ── Roadmap Preview Modal ── */}
+        {/* Roadmap Preview Modal */}
         {showRoadmapPreviewModal && parsedRoadmap && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowRoadmapPreviewModal(false)}>
             <div style={{ background: 'var(--surface)', borderRadius: 20, width: '100%', maxWidth: 600, maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
@@ -901,7 +831,7 @@ export default function MenteeDetail({ mentee, onBack }) {
                     <input
                       value={parsedRoadmap.title}
                       onChange={e => setParsedRoadmap(p => ({ ...p, title: e.target.value }))}
-                      style={{ fontSize: 18, fontWeight: 800, background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontFamily: 'Urbanist, sans-serif' }}
+                      style={{ fontSize: 18, fontWeight: 800, background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontFamily: 'inherit' }}
                     />
                   </div>
                   <button onClick={() => setShowRoadmapPreviewModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}><X size={20} /></button>
@@ -913,11 +843,11 @@ export default function MenteeDetail({ mentee, onBack }) {
                   <span style={{ fontSize: 12, color: 'var(--accent)', background: 'var(--accent-soft)', padding: '3px 10px', borderRadius: 20 }}>
                     {parsedRoadmap.duration_type}
                   </span>
-                  {parsedRoadmap.detected.tasksCol && (
-                    <span style={{ fontSize: 12, color: 'var(--success)', background: 'var(--success-soft)', padding: '3px 10px', borderRadius: 20 }}>✓ Tasks detected</span>
-                  )}
                   {parsedRoadmap.detected.goalCol && (
                     <span style={{ fontSize: 12, color: 'var(--success)', background: 'var(--success-soft)', padding: '3px 10px', borderRadius: 20 }}>✓ Goals detected</span>
+                  )}
+                  {parsedRoadmap.detected.resourceCol && (
+                    <span style={{ fontSize: 12, color: 'var(--success)', background: 'var(--success-soft)', padding: '3px 10px', borderRadius: 20 }}>✓ Resources detected</span>
                   )}
                 </div>
               </div>
@@ -925,7 +855,7 @@ export default function MenteeDetail({ mentee, onBack }) {
               <div style={{ padding: '16px 28px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {parsedRoadmap.units.slice(0, 10).map((unit, i) => (
                   <div key={i} style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '12px 16px', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: unit.tasks.length ? 8 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'var(--accent)', flexShrink: 0 }}>
                         {unit.unit_number}
                       </div>
@@ -933,18 +863,7 @@ export default function MenteeDetail({ mentee, onBack }) {
                         <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{unit.title}</div>
                         {unit.goal && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{unit.goal}</div>}
                       </div>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{unit.tasks.length} tasks</span>
                     </div>
-                    {unit.tasks.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 36 }}>
-                        {unit.tasks.slice(0, 3).map((t, j) => (
-                          <span key={j} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, border: '1px solid var(--border)' }}>{t}</span>
-                        ))}
-                        {unit.tasks.length > 3 && (
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)', padding: '2px 8px' }}>+{unit.tasks.length - 3} more</span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 ))}
                 {parsedRoadmap.units.length > 10 && (
