@@ -1048,6 +1048,18 @@ Topics:
 
     return result
 
+# routes/roadmap.py  (or wherever your roadmap routes live)
+@router.post("/roadmap/task-instructions")
+async def task_instructions(body: TaskInstructionsRequest):
+    # Use FAST_MODEL — llama-3.1-8b-instant
+    # Prompt: given task_title + unit_goal, return 2-3 sentence
+    # plain-English guide on what the mentee should do/learn
+    instructions = await generate_task_instructions(
+        body.task_title,
+        body.unit_goal
+    )
+    return { "instructions": instructions }
+
 
 @router.post("/roadmap/check-delays")
 async def check_roadmap_delays(user=Depends(get_current_user)):

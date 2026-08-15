@@ -188,7 +188,7 @@ export const roadmapApi = {
   completeTask: (taskId) => request('POST', `/projects/roadmap/task/${taskId}/complete`),
   submitTest: (testId, answers) => request('POST', `/projects/roadmap/test/${testId}/submit`, { answers }),
   getTestResults: (testId) => request('GET', `/projects/roadmap/test/${testId}/results`),
-
+  taskInstructions: (taskTitle, unitGoal) => request('POST', '/projects/roadmap/task-instructions', { task_title: taskTitle, unit_goal: unitGoal }),
 }
 
 

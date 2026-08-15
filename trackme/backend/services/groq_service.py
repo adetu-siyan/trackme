@@ -1082,6 +1082,28 @@ First 3 rows: {json.dumps(sample_rows[:3])}
     })
     print(f"[VALIDATE] Parsed: {result}")
     return result
+
+
+#task instructions generation
+async def generate_task_instructions(task_title: str, unit_goal: str) -> str:
+    prompt = f"""Write 2-3 clear sentences telling a mentee what to actually do for this task.
+Be specific and practical. No preamble.
+
+Task: {task_title}
+Unit goal: {unit_goal}
+
+Plain text only, under 100 words."""
+
+    def _call():
+        return client.chat.completions.create(
+            model=FAST_MODEL,  # llama-3.1-8b-instant — cheap
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=150,  # hard cap keeps cost controlled
+        )
+
+    response = await asyncio.to_thread(_call)
+    return response.choices[0].message.content.strip()
 # # ─────────────────────────────────────────────────────────────────────────────
 # # ROADMAP EXCEL PARSING
 # # ─────────────────────────────────────────────────────────────────────────────
