@@ -631,29 +631,30 @@ function UnitCard({ unit, activeTestTaskId, onStartTest, onTaskComplete }) {
     })
   }, [expanded, unit.tasks])
 
-  async function handleMarkDone(task) {
-    // Step 1: optimistically mark task done in UI
-    // Step 2: fetch test questions from backend
-    // Step 3: hand test data up to Guide so the panel can open
-    if (task.completed || !unit.unlocked || unit.completed) return
-    setCompletingTask(task.id)
-    try {
-      const res = await roadmapApi.completeTask(task.id)
-      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: true } : t))
-      // Bubble up to Guide to open the test panel
+ async function handleMarkDone(task) {
+  if (task.completed || !unit.unlocked || unit.completed) return
+  setCompletingTask(task.id)
+  try {
+    const res = await roadmapApi.completeTask(task.id)
+    // Just mark the task done visually
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: true } : t))
+
+    // Only open test panel when ALL tasks in this unit are done
+    if (res.all_tasks_done && res.test_id) {
       onStartTest({
         test_id: res.test_id,
-        task_title: task.title,
+        task_title: unit.title, // unit title not task title
         questions: res.questions,
-        unit_completed: res.unit_completed,
+        unit_completed: true,
       })
-      if (res.unit_completed) onTaskComplete()
-    } catch (e) {
-      alert(e.message || 'Failed to mark complete')
-    } finally {
-      setCompletingTask(null)
+      onTaskComplete()
     }
+  } catch (e) {
+    alert(e.message || 'Failed to mark complete')
+  } finally {
+    setCompletingTask(null)
   }
+}
 
   const statusColor = unit.completed ? 'var(--success)' : unit.unlocked ? 'var(--accent)' : 'var(--text-muted)'
   const statusBg = unit.completed ? 'var(--success-soft)' : unit.unlocked ? 'var(--accent-soft)' : 'var(--surface-3)'

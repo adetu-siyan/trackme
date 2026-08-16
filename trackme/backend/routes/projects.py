@@ -1088,30 +1088,38 @@ async def complete_roadmap_task(task_id: str, user=Depends(get_current_user)):
     if not roadmap_res.data or roadmap_res.data[0]["mentee_id"] != mentee_id:
         raise HTTPException(403, "Not your task")
 
+    # Mark this task done
     supabase.table("roadmap_tasks").update({
         "completed": True,
         "completed_at": datetime.utcnow().isoformat()
     }).eq("id", task_id).execute()
 
-    questions = await generate_task_test(
-        task_title=task["title"],
-        task_description=task.get("description", task["title"]),
-        unit_goal=unit.get("goal", "")
-    )
-
-    test_res = supabase.table("roadmap_task_tests").insert({
-        "task_id": task_id,
-        "mentee_id": mentee_id,
-        "questions": questions,
-    }).execute()
-
-    test_id = test_res.data[0]["id"] if test_res.data else None
-
+    # Check if ALL tasks in this unit are now done
     all_tasks = supabase.table("roadmap_tasks") \
-        .select("completed").eq("unit_id", unit.get("id")).execute()
+        .select("completed, title").eq("unit_id", unit.get("id")).execute()
     all_done = all(t["completed"] for t in (all_tasks.data or []))
 
+    test_id = None
+    questions = []
+
     if all_done:
+        # Generate ONE unit test from ALL task titles combined
+        all_task_titles = [t["title"] for t in (all_tasks.data or [])]
+        questions = await generate_unit_test(
+            unit_title=unit.get("title", ""),
+            unit_goal=unit.get("goal", ""),
+            task_titles=all_task_titles,
+        )
+
+        test_res = supabase.table("roadmap_task_tests").insert({
+            "unit_id": unit.get("id"),
+            "mentee_id": mentee_id,
+            "questions": questions,
+        }).execute()
+
+        test_id = test_res.data[0]["id"] if test_res.data else None
+
+        # Mark unit complete and unlock next
         supabase.table("roadmap_units").update({"completed": True}) \
             .eq("id", unit.get("id")).execute()
         next_unit_number = unit.get("unit_number", 0) + 1
@@ -1121,12 +1129,11 @@ async def complete_roadmap_task(task_id: str, user=Depends(get_current_user)):
 
     return {
         "success": True,
+        "all_tasks_done": all_done,
         "test_id": test_id,
         "questions": questions,
-        "unit_completed": all_done,
     }
-
-
+    
 # ── GET MENTEE ROADMAP (mentor view) ──────────────────────────
 @router.get("/roadmap/mentee/{mentee_id}")
 async def get_roadmap_for_mentor(mentee_id: str, user=Depends(get_current_user)):
