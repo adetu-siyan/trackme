@@ -1205,23 +1205,22 @@ Return ONLY valid JSON, no markdown:
 # TASK TEST GENERATION (10 QUESTIONS)
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def generate_task_test(task_title: str, task_description: str, unit_goal: str) -> list:
-    """
-    Generates 10 MCQ questions for a completed roadmap task.
-    Returns list of {question, options: [A,B,C,D], answer}
-    """
-    prompt = f"""Generate a 10-question multiple choice test for a mentee who completed a learning task.
+async def generate_unit_test(unit_title: str, unit_goal: str, task_titles: list) -> list:
+    tasks_text = "\n".join([f"- {t}" for t in task_titles])
+    
+    prompt = f"""Generate a 10-question multiple choice test for a mentee who completed this lesson.
 
-Task: {task_title}
-Description: {task_description}
-Unit goal: {unit_goal}
+Lesson: {unit_title}
+Goal: {unit_goal}
+Topics covered:
+{tasks_text}
 
 Rules:
-- Test understanding, not just recall
+- Spread questions across ALL topics listed — don't focus on just one
+- Each question tests a different concept
+- Wrong options must be plausible
 - Mix: 3 easy, 4 medium, 3 hard
-- Wrong options must be plausible — not obviously silly
 - Answer must be exactly "A", "B", "C", or "D"
-- Cover different aspects across the 10 questions
 
 Return ONLY valid JSON, no markdown:
 {{
@@ -1246,7 +1245,6 @@ Return ONLY valid JSON, no markdown:
     text = _clean_json(response.choices[0].message.content.strip())
     result = _safe_json(text, {"questions": []})
     return result.get("questions", [])
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ROADMAP DELAY ANALYSIS
