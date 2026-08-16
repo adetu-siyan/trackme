@@ -412,6 +412,62 @@ import {
 async function fetchTaskInstructions(taskTitle, unitGoal) {
   return roadmapApi.taskInstructions(taskTitle, unitGoal)
 }
+// ── prediction panel ─────────────────────────────────────────────────
+function predictCompletion(roadmap, units) {
+  const completedUnits = units.filter(u => u.completed)
+  const totalUnits = units.length
+  const startDate = new Date(roadmap.start_date)
+  const today = new Date()
+  const daysElapsed = Math.max(1, Math.floor((today - startDate) / (1000 * 60 * 60 * 24)))
+  const unitsRemaining = totalUnits - completedUnits.length
+
+  if (completedUnits.length === 0) {
+    // No progress yet — use planned pace
+    const plannedDays = roadmap.duration_type === 'daily' ? totalUnits : totalUnits * 7
+    const finishDate = new Date(startDate)
+    finishDate.setDate(finishDate.getDate() + plannedDays)
+    return { date: finishDate, onTrack: true, gapDetected: false, daysElapsed }
+  }
+
+  // Detect gap — find most recent completed unit
+  const sortedCompleted = completedUnits
+    .filter(u => u.completed_at)
+    .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+  
+  const lastActivity = sortedCompleted[0]
+    ? new Date(sortedCompleted[0].completed_at)
+    : startDate
+  
+  const daysSinceLastActivity = Math.floor((today - lastActivity) / (1000 * 60 * 60 * 24))
+  const gapDetected = daysSinceLastActivity > 3
+
+  // Pace = units per day based on actual completion
+  const pace = completedUnits.length / daysElapsed // units per day
+  
+  if (pace === 0) return null
+
+  const daysToFinish = Math.ceil(unitsRemaining / pace)
+  const finishDate = new Date(today)
+  finishDate.setDate(finishDate.getDate() + daysToFinish)
+
+  // Planned finish
+  const plannedDays = roadmap.duration_type === 'daily' ? totalUnits : totalUnits * 7
+  const plannedFinish = new Date(startDate)
+  plannedFinish.setDate(plannedFinish.getDate() + plannedDays)
+
+  const daysOff = Math.round((finishDate - plannedFinish) / (1000 * 60 * 60 * 24))
+
+  return {
+    date: finishDate,
+    plannedDate: plannedFinish,
+    daysOff, // positive = behind, negative = ahead
+    onTrack: Math.abs(daysOff) <= 3,
+    gapDetected,
+    daysSinceLastActivity,
+    pace: Math.round(pace * 7 * 10) / 10, // units per week
+    daysElapsed,
+  }
+}
 
 // ── Test Panel ─────────────────────────────────────────────────
 // Renders as right-side panel on desktop, full overlay on mobile
@@ -1021,6 +1077,47 @@ export default function Guide() {
                 </div>
               )}
             </div>
+
+           
+        {/* Overall progress */} 
+            {(() => {
+  const prediction = predictCompletion(roadmap, units)
+  if (!prediction) return null
+
+  const dateStr = prediction.date.toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric'
+  })
+
+  const color = prediction.gapDetected
+    ? 'var(--danger)'
+    : prediction.onTrack
+    ? 'var(--success)'
+    : 'var(--warning)'
+
+  const bg = prediction.gapDetected
+    ? 'var(--danger-soft)'
+    : prediction.onTrack
+    ? 'var(--success-soft)'
+    : 'var(--accent-soft)'
+
+  return (
+    <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: bg }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+        {prediction.gapDetected
+          ? `⚠️ ${prediction.daysSinceLastActivity}d gap detected — recalculated`
+          : prediction.onTrack
+          ? '✓ On track'
+          : prediction.daysOff > 0 ? `${prediction.daysOff}d behind schedule` : `${Math.abs(prediction.daysOff)}d ahead`}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+        At your current pace of <strong style={{ color: 'var(--text-primary)' }}>{prediction.pace} units/week</strong>, you'll finish around <strong style={{ color }}>{dateStr}</strong>.
+        {prediction.daysOff > 7 && (
+          <span style={{ color: 'var(--text-muted)' }}> Completing one extra unit per day closes the gap in {Math.ceil(prediction.daysOff / 2)} days.</span>
+        )}
+      </div>
+    </div>
+  )
+})()}
 
             {/* Unit list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
