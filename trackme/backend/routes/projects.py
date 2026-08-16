@@ -1032,13 +1032,13 @@ async def submit_roadmap_test(
         "submitted_at": datetime.utcnow().isoformat(),
     }).eq("id", test_id).execute()
 
-    task_res = supabase.table("roadmap_tasks") \
-        .select("title, roadmap_id").eq("id", test["task_id"]).execute()
+    unit_res = supabase.table("roadmap_units") \
+        .select("title, roadmap_id").eq("id", test["unit_id"]).execute()
 
-    if task_res.data:
-        task = task_res.data[0]
+    if unit_res.data:
+        unit = unit_res.data[0]
         roadmap_res = supabase.table("roadmaps") \
-            .select("mentor_id, mentee_id").eq("id", task["roadmap_id"]).execute()
+            .select("mentor_id, mentee_id").eq("id", unit["roadmap_id"]).execute()
         if roadmap_res.data:
             mentor_id = roadmap_res.data[0]["mentor_id"]
             mentee_name = get_profile_name(mentee_id, fallback="Your mentee")
@@ -1046,7 +1046,7 @@ async def submit_roadmap_test(
                 mentor_id,
                 "test_submitted",
                 f"📝 Test Result — {mentee_name}",
-                f"{mentee_name} scored {score}% on \"{task['title']}\" ({'Passed' if passed else 'Failed'})",
+                f"{mentee_name} scored {score}% on \"{unit['title']}\" ({'Passed' if passed else 'Failed'})",
                 {"test_id": test_id, "score": score, "passed": passed}
             )
 
@@ -1057,7 +1057,6 @@ async def submit_roadmap_test(
         "total": len(questions),
         "passed": passed,
     }
-
 
 # ── TEST RESULTS ──────────────────────────────────────────────
 @router.get("/roadmap/test/{test_id}/results")
