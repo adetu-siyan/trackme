@@ -1,6 +1,6 @@
 /* ============================================================
    Dôti — Design System
-   Font: Urbanist
+   Font: Libertinus Serif Display
    Accent: Violet #7C3AED / #8B5CF6
    ============================================================ */
 
@@ -90,7 +90,7 @@ html {
 }
 
 body {
-  font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Libertinus Serif Display', system-ui, serif;
   background: var(--bg);
   color: var(--text-primary);
   transition: background var(--transition), color var(--transition);
@@ -108,22 +108,23 @@ body {
    SCROLLBAR
    ============================================================ */
 ::-webkit-scrollbar { width: 0px; height: 0px; }
+
 /* ============================================================
    TYPOGRAPHY SCALE
    ============================================================ */
-h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.15; }
-h2 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.25; }
-h3 { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em; }
-h4 { font-size: 0.95rem; font-weight: 600; }
+h1 { font-size: 2rem;   font-weight: 400; letter-spacing: -0.04em; line-height: 1.15; }
+h2 { font-size: 1.4rem; font-weight: 400; letter-spacing: -0.03em; line-height: 1.25; }
+h3 { font-size: 1.1rem; font-weight: 400; letter-spacing: -0.02em; }
+h4 { font-size: 0.95rem; font-weight: 400; }
 p  { line-height: 1.65; }
 
 /* ============================================================
    UTILITY CLASSES
    ============================================================ */
-.text-muted    { color: var(--text-muted); }
+.text-muted     { color: var(--text-muted); }
 .text-secondary { color: var(--text-secondary); }
-.text-accent   { color: var(--accent); }
-.font-mono     { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+.text-accent    { color: var(--accent); }
+.font-mono      { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 
 /* ============================================================
    BUTTONS
@@ -134,9 +135,9 @@ p  { line-height: 1.65; }
   gap: 8px;
   padding: 10px 20px;
   border-radius: var(--radius);
-  font-family: 'Urbanist', sans-serif;
+  font-family: 'Libertinus Serif Display', system-ui, serif;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   border: none;
   transition: all var(--transition);
@@ -235,7 +236,7 @@ p  { line-height: 1.65; }
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text-primary);
-  font-family: 'Urbanist', sans-serif;
+  font-family: 'Libertinus Serif Display', system-ui, serif;
   font-size: 15px;
   transition: all var(--transition);
   outline: none;
@@ -264,13 +265,13 @@ textarea.input {
   padding: 3px 10px;
   border-radius: 20px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
 }
 
-.badge-accent { background: var(--accent-soft); color: var(--accent); }
-.badge-success { background: var(--success-soft); color: var(--success); }
-.badge-warning { background: var(--warning-soft); color: var(--warning); }
-.badge-danger  { background: var(--danger-soft);  color: var(--danger);  }
+.badge-accent   { background: var(--accent-soft);   color: var(--accent);   }
+.badge-success  { background: var(--success-soft);  color: var(--success);  }
+.badge-warning  { background: var(--warning-soft);  color: var(--warning);  }
+.badge-danger   { background: var(--danger-soft);   color: var(--danger);   }
 
 /* ============================================================
    LAYOUT
@@ -297,7 +298,6 @@ textarea.input {
     width: 100%;
   }
 }
-
 
 .page {
   flex: 1;
@@ -354,7 +354,7 @@ textarea.input {
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
+  0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
@@ -378,7 +378,7 @@ textarea.input {
   padding: 12px 18px;
   box-shadow: var(--shadow-lg);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   animation: fadeIn 0.2s ease;
   max-width: 320px;
   display: flex;
